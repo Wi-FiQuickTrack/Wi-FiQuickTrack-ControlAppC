@@ -241,3 +241,29 @@ void register_api(int id, api_callback_func verify, api_callback_func handle) {
     api->verify = verify;
     api->handle = handle;
 }
+
+void fill_wrapper_message_hdr(struct packet_wrapper *wrapper, int msg_type, int seq) {
+    wrapper->hdr.version = API_VERSION;
+    wrapper->hdr.type = msg_type;
+    wrapper->hdr.seq = seq;
+    wrapper->hdr.reserved = API_RESERVED_BYTE;
+    wrapper->hdr.reserved2 = API_RESERVED_BYTE;
+}
+
+void fill_wrapper_tlv_byte(struct packet_wrapper *wrapper, int id, char value) {
+    wrapper->tlv[wrapper->tlv_num] = malloc(sizeof(struct tlv_hdr));
+    wrapper->tlv[wrapper->tlv_num]->id = id;
+    wrapper->tlv[wrapper->tlv_num]->len = 1;
+    wrapper->tlv[wrapper->tlv_num]->value = (char*)malloc(1);
+    wrapper->tlv[wrapper->tlv_num]->value[0] = value;
+    wrapper->tlv_num++;
+}
+
+void fill_wrapper_tlv_bytes(struct packet_wrapper *wrapper, int id, int len, char* value) {
+    wrapper->tlv[wrapper->tlv_num] = malloc(sizeof(struct tlv_hdr));
+    wrapper->tlv[wrapper->tlv_num]->id = id;
+    wrapper->tlv[wrapper->tlv_num]->len = len;
+    wrapper->tlv[wrapper->tlv_num]->value = (char*)malloc(len);
+    memcpy(wrapper->tlv[wrapper->tlv_num]->value, value, len);
+    wrapper->tlv_num++;
+}

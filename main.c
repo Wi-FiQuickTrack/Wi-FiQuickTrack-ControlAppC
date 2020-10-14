@@ -41,26 +41,27 @@
 #define CONTROL_APP_PORT    9004
 #define BUFFER_LEN          10240
 
-static void tpcapp_receive_message(int sock, void *eloop_ctx, void *sock_ctx);
+static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx);
 
-static int tpcapp_socket_init(int port) {
+static int control_socket_init(int port) {
     int s;
     struct sockaddr_in addr;
 
     /* Open UDP socket */
     s = socket(PF_INET, SOCK_DGRAM, 0);
     if (s < 0) {
-        tpcapp_logger(LOG_LEVEL_ERROR, "Failed to open server socket");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open server socket");
         return -1;
     }
 
-struct ifreq ifr;
+    /* Test to bind interface */
+    struct ifreq ifr;
 
-memset(&ifr, 0, sizeof(ifr));
-snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "eth0");
-if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
-printf("failed to bind.\n");
-}
+    memset(&ifr, 0, sizeof(ifr));
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "eth0");
+    if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
+        printf("failed to bind.\n");
+    }
 
     /* Bind specific port */
     memset(&addr, 0, sizeof(addr));
@@ -68,20 +69,20 @@ printf("failed to bind.\n");
     //addr.sin_addr.s_addr = inet_addr("10.252.10.16");
     addr.sin_port = htons(port);
     if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-        tpcapp_logger(LOG_LEVEL_ERROR, "Failed to bind server socket");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to bind server socket");
         close(s);
         return -1;
     }
 
     /* Register to eloop and ready for the socket event */
-    if (eloop_register_read_sock(s, tpcapp_receive_message, NULL, NULL)) {
-        tpcapp_logger(LOG_LEVEL_ERROR, "Failed to initiate ControlAppC");
+    if (eloop_register_read_sock(s, control_receive_message, NULL, NULL)) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to initiate ControlAppC");
         return -1;
     }
     return 0;
 }
 
-static void tpcapp_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
+static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     int ret;
 
     int fromlen, len;                 // structure size and received length
@@ -95,19 +96,19 @@ static void tpcapp_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     fromlen = sizeof(from);
     len = recvfrom(sock, buffer, BUFFER_LEN, 0, (struct sockaddr *) &from, (socklen_t*)&fromlen);
     if (len < 0) {
-        tpcapp_logger(LOG_LEVEL_ERROR, "Failed to receive the packet");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to receive the packet");
         return ;
     } else {
-        tpcapp_logger(LOG_LEVEL_DEBUG, "Receive the packet");
+        indigo_logger(LOG_LEVEL_DEBUG, "Receive the packet");
     }
 
     /* Parse request to HDR and TLV. Response NACK if parser fails. Otherwises, ACK. */
     memset(&req, 0, sizeof(struct packet_wrapper));
     ret = parse_packet(&req, buffer, len);
     if (ret == 0) {
-        tpcapp_logger(LOG_LEVEL_DEBUG, "Parsed packet successfully");
+        indigo_logger(LOG_LEVEL_DEBUG, "Parsed packet successfully");
     } else {
-        tpcapp_logger(LOG_LEVEL_ERROR, "Failed to parse the packet");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to parse the packet");
         fill_wrapper_ack(&resp, req.hdr.seq, 0x31, "Unable to parse the packet");
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
 
@@ -118,9 +119,9 @@ static void tpcapp_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     /* Find API by ID. If API is not supported, assemble NACK. */
     api = get_api_by_id(req.hdr.type);
     if (api) {
-        tpcapp_logger(LOG_LEVEL_DEBUG, "Found API %s handler", api->name);
+        indigo_logger(LOG_LEVEL_DEBUG, "Found API %s handler", api->name);
     } else {
-        tpcapp_logger(LOG_LEVEL_ERROR, "Unable to find the API %s handler", api->name);
+        indigo_logger(LOG_LEVEL_ERROR, "Unable to find the API %s handler", api->name);
         fill_wrapper_ack(&resp, req.hdr.seq, 0x31, "Unable to find the API handler");
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
         sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
@@ -129,13 +130,13 @@ static void tpcapp_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
 
     /* Verify. Optional. If validation is failed, then return NACK. */
     if (api->verify == NULL || (api->verify && api->verify(&req, &resp) == 0)) {
-        tpcapp_logger(LOG_LEVEL_INFO, "Return ACK for API %s", api->name);
+        indigo_logger(LOG_LEVEL_INFO, "Return ACK for API %s", api->name);
         fill_wrapper_ack(&resp, req.hdr.seq, 0x30, "ACK: Command received");
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
         sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen);
         free_packet_wrapper(&resp);
     } else {
-        tpcapp_logger(LOG_LEVEL_ERROR, "Failed to verify");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to verify");
         fill_wrapper_ack(&resp, req.hdr.seq, 1, "Unable to find the API handler");
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
         sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
@@ -144,18 +145,18 @@ static void tpcapp_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
 
     /* Handle & Response. Call API handle(), assemble packet by response wrapper and send back to source address. */
     if (api->handle && api->handle(&req, &resp) == 0) {
-        tpcapp_logger(LOG_LEVEL_INFO, "Return execution result for API %s", api->name);
+        indigo_logger(LOG_LEVEL_INFO, "Return execution result for API %s", api->name);
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
         sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
     } else {
-        tpcapp_logger(LOG_LEVEL_DEBUG, "API %s No handle function", api->name);
+        indigo_logger(LOG_LEVEL_DEBUG, "API %s No handle function", api->name);
     }
 
     done:
     /* Clean up resource */
     free_packet_wrapper(&req);
     free_packet_wrapper(&resp);
-    tpcapp_logger(LOG_LEVEL_DEBUG, "Complete");
+    indigo_logger(LOG_LEVEL_DEBUG, "Complete");
 }
 
 int main(int argc, char* argv[]) {
@@ -163,26 +164,21 @@ int main(int argc, char* argv[]) {
 
     if (argc == 2) {
         port = atoi(argv[1]);
-        /*
-        char buffer[64];
-        get_mac_address(buffer, sizeof(buffer), "wlan0");
-        printf("buff=%s\n", buffer);
-        */
     }
     
-    tpcapp_logger(LOG_LEVEL_INFO, "ControlAppC starts");
+    indigo_logger(LOG_LEVEL_INFO, "ControlAppC starts");
 
     register_apis();
 
     eloop_init(NULL);
 
-    tpcapp_socket_init(port);
-    
+    control_socket_init(port);
+
     eloop_run();
 
     eloop_destroy();
 
-    tpcapp_logger(LOG_LEVEL_INFO, "ControlAppC stops");
+    indigo_logger(LOG_LEVEL_INFO, "ControlAppC stops");
 
     return 0;
 }

@@ -33,10 +33,15 @@
 #include <sys/ioctl.h>
 #include <linux/if.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <ifaddrs.h>
 
 #include "utils.h"
+#include "eloop.h"
 
-int stdout_level = LOG_LEVEL_INFO;
+#define BUFFER_LEN  4096
+
+int stdout_level = LOG_LEVEL_DEBUG;
 int syslog_level = LOG_LEVEL_INFO;
 
 void debug_print_timestamp(void) {
@@ -52,7 +57,7 @@ void debug_print_timestamp(void) {
     printf("%s ", buffer);
 }
 
-void tpcapp_logger(int level, const char *fmt, ...) {
+void indigo_logger(int level, const char *fmt, ...) {
     char *format, *log_type;
     int maxlen;
     int priority;
@@ -125,13 +130,13 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
     pid_t pid;
 
     if (pipe(pipefds) == -1){
-        tpcapp_logger(LOG_LEVEL_ERROR, "Failed to create the pipe");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to create the pipe");
         return -1;
     }
 
     pid = fork();
     if (pid == -1) {
-        tpcapp_logger(LOG_LEVEL_ERROR, "Failed to fork");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to fork");
         return -1;
     }
 
@@ -145,7 +150,7 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
     } else {
         close(pipefds[1]);
         len = read(pipefds[0], buffer, buffer_size);
-        tpcapp_logger(LOG_LEVEL_DEBUG, "Pipe system call= %s, Return length= %d, result= %s", cmd, len, buffer);
+        indigo_logger(LOG_LEVEL_DEBUG, "Pipe system call= %s, Return length= %d, result= %s", cmd, len, buffer);
         close(pipefds[0]);
     }
     return len;
@@ -176,4 +181,100 @@ int get_mac_address(char *buffer, int size, char *interface) {
         return 0;
     }
     return 1;
+}
+
+int loopback_socket = 0;
+
+static void loopback_client_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
+    struct sockaddr_storage from;
+    unsigned char buffer[BUFFER_LEN];
+    int fromlen, len;
+
+    fromlen = sizeof(from);
+    len = recvfrom(sock, buffer, BUFFER_LEN, 0, (struct sockaddr *) &from, &fromlen);
+    if (len < 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Loopback Client recvfrom[server] error");
+        return ;
+    }
+
+    indigo_logger(LOG_LEVEL_INFO, "Loopback Client received length = %d", len);
+
+    len = sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (struct sockaddr *)&from, sizeof(from));
+
+    indigo_logger(LOG_LEVEL_INFO, "Loopback Client echo back length = %d", len);
+}
+
+static void loopback_client_timeout(void *eloop_ctx, void *timeout_ctx) {
+    int s = (intptr_t)eloop_ctx;
+    eloop_unregister_read_sock(s);
+    close(s);
+    loopback_socket = 0;
+}
+
+int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
+    struct ifaddrs *ifap, *ifa;
+    struct sockaddr_in *sa;
+    char *addr = NULL;
+
+    getifaddrs (&ifap);
+    for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, name) == 0) {
+            sa = (struct sockaddr_in *) ifa->ifa_addr;
+            addr = inet_ntoa(sa->sin_addr);
+            if (ipaddr) {
+                strcpy(ipaddr, addr);
+            }
+            return 1;
+        }
+    }
+    freeifaddrs(ifap);
+    return 0;
+}
+
+int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout) {
+    int s = 0;
+    struct sockaddr_in addr;
+
+   /* Open UDP socket */
+    s = socket(PF_INET, SOCK_DGRAM, 0);
+    if (s < 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open server socket");
+        return -1;
+    }
+
+    /* Bind specific port */
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    if (local_ip) {
+        addr.sin_addr.s_addr = inet_addr(local_ip);
+    }
+    addr.sin_port = htons(local_port);
+    if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to bind server socket");
+        close(s);
+        return -1;
+    }
+
+    /* Register to eloop and ready for the socket event */
+    if (eloop_register_read_sock(s, loopback_client_receive_message, NULL, NULL)) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to initiate ControlAppC");
+        return -1;
+    }
+    loopback_socket = s;
+    eloop_register_timeout(timeout, 0, loopback_client_timeout, (void*)(intptr_t)s, NULL);
+
+    return 0;
+}
+
+int loopback_client_stop() {
+    if (loopback_socket) {
+        eloop_unregister_read_sock(loopback_socket);
+        close(loopback_socket);
+        loopback_socket = 0;
+    }
+    return 0;
+}
+
+int loopback_client_status() {
+    return !!loopback_socket;
 }

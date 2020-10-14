@@ -29,8 +29,12 @@ enum {
     LOG_LEVEL_ERROR = 5
 };
 
-void tpcapp_logger(int level, const char *fmt, ...);
+void indigo_logger(int level, const char *fmt, ...);
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 int write_file(char *fn, char *buffer, int len);
 
 int get_mac_address(char *buffer, int size, char *interface);
+int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);
+int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout);
+int loopback_client_stop();
+int loopback_client_status();

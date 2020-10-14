@@ -35,9 +35,11 @@ int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp
 int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp);
 
 void register_apis() {
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
+    register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
     register_api(API_INDIGO_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
     register_api(API_AP_CONFIGURE, NULL, configure_ap_handler);
@@ -46,6 +48,7 @@ void register_apis() {
     register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
 }
 
+/* TODO: Move to another file */
 #define TLV_VALUE_APP_VERSION                       "v1.0"
 #define TLV_VALUE_OK                                "OK"
 #define TLV_VALUE_STATUS_OK                         0x30
@@ -56,49 +59,14 @@ void register_apis() {
 #define TLV_VALUE_HOSTAPD_START_OK                  "AP is up : Hostapd service is active"
 #define TLV_VALUE_ASSIGN_STATIC_IP_OK               "Static IP successfully assigned to wireless interface"
 #define TLV_VALUE_ASSIGN_STATIC_IP_NOT_OK           "Static IP failed to be assigned to wireless interface"
-
-void fill_wrapper_message_hdr(struct packet_wrapper *wrapper, int msg_type, int seq) {
-    wrapper->hdr.version = API_VERSION;
-    wrapper->hdr.type = msg_type;
-    wrapper->hdr.seq = seq;
-    wrapper->hdr.reserved = API_RESERVED_BYTE;
-    wrapper->hdr.reserved2 = API_RESERVED_BYTE;
-}
-
-void fill_wrapper_tlv_byte(struct packet_wrapper *wrapper, int id, char value) {
-    wrapper->tlv[wrapper->tlv_num] = malloc(sizeof(struct tlv_hdr));
-    wrapper->tlv[wrapper->tlv_num]->id = id;
-    wrapper->tlv[wrapper->tlv_num]->len = 1;
-    wrapper->tlv[wrapper->tlv_num]->value = (char*)malloc(1);
-    wrapper->tlv[wrapper->tlv_num]->value[0] = value;
-    wrapper->tlv_num++;
-}
-
-void fill_wrapper_tlv_bytes(struct packet_wrapper *wrapper, int id, int len, char* value) {
-    wrapper->tlv[wrapper->tlv_num] = malloc(sizeof(struct tlv_hdr));
-    wrapper->tlv[wrapper->tlv_num]->id = id;
-    wrapper->tlv[wrapper->tlv_num]->len = len;
-    wrapper->tlv[wrapper->tlv_num]->value = (char*)malloc(len);
-    memcpy(wrapper->tlv[wrapper->tlv_num]->value, value, len);
-    wrapper->tlv_num++;
-}
+#define TLV_VALUE_LOOPBACK_SVR_START_OK             "Loop back server initialized"
+#define TLV_VALUE_LOOPBACK_SVR_START_NOT_OK         "Failed to initialise loop back server"
 
 int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
     fill_wrapper_tlv_bytes(resp, TLV_CONTROL_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
-    return 0;
-}
-
-// ACK:  {"status": 0, "message": "ACK: Command received", "tlvs": {}} 
-// RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'} 
-int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    /* TODO: Stop Loopback Server */
-
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_LOOP_BACK_STOP_OK), TLV_VALUE_LOOP_BACK_STOP_OK);
     return 0;
 }
 
@@ -114,19 +82,19 @@ int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
 
     len = system("killall hostapd 1>/dev/null 2>/dev/null");
     if (len) {
-        tpcapp_logger(LOG_LEVEL_DEBUG, "Failed to stop hostapd");
+        indigo_logger(LOG_LEVEL_DEBUG, "Failed to stop hostapd");
     }
     sleep(2);
 
     len = system("rm -rf /etc/hostapd/*.conf");
     if (len) {
-        tpcapp_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
+        indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
     }
     sleep(1);
 
     len = system("rfkill unblock wlan");
     if (len) {
-        tpcapp_logger(LOG_LEVEL_DEBUG, "Failed to run rfkill unblock wlan");
+        indigo_logger(LOG_LEVEL_DEBUG, "Failed to run rfkill unblock wlan");
     }
     sleep(1);
 
@@ -297,6 +265,70 @@ int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(buffer), buffer);
     fill_wrapper_tlv_bytes(resp, TLV_DUT_MAC_ADDR, strlen(buffer), buffer);
+
+    return 0;
+}
+
+#define LOOPBACK_TIMEOUT            30
+
+int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct tlv_hdr *tlv;
+    char tool_ip[256];
+    char tool_port[256];
+    char local_ip[256];
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_LOOPBACK_SVR_START_NOT_OK;
+
+    /* ControlApp on DUT */
+    /* TLV: TLV_TOOL_IP_ADDRESS */
+    memset(tool_ip, 0, sizeof(tool_ip));
+    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_IP_ADDRESS);
+    if (tlv) {
+        memcpy(tool_ip, tlv->value, tlv->len);
+    } else {
+        goto response;
+    }
+    /* TLV: TLV_TOOL_UDP_PORT */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_UDP_PORT);
+    if (tlv) {
+        memcpy(tool_port, tlv->value, tlv->len);
+    } else {
+        goto response;
+    }
+    /* Find network interface. If br0 exists, then use it. Otherwise, it uses the initiation value. */
+    memset(local_ip, 0, sizeof(local_ip));
+    if (find_interface_ip(local_ip, sizeof(local_ip), "br0")) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", "br0");
+    } else if (find_interface_ip(local_ip, sizeof(local_ip), DEFAULT_INTERFACE_NAME)) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", DEFAULT_INTERFACE_NAME);
+    } else if (find_interface_ip(local_ip, sizeof(local_ip), "eth0")) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", "eth0");
+    } else {
+        indigo_logger(LOG_LEVEL_DEBUG, "No availabe interface");
+    }
+    /* Start loopback */
+    if (!loopback_client_start(tool_ip, atoi(tool_port), local_ip, atoi(tool_port), LOOPBACK_TIMEOUT)) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_LOOPBACK_SVR_START_OK;
+    }
+response:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+// ACK:  {"status": 0, "message": "ACK: Command received", "tlvs": {}} 
+// RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'} 
+int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    /* Stop loopback */
+    if (loopback_client_status()) {
+        loopback_client_stop();
+    }
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_LOOP_BACK_STOP_OK), TLV_VALUE_LOOP_BACK_STOP_OK);
 
     return 0;
 }

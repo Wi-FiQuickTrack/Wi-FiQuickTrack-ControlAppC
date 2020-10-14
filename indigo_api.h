@@ -204,6 +204,11 @@ void register_api(int id, api_callback_func verify, api_callback_func handle);
 
 void fill_wrapper_ack(struct packet_wrapper *wrapper, int seq, int status, char *reason);
 
+void register_api(int id, api_callback_func verify, api_callback_func handle);
+void fill_wrapper_message_hdr(struct packet_wrapper *wrapper, int msg_type, int seq);
+void fill_wrapper_tlv_byte(struct packet_wrapper *wrapper, int id, char value);
+void fill_wrapper_tlv_bytes(struct packet_wrapper *wrapper, int id, int len, char* value);
+
 /* Solution Vendor */
 void register_apis();
 #endif // __INDIGO_API_

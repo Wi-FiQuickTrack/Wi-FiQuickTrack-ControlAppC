@@ -63,18 +63,18 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
     
     api = get_api_by_id(req->hdr.type);
     if (api) {
-        tpcapp_logger(LOG_LEVEL_INFO, "API: 0x%04x (%s)", api->type, api->name);
+        indigo_logger(LOG_LEVEL_INFO, "API: 0x%04x (%s)", api->type, api->name);
     } else {
-        tpcapp_logger(LOG_LEVEL_WARNING, "API: 0x%04x Unknown", req->hdr.type);
+        indigo_logger(LOG_LEVEL_WARNING, "API: 0x%04x Unknown", req->hdr.type);
         return -1;
     }
 
     for (i = 0; i < req->tlv_num; i++) {
         tlv = get_tlv_by_id(req->tlv[i]->id);
         if (tlv) {
-            tpcapp_logger(LOG_LEVEL_INFO, "TLV: 0x%04x (%s)", tlv->id, tlv->name);
+            indigo_logger(LOG_LEVEL_INFO, "TLV: 0x%04x (%s)", tlv->id, tlv->name);
         } else {
-            tpcapp_logger(LOG_LEVEL_WARNING, "TLV: 0x%04x Unknown", req->tlv[i]->id);
+            indigo_logger(LOG_LEVEL_WARNING, "TLV: 0x%04x Unknown", req->tlv[i]->id);
             return -1;
         }
     }
@@ -144,11 +144,11 @@ int gen_message_hdr(char *message, int message_len, struct message_hdr *hdr) {
 }
 
 void print_message_hdr(struct message_hdr *hdr) {
-    tpcapp_logger(LOG_LEVEL_INFO, "Version: %d", hdr->version);
-    tpcapp_logger(LOG_LEVEL_INFO, "Type: 0x%04x (%s)", hdr->type, get_api_type_by_id(hdr->type));
-    tpcapp_logger(LOG_LEVEL_INFO, "Seqence: 0x%04x", hdr->seq);
-    tpcapp_logger(LOG_LEVEL_INFO, "Reserved: 0x%02x", hdr->reserved);
-    tpcapp_logger(LOG_LEVEL_INFO, "Reserved2: 0x%02x", hdr->reserved2);
+    indigo_logger(LOG_LEVEL_INFO, "Version: %d", hdr->version);
+    indigo_logger(LOG_LEVEL_INFO, "Type: 0x%04x (%s)", hdr->type, get_api_type_by_id(hdr->type));
+    indigo_logger(LOG_LEVEL_INFO, "Seqence: 0x%04x", hdr->seq);
+    indigo_logger(LOG_LEVEL_INFO, "Reserved: 0x%02x", hdr->reserved);
+    indigo_logger(LOG_LEVEL_INFO, "Reserved2: 0x%02x", hdr->reserved2);
 }
 
 int print_hex(char *message, int message_len) {
@@ -194,8 +194,8 @@ void print_tlv(struct tlv_hdr *t) {
     char buffer[256];
     struct indigo_tlv *tlv = get_tlv_by_id(t->id);
 
-    tpcapp_logger(LOG_LEVEL_INFO, "ID: 0x%04x (%s)", t->id, tlv == NULL ? "Unknown" : tlv->name);
-    tpcapp_logger(LOG_LEVEL_INFO, "Length: %d", t->len);
+    indigo_logger(LOG_LEVEL_INFO, "ID: 0x%04x (%s)", t->id, tlv == NULL ? "Unknown" : tlv->name);
+    indigo_logger(LOG_LEVEL_INFO, "Length: %d", t->len);
 
     memset(buffer, 0, sizeof(buffer));
     if (t->len > 0) {
@@ -204,7 +204,7 @@ void print_tlv(struct tlv_hdr *t) {
     for (i = 0; i < t->len; i++) {
         sprintf(buffer, "%s0x%02x ", buffer, t->value[i]);
     }
-    tpcapp_logger(LOG_LEVEL_INFO, buffer);
+    indigo_logger(LOG_LEVEL_INFO, buffer);
 }
 
 int assemble_packet(char *packet, int packet_size, struct packet_wrapper *wrapper) {
