@@ -52,6 +52,7 @@ int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrappe
 int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 
 void register_apis() {
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
@@ -1199,7 +1200,7 @@ done:
     return 0;
 }
 
-int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
     char buffer[1024];
