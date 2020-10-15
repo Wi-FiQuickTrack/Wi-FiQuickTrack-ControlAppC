@@ -54,18 +54,10 @@ static int control_socket_init(int port) {
         return -1;
     }
 
-    /* Test to bind interface */
-    struct ifreq ifr;
-
-    memset(&ifr, 0, sizeof(ifr));
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "eth0");
-    if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, (void *)&ifr, sizeof(ifr)) < 0) {
-        printf("failed to bind.\n");
-    }
-
     /* Bind specific port */
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
+    /* TODO: Bind interface */
     //addr.sin_addr.s_addr = inet_addr("10.252.10.16");
     addr.sin_port = htons(port);
     if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
@@ -143,6 +135,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
         goto done;
     }
 
+    /* TODO: Optional, use timer to handle the execution */
     /* Handle & Response. Call API handle(), assemble packet by response wrapper and send back to source address. */
     if (api->handle && api->handle(&req, &resp) == 0) {
         indigo_logger(LOG_LEVEL_INFO, "Return execution result for API %s", api->name);
@@ -160,21 +153,33 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
 }
 
 int main(int argc, char* argv[]) {
-    int port = CONTROL_APP_PORT;
-
+    /* TODO: More parameters, e.g., WLAN interface */
     if (argc == 2) {
-        port = atoi(argv[1]);
+        printf("set port.\n");
+        set_service_port(atoi(argv[1]));
     }
-    
-    indigo_logger(LOG_LEVEL_INFO, "ControlAppC starts");
+
+    set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);
+    set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);
+    set_hapd_global_ctrl_path(HAPD_GLOBAL_CTRL_PATH_DEFAULT);
+    set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);
+    set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT);
+
+    indigo_logger(LOG_LEVEL_INFO, "ControlAppC starts on port: %d", get_service_port());
+    indigo_logger(LOG_LEVEL_INFO, "Wireless Interface: %s", get_wireless_interface());
+    indigo_logger(LOG_LEVEL_INFO, "Hostapd Global Control Interface: %s", get_hapd_global_ctrl_path());
+    indigo_logger(LOG_LEVEL_INFO, "Hostapd Control Interface: %s", get_hapd_ctrl_path());
+    indigo_logger(LOG_LEVEL_INFO, "WPA Supplicant Control Interface: %s", get_wpas_ctrl_path());
 
     register_apis();
 
     eloop_init(NULL);
 
-    control_socket_init(port);
-
-    eloop_run();
+    if (control_socket_init(get_service_port()) == 0) {
+        eloop_run();
+    } else {
+        indigo_logger(LOG_LEVEL_INFO, "Failed to initiate the UDP socket");
+    }
 
     eloop_destroy();
 

@@ -51,10 +51,18 @@ struct indigo_api {
 #define API_AP_CONFIGURE                        0x1002
 #define API_AP_TRIGGER_CHANSWITCH               0x1003
 #define API_AP_SEND_DISCONNECT                  0x1004
+#define API_AP_SET_PARAM                        0x1005
+#define API_AP_SEND_BTM_REQ                     0x1006
+
 #define API_STA_ASSOCIATE                       0x2000
 #define API_STA_CONFIGURE                       0x2001
 #define API_STA_DISCONNECT                      0x2002
 #define API_STA_SEND_DISCONNECT                 0x2003
+#define API_STA_REASSOCIATE                     0x2004
+#define API_STA_SET_PARAM                       0x2005
+#define API_STA_SEND_BTM_QUERY                  0x2006
+#define API_STA_SEND_ANQP_QUERY                 0x2007
+
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
 #define API_GET_CONTROL_APP_VERSION             0x5002
@@ -189,6 +197,26 @@ struct indigo_api {
 #define TLV_RRM_BEACON_REPORT                   0x007a
 #define TLV_COUNTRY3                            0x007b
 #define TLV_MBO_CELL_CAPA                       0x007c
+#define TLV_DOMAIN_MATCH                        0x007d
+#define TLV_DOMAIN_SUFFIX_MATCH                 0x007e
+#define TLV_MBO_ASSOC_DISALLOW                  0x007f
+#define TLV_MBO_IGNORE_ASSOC_DISALLOW           0x0080
+#define TLV_DISASSOC_IMMINENT                   0x0081
+#define TLV_BSS_TERMINATION                     0x0082
+#define TLV_DISASSOC_TIMER                      0x0083
+#define TLV_BSS_TERMINATION_TSF                 0x0084
+#define TLV_BSS_TERMINATION_DURATION            0x0085
+#define TLV_REASSOCIAITION_RETRY_DELAY          0x0086
+#define TLV_BTMQUERY_REASON_CODE                0x0087
+#define TLV_CANDIDATE_LIST                      0x0088
+#define TLV_ANQP_INFO_ID                        0x0089
+#define TLV_GAS_COMEBACK_DELAY                  0x008a
+#define TLV_SAE_PWE                             0x008d
+#define TLV_OWE_GROUPS                          0x008e
+#define TLV_STA_OWE_GROUP                       0x008f
+#define TLV_HE_MU_EDCA                          0x0090
+#define TLV_SAE_PMKID_IN_ASSOC                  0x0091
+
 #define TLV_MESSAGE                             0xa000
 #define TLV_STATUS                              0xa001
 #define TLV_DUT_WLAN_IP_ADDR                    0xa002

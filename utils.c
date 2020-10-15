@@ -278,3 +278,65 @@ int loopback_client_stop() {
 int loopback_client_status() {
     return !!loopback_socket;
 }
+
+/* Environment */
+char wireless_interface[64] = WIRELESS_INTERFACE_DEFAULT;
+char hapd_ctrl_path[64] = HAPD_CTRL_PATH_DEFAULT;
+char hapd_global_ctrl_path[64] = HAPD_GLOBAL_CTRL_PATH_DEFAULT;
+char wpas_ctrl_path[64] = WPAS_CTRL_PATH_DEFAULT;
+char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
+int service_port = SERVICE_PORT_DEFAULT;
+
+char* get_hapd_ctrl_path() {
+    return hapd_ctrl_path;
+}
+
+int set_hapd_ctrl_path(char* path) {
+    snprintf(hapd_ctrl_path, sizeof(hapd_ctrl_path), "%s/%s", path, wireless_interface);
+    return 0;
+}
+
+char* get_hapd_global_ctrl_path() {
+    return hapd_global_ctrl_path;
+}
+
+int set_hapd_global_ctrl_path(char* path) {
+    snprintf(hapd_global_ctrl_path, sizeof(hapd_global_ctrl_path), "%s", path);
+    return 0;
+}
+
+char* get_wpas_ctrl_path() {
+    return wpas_ctrl_path;
+}
+
+int set_wpas_ctrl_path(char* path) {
+    snprintf(wpas_ctrl_path, sizeof(wpas_ctrl_path), "%s/%s", path, wireless_interface);
+    return 0;
+}
+
+char* get_wpas_global_ctrl_path() {
+    return wpas_global_ctrl_path;
+}
+
+int set_wpas_global_ctrl_path(char* path) {
+    snprintf(wpas_global_ctrl_path, sizeof(wpas_global_ctrl_path), "%s", path);
+    return 0;
+}
+
+char* get_wireless_interface() {
+    return wireless_interface;
+}
+
+int set_wireless_interface(char *name) {
+    snprintf(wireless_interface, sizeof(wireless_interface), "%s", name);
+    return 0;
+}
+
+int get_service_port() {
+    return service_port;
+}
+
+int set_service_port(int port) {
+    service_port = port;
+    return 0;
+}

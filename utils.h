@@ -38,3 +38,25 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);
 int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout);
 int loopback_client_stop();
 int loopback_client_status();
+
+#define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
+#define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
+#define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
+#define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
+#define WIRELESS_INTERFACE_DEFAULT                 "wlan0"
+#define SERVICE_PORT_DEFAULT                       9002
+
+char* get_hapd_ctrl_path();
+int set_hapd_ctrl_path(char* path);
+char* get_hapd_global_ctrl_path();
+int set_hapd_global_ctrl_path(char* path);
+
+char* get_wpas_ctrl_path();
+int set_wpas_ctrl_path(char* path);
+char* get_wpas_global_ctrl_path();
+int set_wpas_global_ctrl_path(char* path);
+
+char* get_wireless_interface();
+int set_wireless_interface(char *name);
+int get_service_port();
+int set_service_port(int port);

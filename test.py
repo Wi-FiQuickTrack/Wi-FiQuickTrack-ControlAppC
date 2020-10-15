@@ -46,8 +46,30 @@ def test_loopback_start():
     m.append_tlv(Tlv(0x0054, bytes(b'20480')))
     return m
 
+def test_ap_send_disassociate():
+    m = Msg(0x1004)
+    m.append_tlv(Tlv(0x0028, bytes(b'b8:5d:0a:62:b3:ee')))
+    return m
+
+def test_sta_configure():
+    m = Msg(0x2001)
+    m.append_tlv(Tlv(0x0035, bytes(b'Indigo_1600155580'))) # SSID
+    m.append_tlv(Tlv(0x003a, bytes(b'12345678'))) # PSK
+    m.append_tlv(Tlv(0x003b, bytes(b'RSN'))) # PROTO
+    m.append_tlv(Tlv(0x003d, bytes(b'CCMP'))) # PAIRWISE
+    m.append_tlv(Tlv(0x003c, bytes(b'1'))) # STA_IEEE80211_W
+    m.append_tlv(Tlv(0x0036, bytes(b'WPA-PSK'))) # KEY_MGMT
+    return m
+
+def test_sta_associate():
+    m = Msg(0x2000)
+    return m
+
 #m = test_get_control_app()
-m = test_loopback_start()
+#m = test_loopback_start()
+#m = test_ap_send_disassociate()
+#m = test_sta_configure()
+m = test_sta_associate()
 output = m.to_bytes()
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

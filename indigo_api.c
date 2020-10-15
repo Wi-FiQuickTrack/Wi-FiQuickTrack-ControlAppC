@@ -25,19 +25,29 @@
 #include <stdlib.h>
 
 #include "indigo_api.h"
+#include "utils.h"
 
 struct indigo_api indigo_api_list[] = {
     { API_CMD_RESPONSE, "CMD_RESPONSE", NULL, NULL },
     { API_CMD_ACK, "CMD_ACK", NULL, NULL },
+
     { API_AP_START_UP, "AP_START_UP", NULL, NULL },
     { API_AP_STOP, "AP_STOP", NULL, NULL },
     { API_AP_CONFIGURE, "AP_CONFIGURE", NULL, NULL },
     { API_AP_TRIGGER_CHANSWITCH, "AP_TRIGGER_CHANSWITCH", NULL, NULL },
     { API_AP_SEND_DISCONNECT, "AP_SEND_DISCONNECT", NULL, NULL },
+    { API_AP_SET_PARAM, "API_AP_SET_PARAM", NULL, NULL },
+    { API_AP_SEND_BTM_REQ, "API_AP_SEND_BTM_REQ", NULL, NULL },
+
     { API_STA_ASSOCIATE, "STA_ASSOCIATE", NULL, NULL },
     { API_STA_CONFIGURE, "STA_CONFIGURE", NULL, NULL },
     { API_STA_DISCONNECT, "STA_DISCONNECT", NULL, NULL },
     { API_STA_SEND_DISCONNECT, "STA_SEND_DISCONNECT", NULL, NULL },
+    { API_STA_REASSOCIATE, "STA_REASSOCIATE", NULL, NULL },
+    { API_STA_SET_PARAM, "STA_SET_PARAM", NULL, NULL },
+    { API_STA_SEND_BTM_QUERY, "STA_SEND_BTM_QUERY", NULL, NULL },
+    { API_STA_SEND_ANQP_QUERY, "STA_SEND_ANQP_QUERY", NULL, NULL },
+
     { API_GET_IP_ADDR, "GET_IP_ADDR", NULL, NULL },
     { API_GET_MAC_ADDR, "GET_MAC_ADDR", NULL, NULL },
     { API_GET_CONTROL_APP_VERSION, "GET_CONTROL_APP_VERSION", NULL, NULL },
@@ -238,8 +248,12 @@ void fill_wrapper_ack(struct packet_wrapper *wrapper, int seq, int status, char 
 void register_api(int id, api_callback_func verify, api_callback_func handle) {
     struct indigo_api *api;
     api = get_api_by_id(id);
-    api->verify = verify;
-    api->handle = handle;
+    if (api) {
+        api->verify = verify;
+        api->handle = handle;
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to find the API 0x%04x", id);
+    }
 }
 
 void fill_wrapper_message_hdr(struct packet_wrapper *wrapper, int msg_type, int seq) {
