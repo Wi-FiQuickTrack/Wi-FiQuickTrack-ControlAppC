@@ -39,8 +39,6 @@
 #include "utils.h"
 #include "eloop.h"
 
-#define BUFFER_LEN  4096
-
 int stdout_level = LOG_LEVEL_DEBUG;
 int syslog_level = LOG_LEVEL_INFO;
 
@@ -150,7 +148,7 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
     } else {
         close(pipefds[1]);
         len = read(pipefds[0], buffer, buffer_size);
-        indigo_logger(LOG_LEVEL_DEBUG, "Pipe system call= %s, Return length= %d, result= %s", cmd, len, buffer);
+        indigo_logger(LOG_LEVEL_DEBUG_VERBOSE, "Pipe system call= %s, Return length= %d, result= %s", cmd, len, buffer);
         close(pipefds[0]);
     }
     return len;
@@ -169,20 +167,7 @@ int write_file(char *fn, char *buffer, int len) {
     return -1;
 }
 
-int get_mac_address(char *buffer, int size, char *interface) {
-    struct ifreq s;
-    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-
-    strcpy(s.ifr_name, interface);
-    if (0 == ioctl(fd, SIOCGIFHWADDR, &s)) {
-        sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x", 
-            (char)s.ifr_addr.sa_data[0]&0x00ff, (char)s.ifr_addr.sa_data[1]&0x00ff, (char)s.ifr_addr.sa_data[2]&0x00ff, 
-            (char)s.ifr_addr.sa_data[3]&0x00ff, (char)s.ifr_addr.sa_data[4]&0x00ff, (char)s.ifr_addr.sa_data[5]&0x00ff);
-        return 0;
-    }
-    return 1;
-}
-
+/* Loopback */
 int loopback_socket = 0;
 
 static void loopback_client_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
@@ -209,26 +194,6 @@ static void loopback_client_timeout(void *eloop_ctx, void *timeout_ctx) {
     eloop_unregister_read_sock(s);
     close(s);
     loopback_socket = 0;
-}
-
-int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
-    struct ifaddrs *ifap, *ifa;
-    struct sockaddr_in *sa;
-    char *addr = NULL;
-
-    getifaddrs (&ifap);
-    for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, name) == 0) {
-            sa = (struct sockaddr_in *) ifa->ifa_addr;
-            addr = inet_ntoa(sa->sin_addr);
-            if (ipaddr) {
-                strcpy(ipaddr, addr);
-            }
-            return 1;
-        }
-    }
-    freeifaddrs(ifap);
-    return 0;
 }
 
 int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout) {
@@ -279,20 +244,62 @@ int loopback_client_status() {
     return !!loopback_socket;
 }
 
+int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
+    struct ifaddrs *ifap, *ifa;
+    struct sockaddr_in *sa;
+    char *addr = NULL;
+
+    getifaddrs (&ifap);
+    for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, name) == 0) {
+            sa = (struct sockaddr_in *) ifa->ifa_addr;
+            addr = inet_ntoa(sa->sin_addr);
+            if (ipaddr) {
+                strcpy(ipaddr, addr);
+            }
+            return 1;
+        }
+    }
+    freeifaddrs(ifap);
+    return 0;
+}
+
+
+int get_mac_address(char *buffer, int size, char *interface) {
+    struct ifreq s;
+    int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    strcpy(s.ifr_name, interface);
+    if (0 == ioctl(fd, SIOCGIFHWADDR, &s)) {
+        sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x", 
+            (char)s.ifr_addr.sa_data[0]&0x00ff, (char)s.ifr_addr.sa_data[1]&0x00ff, (char)s.ifr_addr.sa_data[2]&0x00ff, 
+            (char)s.ifr_addr.sa_data[3]&0x00ff, (char)s.ifr_addr.sa_data[4]&0x00ff, (char)s.ifr_addr.sa_data[5]&0x00ff);
+        return 0;
+    }
+    return 1;
+}
+
 /* Environment */
-char wireless_interface[64] = WIRELESS_INTERFACE_DEFAULT;
-char hapd_ctrl_path[64] = HAPD_CTRL_PATH_DEFAULT;
-char hapd_global_ctrl_path[64] = HAPD_GLOBAL_CTRL_PATH_DEFAULT;
-char wpas_ctrl_path[64] = WPAS_CTRL_PATH_DEFAULT;
-char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
 int service_port = SERVICE_PORT_DEFAULT;
+char wireless_interface[64] = WIRELESS_INTERFACE_DEFAULT;
+
+char hapd_ctrl_path[64] = HAPD_CTRL_PATH_DEFAULT;
+char hapd_full_ctrl_path[128];
+char hapd_global_ctrl_path[64] = HAPD_GLOBAL_CTRL_PATH_DEFAULT;
+
+char wpas_ctrl_path[64] = WPAS_CTRL_PATH_DEFAULT;
+char wpas_full_ctrl_path[128];
+char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
 
 char* get_hapd_ctrl_path() {
-    return hapd_ctrl_path;
+    memset(hapd_full_ctrl_path, 0, sizeof(hapd_full_ctrl_path));
+    sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, wireless_interface);
+    return hapd_full_ctrl_path;
 }
 
 int set_hapd_ctrl_path(char* path) {
-    snprintf(hapd_ctrl_path, sizeof(hapd_ctrl_path), "%s/%s", path, wireless_interface);
+    memset(hapd_ctrl_path, 0, sizeof(hapd_ctrl_path));
+    snprintf(hapd_ctrl_path, sizeof(hapd_ctrl_path), "%s", path);
     return 0;
 }
 
@@ -301,16 +308,19 @@ char* get_hapd_global_ctrl_path() {
 }
 
 int set_hapd_global_ctrl_path(char* path) {
+    memset(hapd_global_ctrl_path, 0, sizeof(hapd_global_ctrl_path));
     snprintf(hapd_global_ctrl_path, sizeof(hapd_global_ctrl_path), "%s", path);
     return 0;
 }
 
 char* get_wpas_ctrl_path() {
-    return wpas_ctrl_path;
+    memset(wpas_full_ctrl_path, 0, sizeof(wpas_full_ctrl_path));
+    sprintf(wpas_full_ctrl_path, "%s/%s", wpas_ctrl_path, wireless_interface);
+    return wpas_full_ctrl_path;
 }
 
 int set_wpas_ctrl_path(char* path) {
-    snprintf(wpas_ctrl_path, sizeof(wpas_ctrl_path), "%s/%s", path, wireless_interface);
+    snprintf(wpas_ctrl_path, sizeof(wpas_ctrl_path), "%s", path);
     return 0;
 }
 

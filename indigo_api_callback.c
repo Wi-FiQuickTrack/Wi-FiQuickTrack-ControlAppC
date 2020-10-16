@@ -29,39 +29,43 @@
 #include "utils.h"
 #include "wpa_ctrl.h"
 
-int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp);
-int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-
-int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
-
-int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+/* Basic */
+static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+/* AP */
+static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
+/* STA */
+static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 
 void register_apis() {
+    /* Basic */
+    register_api(API_GET_IP_ADDR, NULL, get_ip_addr_handler);
+    register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
     register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
     register_api(API_INDIGO_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
+    /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
-    register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
     register_api(API_DEVICE_RESET, NULL, reset_device_handler);
-    
+    /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
     register_api(API_AP_CONFIGURE, NULL, configure_ap_handler);
@@ -69,7 +73,7 @@ void register_apis() {
     register_api(API_AP_SEND_DISCONNECT, NULL, send_ap_disconnect_handler);
     register_api(API_AP_SET_PARAM , NULL, set_ap_parameter_handler);
     register_api(API_AP_SEND_BTM_REQ, NULL, send_ap_btm_handler);
- 
+    /* STA */
     register_api(API_STA_ASSOCIATE, NULL, start_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
     register_api(API_STA_DISCONNECT, NULL, stop_sta_handler);
@@ -80,45 +84,7 @@ void register_apis() {
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
 }
 
-/* TODO: Move to another file */
-#define WPA_CTRL_OK                                 "OK"
-
-#define TLV_VALUE_APP_VERSION                       "v1.0"
-#define TLV_VALUE_OK                                "OK"
-#define TLV_VALUE_NOT_OK                            "Failed"
-#define TLV_VALUE_INSUFFICIENT_TLV                  "TLV is insufficient to run the command"
-#define TLV_VALUE_STATUS_OK                         0x30
-#define TLV_VALUE_STATUS_NOT_OK                     0x31
-#define TLV_VALUE_LOOP_BACK_STOP_OK                 "Loopback server in idle state"
-#define TLV_VALUE_HOSTAPD_STOP_OK                   "AP stop completed : Hostapd service is inactive."
-#define TLV_VALUE_HOSTAPD_STOP_NOT_OK               "Failed to stop hostapd service."
-#define TLV_VALUE_WPA_SET_PARAMETER_OK              "Set parameter action was successful."
-#define TLV_VALUE_WPA_SET_PARAMETER_NO_OK           "Failed to set parameter."
-#define TLV_VALUE_WPA_PARAMETER_NOT_SUPPORT         "The set parameter is not supported"
-#define TLV_VALUE_HOSTAPD_START_OK                  "AP is up : Hostapd service is active"
-#define TLV_VALUE_ASSIGN_STATIC_IP_OK               "Static IP successfully assigned to wireless interface"
-#define TLV_VALUE_ASSIGN_STATIC_IP_NOT_OK           "Static IP failed to be assigned to wireless interface"
-#define TLV_VALUE_LOOPBACK_SVR_START_OK             "Loop back server initialized"
-#define TLV_VALUE_LOOPBACK_SVR_START_NOT_OK         "Failed to initialise loop back server"
-#define TLV_VALUE_WIRELESS_INTERFACE_NOT_OK         "Wireless interface is not available"
-#define TLV_VALUE_HOSTAPD_CTRL_NOT_OK               "Failed to connect to hostapd control interface"
-#define TLV_VALUE_HOSTAPD_NOT_OK                    "Failed to find hostapd PID"
-
-#define TLV_VALUE_WPA_S_STOP_NOT_OK                 "Failed to stop wpa supplicant service."
-#define TLV_VALUE_WPA_S_STOP_OK                     "Indigo tool STA was successfully disconnected"
-#define TLV_VALUE_WPA_S_ASSOC_OK                    "STA is up: WPA supplicant associated"
-#define TLV_VALUE_WPA_S_ASSOC_NOT_OK                "WPA supplicant cannot associate with AP"
-#define TLV_VALUE_WPA_S_DISCONNECT_OK               "Sent DISCONNECT message"
-#define TLV_VALUE_WPA_S_DISCONNECT_NOT_OK           "Failed to send DISCONNECT message"
-#define TLV_VALUE_WPA_S_RECONNECT_OK                "Sent RECONNECT message"
-#define TLV_VALUE_WPA_S_RECONNECT_NOT_OK            "Failed to send RECONNECT message"
-#define TLV_VALUE_WPA_S_CTRL_NOT_OK                 "Failed to connect to WPA supplicant control interface"
-#define TLV_VALUE_WPA_S_BTM_QUERY_OK                "Sent WNM_BSS_QUERY"
-#define TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK            "Failed to WNM_BSS_QUERY"
-#define TLV_VALUE_RESET_OK                          "Device reset successfully"
-#define TLV_VALUE_RESET_NOT_OK                      "Device reset successfully"
-
-int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
@@ -126,10 +92,7 @@ int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *r
     return 0;
 }
 
-#define DUT_TYPE_STAUT           0x01
-#define DUT_TYPE_APUT            0x02
-
-int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_RESET_NOT_OK;
     char role[256], log_level[256], buffer[256];
@@ -169,6 +132,7 @@ int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp
         system(buffer);
         system("cp -rf ap_reset_config.conf /etc/hostapd/hostapd.conf");
     }
+    sleep(1);
 
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_RESET_OK;
@@ -183,9 +147,9 @@ done:
 
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
-int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
-    char buffer[10240];
+    char buffer[BUFFER_LEN];
     char *parameter[] = {"pidof", "hostapd", NULL};
     char *message = NULL;
 
@@ -292,7 +256,6 @@ struct tlv_to_config_name maps[] = {
     { TLV_STA_OWE_GROUP, "owe_group", 0 },
 };
 
-
 static char* find_hostapd_config_name(int tlv_id) {
     int i;
     for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
@@ -312,7 +275,6 @@ static struct tlv_to_config_name* find_hostapd_config(int tlv_id) {
     }
     return NULL;
 }
-
 
 static int generate_hostapd_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
     int i, j;
@@ -336,7 +298,7 @@ static int generate_hostapd_config(char *buffer, int buffer_size, struct packet_
 
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
-int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
     char buffer[10240];
     struct tlv_hdr *tlv;
@@ -362,11 +324,12 @@ int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp
 
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
-int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_HOSTAPD_START_OK;
     int len;
 
-    len = system("hostapd -B -P /run/hostapd.pid -g /run/hostapd-global -ddK -f /tmp/hostapd.log /etc/hostapd/hostapd.conf");
+    //len = system("hostapd -B -P /run/hostapd.pid -g /run/hostapd-global -ddK -f /tmp/hostapd.log /etc/hostapd/hostapd.conf");
+    len = system("hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global -ddK /etc/hostapd/hostapd.conf");
     sleep(1);
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -379,7 +342,7 @@ int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
 // Bytes to DUT : 01 50 06 00 ed ff ff 00 55 0c 31 39 32 2e 31 36 38 2e 31 30 2e 33
 // ACK  :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'} 
-int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
     char buffer[64];
     struct tlv_hdr *tlv;
@@ -412,7 +375,7 @@ int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *
 // Bytes to DUT : 01 50 01 00 ee ff ff 
 // ACK:  Bytes from DUT : 01 00 01 00 ee ff ff a0 01 01 30 a0 00 15 41 43 4b 3a 20 43 6f 6d 6d 61 6e 64 20 72 65 63 65 69 76 65 64 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: '9c:b6:d0:19:40:c7', <IndigoResponseTLV.DUT_MAC_ADDR: 40963>: '9c:b6:d0:19:40:c7'} 
-int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char buffer[64];
 
     get_mac_address(buffer, sizeof(buffer), get_wireless_interface());
@@ -427,7 +390,7 @@ int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp
 
 #define LOOPBACK_TIMEOUT            30
 
-int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
     char tool_ip[256];
     char tool_port[256];
@@ -477,7 +440,7 @@ done:
 
 // ACK:  {"status": 0, "message": "ACK: Command received", "tlvs": {}} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'} 
-int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     /* Stop loopback */
     if (loopback_client_status()) {
         loopback_client_stop();
@@ -489,7 +452,7 @@ int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrap
     return 0;
 }
 
-int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char buffer[8192];
     char response[1024];
@@ -550,7 +513,7 @@ done:
     return 0;
 }
 
-int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = NULL;
     char buffer[8192];
@@ -607,7 +570,7 @@ done:
     return 0;
 }
 
-int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK, len = 0;
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
@@ -724,7 +687,7 @@ done:
     return 0;
 }
 
-int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK, len = 0;
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
@@ -790,7 +753,7 @@ done:
     return 0;
 }
 
-int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = NULL;
     char buffer[64];
@@ -816,7 +779,7 @@ done:
     return 0;
 }
 
-int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
     char buffer[10240];
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
@@ -942,7 +905,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     return strlen(buffer);
 }
 
-int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
     char buffer[10240];
     struct tlv_hdr *tlv;
@@ -961,7 +924,7 @@ int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *res
     return 0;
 }
 
-int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_ASSOC_OK;
     char buffer[256], response[1024];
@@ -1016,7 +979,7 @@ done:
     return 0;
 }
 
-int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_DISCONNECT_NOT_OK;
     char buffer[256], response[1024];
@@ -1052,7 +1015,7 @@ done:
     return 0;
 }
 
-int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_RECONNECT_NOT_OK;
     char buffer[256], response[1024];
@@ -1088,7 +1051,7 @@ done:
     return 0;
 }
 
-int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = NULL;
     char buffer[8192];
@@ -1142,7 +1105,7 @@ done:
     return 0;
 }
 
-int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
     char buffer[1024];
@@ -1200,7 +1163,7 @@ done:
     return 0;
 }
 
-int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
     char buffer[1024];

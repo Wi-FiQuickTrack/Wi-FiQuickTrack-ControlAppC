@@ -223,6 +223,47 @@ struct indigo_api {
 #define TLV_DUT_MAC_ADDR                        0xa003
 #define TLV_CONTROL_APP_VERSION                 0xa004
 
+/* TLV Value */
+#define DUT_TYPE_STAUT                          0x01
+#define DUT_TYPE_APUT                           0x02
+
+#define TLV_VALUE_APP_VERSION                   "v1.0"
+#define TLV_VALUE_OK                            "OK"
+#define TLV_VALUE_NOT_OK                        "Failed"
+#define TLV_VALUE_INSUFFICIENT_TLV              "TLV is insufficient to run the command"
+#define TLV_VALUE_STATUS_OK                     0x30
+#define TLV_VALUE_STATUS_NOT_OK                 0x31
+#define TLV_VALUE_LOOP_BACK_STOP_OK             "Loopback server in idle state"
+#define TLV_VALUE_HOSTAPD_STOP_OK               "AP stop completed : Hostapd service is inactive."
+#define TLV_VALUE_HOSTAPD_STOP_NOT_OK           "Failed to stop hostapd service."
+#define TLV_VALUE_WPA_SET_PARAMETER_OK          "Set parameter action was successful."
+#define TLV_VALUE_WPA_SET_PARAMETER_NO_OK       "Failed to set parameter."
+#define TLV_VALUE_WPA_PARAMETER_NOT_SUPPORT     "The set parameter is not supported"
+#define TLV_VALUE_HOSTAPD_START_OK              "AP is up : Hostapd service is active"
+#define TLV_VALUE_ASSIGN_STATIC_IP_OK           "Static IP successfully assigned to wireless interface"
+#define TLV_VALUE_ASSIGN_STATIC_IP_NOT_OK       "Static IP failed to be assigned to wireless interface"
+#define TLV_VALUE_LOOPBACK_SVR_START_OK         "Loop back server initialized"
+#define TLV_VALUE_LOOPBACK_SVR_START_NOT_OK     "Failed to initialise loop back server"
+#define TLV_VALUE_WIRELESS_INTERFACE_NOT_OK     "Wireless interface is not available"
+#define TLV_VALUE_HOSTAPD_CTRL_NOT_OK           "Failed to connect to hostapd control interface"
+#define TLV_VALUE_HOSTAPD_NOT_OK                "Failed to find hostapd PID"
+
+#define TLV_VALUE_WPA_S_STOP_NOT_OK             "Failed to stop wpa supplicant service."
+#define TLV_VALUE_WPA_S_STOP_OK                 "Indigo tool STA was successfully disconnected"
+#define TLV_VALUE_WPA_S_ASSOC_OK                "STA is up: WPA supplicant associated"
+#define TLV_VALUE_WPA_S_ASSOC_NOT_OK            "WPA supplicant cannot associate with AP"
+#define TLV_VALUE_WPA_S_DISCONNECT_OK           "Sent DISCONNECT message"
+#define TLV_VALUE_WPA_S_DISCONNECT_NOT_OK       "Failed to send DISCONNECT message"
+#define TLV_VALUE_WPA_S_RECONNECT_OK            "Sent RECONNECT message"
+#define TLV_VALUE_WPA_S_RECONNECT_NOT_OK        "Failed to send RECONNECT message"
+#define TLV_VALUE_WPA_S_CTRL_NOT_OK             "Failed to connect to WPA supplicant control interface"
+#define TLV_VALUE_WPA_S_BTM_QUERY_OK            "Sent WNM_BSS_QUERY"
+#define TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK        "Failed to WNM_BSS_QUERY"
+#define TLV_VALUE_RESET_OK                      "Device reset successfully"
+#define TLV_VALUE_RESET_NOT_OK                  "Device reset successfully"
+
+#define WPA_CTRL_OK                             "OK"
+
 struct indigo_api* get_api_by_id(int id);
 struct indigo_tlv* get_tlv_by_id(int id);
 char* get_api_type_by_id(int id);

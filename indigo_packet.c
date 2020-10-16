@@ -108,7 +108,6 @@ int free_packet_wrapper(struct packet_wrapper *wrapper) {
     return 0;
 }
 
-
 int parse_message_hdr(struct message_hdr *hdr, char *message, int message_len) {
     if (message_len < sizeof(struct message_hdr)) {
         return -1;
@@ -129,8 +128,6 @@ int gen_message_hdr(char *message, int message_len, struct message_hdr *hdr) {
     if (message_len < sizeof(struct message_hdr)) {
         return -1;
     }
-
-    // printf("%s:%d seq=0x%04x %02x %02x\n", __func__, __LINE__, hdr->seq, (hdr->seq >> 8), (hdr->seq & 0x00ff));
 
     message[len++] = hdr->version;
     message[len++] = (char) (hdr->type >> 8);

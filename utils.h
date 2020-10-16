@@ -20,6 +20,10 @@
 /* OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS                          */
 /* SOFTWARE. */
 
+#define BUFFER_LEN                    1024
+#define LARGE_BUFFER_LEN              8192
+
+/* Log */
 enum {
     LOG_LEVEL_DEBUG_VERBOSE = 0,    
     LOG_LEVEL_DEBUG = 1,
@@ -33,6 +37,8 @@ void indigo_logger(int level, const char *fmt, ...);
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 int write_file(char *fn, char *buffer, int len);
 
+
+
 int get_mac_address(char *buffer, int size, char *interface);
 int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);
 int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout);
@@ -44,7 +50,7 @@ int loopback_client_status();
 #define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
 #define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
 #define WIRELESS_INTERFACE_DEFAULT                 "wlan0"
-#define SERVICE_PORT_DEFAULT                       9002
+#define SERVICE_PORT_DEFAULT                       9004
 
 char* get_hapd_ctrl_path();
 int set_hapd_ctrl_path(char* path);

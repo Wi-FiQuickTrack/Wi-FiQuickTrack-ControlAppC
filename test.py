@@ -65,15 +65,20 @@ def test_sta_associate():
     m = Msg(0x2000)
     return m
 
+def test_ap_start():
+    m = Msg(0x1000)
+    return m
+
 #m = test_get_control_app()
 #m = test_loopback_start()
 #m = test_ap_send_disassociate()
 #m = test_sta_configure()
-m = test_sta_associate()
+# m = test_sta_associate()
+m = test_ap_start()
 output = m.to_bytes()
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address = ('10.252.10.100', 9004)
+server_address = ('10.252.10.47', 9002)
 
 try:
     # Send Requset
