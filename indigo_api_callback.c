@@ -388,6 +388,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     return 0;
 }
 
+/* TODO */
 #define LOOPBACK_TIMEOUT            30
 
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -420,10 +421,13 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", "br0");
     } else if (find_interface_ip(local_ip, sizeof(local_ip), get_wireless_interface())) {
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wireless_interface());
+// #ifdef __TEST__        
     } else if (find_interface_ip(local_ip, sizeof(local_ip), "eth0")) {
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", "eth0");
+// #endif /* __TEST__ */
     } else {
         indigo_logger(LOG_LEVEL_ERROR, "No availabe interface");
+        goto done;
     }
     /* Start loopback */
     if (!loopback_client_start(tool_ip, atoi(tool_port), local_ip, atoi(tool_port), LOOPBACK_TIMEOUT)) {
@@ -843,6 +847,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 
     struct tlv_to_config_name* cfg;
 
+    /* TODO */
     sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\npmf=1\n");
 
     for (i = 0; i < wrapper->tlv_num; i++) {
@@ -959,7 +964,7 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
         memset(response, 0, sizeof(response));
         wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
         // quick workaround to confirm link
-        printf("%s %s\n", response, strstr(response, "wpa_state=COMPLETED") ? "Connected" : "Not connected");
+//        printf("%s %s\n", response, strstr(response, "wpa_state=COMPLETED") ? "Connected" : "Not connected");
         if (strstr(response, "wpa_state=COMPLETED")) {
             printf("Connected.\n");
             status = TLV_VALUE_STATUS_OK;

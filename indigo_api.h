@@ -260,7 +260,7 @@ struct indigo_api {
 #define TLV_VALUE_WPA_S_BTM_QUERY_OK            "Sent WNM_BSS_QUERY"
 #define TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK        "Failed to WNM_BSS_QUERY"
 #define TLV_VALUE_RESET_OK                      "Device reset successfully"
-#define TLV_VALUE_RESET_NOT_OK                  "Device reset successfully"
+#define TLV_VALUE_RESET_NOT_OK                  "Failed to run Device reset"
 
 #define WPA_CTRL_OK                             "OK"
 

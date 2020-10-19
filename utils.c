@@ -194,6 +194,7 @@ static void loopback_client_timeout(void *eloop_ctx, void *timeout_ctx) {
     eloop_unregister_read_sock(s);
     close(s);
     loopback_socket = 0;
+    indigo_logger(LOG_LEVEL_INFO, "Loopback Client stops");
 }
 
 int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout) {
@@ -227,12 +228,14 @@ int loopback_client_start(char *target_ip, int target_port, char *local_ip, int 
     }
     loopback_socket = s;
     eloop_register_timeout(timeout, 0, loopback_client_timeout, (void*)(intptr_t)s, NULL);
+    indigo_logger(LOG_LEVEL_INFO, "Loopback Client starts");
 
     return 0;
 }
 
 int loopback_client_stop() {
     if (loopback_socket) {
+        eloop_cancel_timeout(loopback_client_timeout, (void*)(intptr_t)loopback_socket, NULL);
         eloop_unregister_read_sock(loopback_socket);
         close(loopback_socket);
         loopback_socket = 0;
@@ -263,7 +266,6 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
     freeifaddrs(ifap);
     return 0;
 }
-
 
 int get_mac_address(char *buffer, int size, char *interface) {
     struct ifreq s;

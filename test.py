@@ -1,4 +1,4 @@
-import random, socket, sys
+import random, socket, string, sys, time
 
 class Tlv():
     def __init__(self, id, val):
@@ -36,6 +36,38 @@ class Msg():
 
         return raw
 
+def get_hexstring(input):
+    return ("".join("0x{:02x} ".format(ord(c)) for c in input)).rstrip()
+
+def send_indigo_api(ip, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = (ip, port)
+
+    for output in outputs:
+        try:
+            # Send Requset
+            print >>sys.stderr, 'sending request'
+            sent = sock.sendto(output, server_address)
+
+            # Receive ACK
+            print >>sys.stderr, 'waiting to receive ack'
+            data, server = sock.recvfrom(4096)
+            print >>sys.stderr, 'received "%s"' % get_hexstring(data)
+
+            # Receive Response
+            print >>sys.stderr, 'waiting to receive response'
+            data, server = sock.recvfrom(4096)
+            print >>sys.stderr, 'received "%s"' % get_hexstring(data)
+            time.sleep(command_interval)
+        except:
+            print("An exception occurred and closing socket")
+            sock.close()
+            break
+
+    print("closing socket")
+    sock.close()
+
+
 def test_get_control_app():
     m = Msg(0x5002)
     return m
@@ -45,6 +77,35 @@ def test_loopback_start():
     m.append_tlv(Tlv(0x0053, bytes(b'10.252.10.100')))
     m.append_tlv(Tlv(0x0054, bytes(b'20480')))
     return m
+
+def test_loopback_stop():
+    m = Msg(0x5004)
+    return m
+
+def start_loopback_client(target_host='10.252.10.47', target_port=20480, count=10, size=1000):
+    recv_count = 0
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = (target_host, target_port)
+    
+    letters = string.ascii_lowercase
+
+    for i in range(count):
+        loopback_data = ''.join(random.choice(letters) for i in range(size))
+        try:
+            # Send Requset
+            print >>sys.stderr, '[count=%d] sending loopback data len=%d %s...' % (i, len(loopback_data), loopback_data[0:50])
+            sent = sock.sendto(loopback_data, server_address)
+
+            # Receive Response
+            data, server = sock.recvfrom(4096)
+            print >>sys.stderr, '[count=%d] received loopback data len=%d %s...' % (i, len(data), data[0:50])
+            recv_count = recv_count + 1
+        except:
+            print("[count=%d] failed to send socket")
+
+    sock.close()
+    print("Percentage: %d%%" % int((float(recv_count)/float(count))*100) )
+
 
 def test_ap_send_disassociate():
     m = Msg(0x1004)
@@ -69,33 +130,26 @@ def test_ap_start():
     m = Msg(0x1000)
     return m
 
-#m = test_get_control_app()
-#m = test_loopback_start()
-#m = test_ap_send_disassociate()
-#m = test_sta_configure()
-# m = test_sta_associate()
-m = test_ap_start()
-output = m.to_bytes()
+command_interval = 1
+outputs = []
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-server_address = ('10.252.10.47', 9002)
+if len(sys.argv) == 1:
+    m = test_get_control_app()
+    outputs.append(m.to_bytes())
+elif len(sys.argv) >= 2:
+    if sys.argv[1] == "get_control_app":
+        m = test_get_control_app()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "loopback_start":
+        m = test_loopback_start()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "loopback_test":
+        start_loopback_client('10.252.10.47', 20480, 10, 1000)
+        m = test_get_control_app()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "loopback_stop":
+        m = test_loopback_stop()
+        outputs.append(m.to_bytes())
+    else:
 
-try:
-    # Send Requset
-    print >>sys.stderr, 'sending request'
-    sent = sock.sendto(output, server_address)
-
-    # Receive ACK
-    print >>sys.stderr, 'waiting to receive ack'
-    data, server = sock.recvfrom(4096)
-    print >>sys.stderr, 'received "%s"' % data
-
-    # Receive Response
-    print >>sys.stderr, 'waiting to receive response'
-    data, server = sock.recvfrom(4096)
-    print >>sys.stderr, 'received "%s"' % data
-
-finally:
-    print >>sys.stderr, 'closing socket'
-    sock.close()
-
+send_indigo_api('10.252.10.47', 9004)
