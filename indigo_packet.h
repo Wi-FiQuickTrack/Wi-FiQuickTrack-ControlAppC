@@ -23,7 +23,8 @@
 #ifndef _INDIGO_PACKET_
 #define _INDIGO_PACKET_
 
-#define TLV_NUM       128
+#define TLV_NUM           128
+#define TLV_VALUE_SIZE    256
 
 /* Packet structure */
 struct __attribute__((__packed__)) message_hdr {

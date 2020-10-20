@@ -95,13 +95,14 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_RESET_NOT_OK;
-    char role[256], log_level[256], buffer[256];
+    char buffer[TLV_VALUE_SIZE];
+    char role[TLV_VALUE_SIZE], log_level[TLV_VALUE_SIZE], clear[TLV_VALUE_SIZE];
     struct tlv_hdr *tlv = NULL;
 
     /* TLV: ROLE */
     tlv = find_wrapper_tlv_by_id(req, TLV_ROLE);
     memset(role, 0, sizeof(role));
-    if (!tlv) {
+    if (tlv) {
         memcpy(role, tlv->value, tlv->len);
     } else {
         goto done;
@@ -109,10 +110,14 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     /* TLV: DEBUG_LEVEL */
     tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
     memset(log_level, 0, sizeof(log_level));
-    if (!tlv) {
+    if (tlv) {
         memcpy(log_level, tlv->value, tlv->len);
-    } else {
-        goto done;
+    }
+    /* TLV: CLEAR */
+    tlv = find_wrapper_tlv_by_id(req, TLV_CLEAR);
+    memset(clear, 0, sizeof(clear));
+    if (tlv) {
+        memcpy(clear, tlv->value, tlv->len);
     }
 
     if (role[0] == DUT_TYPE_STAUT) {
@@ -778,7 +783,7 @@ done:
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     if (status == TLV_VALUE_STATUS_OK) {
-        fill_wrapper_tlv_bytes(resp, TLV_DUT_IP_ADDRESS, strlen(buffer), buffer);
+        fill_wrapper_tlv_bytes(resp, TLV_DUT_WLAN_IP_ADDR, strlen(buffer), buffer);
     }
     return 0;
 }
@@ -905,7 +910,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     */
 
     strcat(buffer, "}\n");
-    printf("%s\n", buffer);
+    //printf("%s\n", buffer);
 
     return strlen(buffer);
 }
