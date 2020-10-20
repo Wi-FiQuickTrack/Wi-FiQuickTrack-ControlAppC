@@ -154,7 +154,7 @@ static void usage() {
     printf("usage:\n");
     printf("app [-h] [-p<port number>] [-i<wireless interface>]\n\n");
     printf("usage:\n");
-    printf("  -d = debug with hex message to tool when assemble packet\n");
+    printf("  -d = debug with hex message when assemble packet to test tool\n");
     printf("  -i = wireless interface used by the test\n");
     printf("  -p = port number of the application\n\n");
 }
