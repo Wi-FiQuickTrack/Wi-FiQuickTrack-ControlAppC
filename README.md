@@ -1,5 +1,5 @@
 Indigo Control App
-------------------
+------------------------------------------------------------------------
 
 Copyright (c) 2020 Wi-Fi Alliance                                             
 Permission to a personal, non-exclusive, non-transferable use of this         
@@ -22,3 +22,9 @@ FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
 CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT                    
 OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS                       
 SOFTWARE.
+
+------------------------------------------------------------------------
+Build & Run
+------------------------------------------------------------------------
+make clean ; make
+sudo ./app -p <port>
