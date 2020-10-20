@@ -1247,7 +1247,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* It may need to check whether to just scan */
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}");
+    len = sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}");
     if (len) {
         write_file(WPAS_CONF_FILE, buffer, len);
     }
@@ -1280,7 +1280,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* TLV: BSSID */
     tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
-    if (!tlv) {
+    if (tlv) {
         memcpy(bssid, tlv->value, tlv->len);
     } else {
         goto done;
@@ -1288,7 +1288,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* TLV: ANQP_INFO_ID */
     tlv = find_wrapper_tlv_by_id(req, TLV_ANQP_INFO_ID);
-    if (!tlv) {
+    if (tlv) {
         memcpy(anqp_info_id, tlv->value, tlv->len);
     }
 
@@ -1303,6 +1303,8 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     /* Send command to wpa_supplicant UDS socket */
     resp_len = sizeof(response) - 1;
     wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    
+    printf("%s -> resp: %s\n", buffer, response);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
