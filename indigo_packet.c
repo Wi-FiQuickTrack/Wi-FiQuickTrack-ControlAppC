@@ -28,6 +28,7 @@
 #include "utils.h"
 
 int debug_packet = 0;
+int debug_assemble_packet = 0;
 
 int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
     int parser = 0, ret, i;
@@ -72,9 +73,9 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
     for (i = 0; i < req->tlv_num; i++) {
         tlv = get_tlv_by_id(req->tlv[i]->id);
         if (tlv) {
-            indigo_logger(LOG_LEVEL_INFO, "TLV: 0x%04x (%s)", tlv->id, tlv->name);
+            indigo_logger(LOG_LEVEL_INFO, "    TLV: 0x%04x (%s)", tlv->id, tlv->name);
         } else {
-            indigo_logger(LOG_LEVEL_WARNING, "TLV: 0x%04x Unknown", req->tlv[i]->id);
+            indigo_logger(LOG_LEVEL_WARNING, "    TLV: 0x%04x Unknown", req->tlv[i]->id);
             return -1;
         }
     }
@@ -153,7 +154,7 @@ int print_hex(char *message, int message_len) {
     for(i = 0; i < message_len; i++)  {
         printf("0x%02x ", (unsigned char)message[i]);
     }
-    printf("\n");
+    printf("\n\n");
     return 0;
 }
 
@@ -219,8 +220,8 @@ int assemble_packet(char *packet, int packet_size, struct packet_wrapper *wrappe
         }
     }
 
-    // Debug
-    // print_hex(packet, packet_len);
+    if (debug_assemble_packet)
+        print_hex(packet, packet_len);
 
     return packet_len;
 }
