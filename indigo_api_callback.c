@@ -465,6 +465,7 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
+    size_t resp_len;
 
     /* Check hostapd status. TODO: it may use UDS directly */
     memset(buffer, 0, sizeof(buffer));
@@ -499,7 +500,8 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
     memset(buffer, 0, sizeof(buffer));
     snprintf(buffer, sizeof(buffer), "DISASSOCIATE %s reason=1", address);
     /* Send command to hostapd UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -518,7 +520,8 @@ done:
 }
 
 static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = NULL;
     char buffer[8192];
     char response[1024];
@@ -556,7 +559,8 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
     memset(buffer, 0, sizeof(buffer));
     snprintf(buffer, sizeof(buffer), "SET %s %s", param_name, param_value);
     /* Send command to hostapd UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -575,7 +579,8 @@ done:
 }
 
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK, len = 0;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
@@ -672,8 +677,9 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
         status = TLV_VALUE_STATUS_NOT_OK;
         message = TLV_VALUE_HOSTAPD_CTRL_NOT_OK;
         goto done;
-    }    
-    wpa_ctrl_request(w, request, strlen(request), response, (size_t*)&len, NULL);
+    }
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, request, strlen(request), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -692,7 +698,8 @@ done:
 }
 
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK, len = 0;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
@@ -738,8 +745,9 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
         status = TLV_VALUE_STATUS_NOT_OK;
         message = TLV_VALUE_HOSTAPD_CTRL_NOT_OK;
         goto done;
-    }    
-    wpa_ctrl_request(w, request, strlen(request), response, (size_t*)&len, NULL);
+    }
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, request, strlen(request), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -934,6 +942,7 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
     char *message = TLV_VALUE_WPA_S_ASSOC_OK;
     char buffer[256], response[1024];
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    size_t resp_len;
 
     system("sudo rfkill unblock wlan");
     sleep(1);
@@ -962,7 +971,8 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
     sprintf(buffer, "STATUS");    
     for (i = 0; i < 6; i++) {
         memset(response, 0, sizeof(response));
-        wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+        resp_len = sizeof(response) - 1;
+        wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
         // quick workaround to confirm link
 //        printf("%s %s\n", response, strstr(response, "wpa_state=COMPLETED") ? "Connected" : "Not connected");
         if (strstr(response, "wpa_state=COMPLETED")) {
@@ -988,7 +998,8 @@ static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_DISCONNECT_NOT_OK;
     char buffer[256], response[1024];
-    int len, status, i;
+    int status, i;
+    size_t resp_len;
 
     /* Open WPA supplicant UDS socket */
     w = wpa_ctrl_open(get_wpas_ctrl_path());
@@ -1002,7 +1013,8 @@ static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "DISCONNECT");
     memset(response, 0, sizeof(response));
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
         goto done;
@@ -1025,6 +1037,7 @@ static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_
     char *message = TLV_VALUE_WPA_S_RECONNECT_NOT_OK;
     char buffer[256], response[1024];
     int len, status, i;
+    size_t resp_len;
 
     /* Open WPA supplicant UDS socket */
     w = wpa_ctrl_open(get_wpas_ctrl_path());
@@ -1038,7 +1051,8 @@ static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "RECONNECT");
     memset(response, 0, sizeof(response));
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
         goto done;
@@ -1057,7 +1071,8 @@ done:
 }
 
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = NULL;
     char buffer[8192];
     char response[1024];
@@ -1092,7 +1107,8 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
     memset(buffer, 0, sizeof(buffer));
     snprintf(buffer, sizeof(buffer), "SET %s %s", param_name, param_value);
     /* Send command to wpa_supplicant UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -1111,7 +1127,8 @@ done:
 }
 
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
     char buffer[1024];
     char response[1024];
@@ -1149,7 +1166,8 @@ static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_
     }
 
     /* Send command to wpa_supplicant UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -1177,6 +1195,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     char anqp_info_id[256];
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
+    size_t resp_len;
 
     /* It may need to check whether to just scan */
     memset(buffer, 0, sizeof(buffer));
@@ -1202,7 +1221,8 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     memset(buffer, 0, sizeof(buffer));
     memset(response, 0, sizeof(response));
     sprintf(buffer, "SCAN");
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -1233,7 +1253,8 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     }
 
     /* Send command to wpa_supplicant UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
