@@ -130,6 +130,40 @@ def test_ap_start():
     m = Msg(0x1000)
     return m
 
+def test_ap_stop():
+    m = Msg(0x1001)
+    return m
+
+def test_ap_configure():
+    # Bytes to DUT : 01 10 02 01 51 ff ff 00 01 11 49 6e 64 69 67 6f 5f 31 36 30 32 38 33 39 35 39 34
+    #                00 07 01 31
+    #                00 02 02 31 31
+    #                00 1e 01 67
+    #                00 0e 20 30 31 32 33 34 35 36 37 38 39 61 62 63 64 65 66 30 31 32 33 34 35 36 37 38 39 61 62 63 64 65 66
+    #                00 0b 01 32 
+    #                00 0c 03 53 41 45 
+    #                00 0d 04 43 43 4d 50
+    m = Msg(0x1002)
+    
+    m.append_tlv(Tlv(0x0001, bytes(b'Indigo_1602839594')))
+    m.append_tlv(Tlv(0x0007, bytes(b'1')))
+    m.append_tlv(Tlv(0x0002, bytes(b'11')))
+    m.append_tlv(Tlv(0x001e, bytes(b'g')))
+    m.append_tlv(Tlv(0x000e, bytes(b'0123456789abcdef0123456789abcdef')))
+    m.append_tlv(Tlv(0x000b, bytes(b'2')))
+    m.append_tlv(Tlv(0x000c, bytes(b'SAE')))
+    m.append_tlv(Tlv(0x000d, bytes(b'CCMP')))
+    return m
+
+def test_device_reset():
+    # REQ: 01 50 07 01 4f ff ff 00 5c 01 32 00 57 01 30
+    # RSP: 01 00 01 01 4f ff ff a0 01 01 30 a0 00 15 41 43 4b 3a 20 43 6f 6d 6d 61 6e 64 20 72 65 63 65 69 76 65 64
+    m = Msg(0x5007)
+    m.append_tlv(Tlv(0x005c, bytes(0x32)))
+    m.append_tlv(Tlv(0x0057, bytes(0x30)))
+    return m
+
+
 command_interval = 1
 outputs = []
 
@@ -150,6 +184,20 @@ elif len(sys.argv) >= 2:
     elif sys.argv[1] == "loopback_stop":
         m = test_loopback_stop()
         outputs.append(m.to_bytes())
+    elif sys.argv[1] == "device_reset":
+        m = test_device_reset()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "ap_start":
+        m = test_ap_start()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "ap_stop":
+        m = test_ap_stop()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "ap_configure":
+        m = test_ap_configure()
+        outputs.append(m.to_bytes())
     else:
+        m = test_get_control_app()
+        outputs.append(m.to_bytes())
 
-send_indigo_api('10.252.10.47', 9004)
+send_indigo_api('10.252.10.47', 9001)
