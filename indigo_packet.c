@@ -27,7 +27,7 @@
 #include "indigo_api.h"
 #include "utils.h"
 
-int debug_packet = 0;
+int debug_rcv_packet = 0;
 int debug_assemble_packet = 0;
 
 int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
@@ -37,7 +37,7 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
 
     ret = parse_message_hdr(&req->hdr, packet, packet_len);
     if (ret > 0) {
-        if (debug_packet) {
+        if (debug_rcv_packet) {
             print_message_hdr(&req->hdr);
         }
         parser += ret;
@@ -51,7 +51,7 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
 
         ret = parse_tlv(req->tlv[req->tlv_num], packet + parser, packet_len - parser);
         if (ret > 0) {
-            if (debug_packet) {
+            if (debug_rcv_packet) {
                 print_tlv(req->tlv[req->tlv_num]);
             }
 
@@ -192,12 +192,12 @@ void print_tlv(struct tlv_hdr *t) {
     char buffer[256];
     struct indigo_tlv *tlv = get_tlv_by_id(t->id);
 
-    indigo_logger(LOG_LEVEL_INFO, "ID: 0x%04x (%s)", t->id, tlv == NULL ? "Unknown" : tlv->name);
-    indigo_logger(LOG_LEVEL_INFO, "Length: %d", t->len);
+    indigo_logger(LOG_LEVEL_INFO, "    ID: 0x%04x (%s)", t->id, tlv == NULL ? "Unknown" : tlv->name);
+    indigo_logger(LOG_LEVEL_INFO, "    Length: %d", t->len);
 
     memset(buffer, 0, sizeof(buffer));
     if (t->len > 0) {
-        sprintf(buffer, "Value: ");
+        sprintf(buffer, "    Value: ");
     }
     for (i = 0; i < t->len; i++) {
         sprintf(buffer, "%s0x%02x ", buffer, t->value[i]);

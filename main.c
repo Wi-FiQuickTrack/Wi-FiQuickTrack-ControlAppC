@@ -40,6 +40,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx);
 static int parse_parameters(int argc, char *argv[]);
 static void usage();
 extern int debug_assemble_packet;
+extern int debug_rcv_packet;
 
 /* Initiate the service port. */
 static int control_socket_init(int port) {
@@ -154,7 +155,8 @@ static void usage() {
     printf("usage:\n");
     printf("app [-h] [-p<port number>] [-i<wireless interface>]\n\n");
     printf("usage:\n");
-    printf("  -d = debug with hex message when assemble packet to test tool\n");
+    printf("  -d = Debug with hex message when assemble packet to test tool\n");
+    printf("  -r = print Received message from test tool\n");
     printf("  -i = wireless interface used by the test\n");
     printf("  -p = port number of the application\n\n");
 }
@@ -163,10 +165,13 @@ static void usage() {
 static int parse_parameters(int argc, char *argv[]) {
     int c;
 
-    while ((c = getopt(argc, argv, "i:hp:d")) != -1) {
+    while ((c = getopt(argc, argv, "i:hp:dr")) != -1) {
         switch (c) {
         case 'd':
             debug_assemble_packet = 1;
+            break;
+        case 'r':
+            debug_rcv_packet = 1;
             break;
         case 'p':
             set_service_port(atoi(optarg));
