@@ -88,7 +88,7 @@ void indigo_logger(int level, const char *fmt, ...) {
         break;
     }
 
-    snprintf(format, maxlen, "controlappc.%s %s", log_type, fmt);
+    snprintf(format, maxlen, "controlappc.%8s  %s", log_type, fmt);
 
     if (level >= stdout_level) {
         debug_print_timestamp();
@@ -157,7 +157,7 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
 int write_file(char *fn, char *buffer, int len) {
     int fd;
 
-    fd = open(fn, O_CREAT | O_WRONLY);
+    fd = open(fn, O_CREAT | O_WRONLY | O_TRUNC);
     if (fd > 0) {
         (void)write(fd, buffer, len);
         close(fd);

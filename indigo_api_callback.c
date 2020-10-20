@@ -185,24 +185,174 @@ static struct tlv_to_config_name* find_hostapd_config(int tlv_id) {
     return NULL;
 }
 
-static int generate_hostapd_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
-    int i, j;
+static int get_center_freq_index(int channel, int width) {
+    if (width == 1) {
+        if (channel >= 36 && channel <= 48) {
+            return 42;
+        } else if (channel <= 64) {
+            return 58;
+        } else if (channel >= 100 && channel <= 112) {
+            return 106;
+        } else if (channel <= 128) {
+            return 122;
+        } else if (channel <= 144) {
+            return 138;
+        } else if (channel >= 149 && channel <= 161) {
+            return 155;
+        }
+    } else if (width == 2) {
+        if (channel >= 36 && channel <= 64) {
+            return 50;
+        } else if (channel >= 36 && channel <= 64) {
+            return 114;
+        }
+    }
+    return 0;
+}
 
-    sprintf(buffer, "ctrl_interface=/var/run/hostapd\nctrl_interface_group=0\ninterface=%s\n", get_wireless_interface());
+static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper) {
+    int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
+    int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0;
+    int i;
+    char buffer[512];
+    char band[64];
+
+    struct tlv_to_config_name* cfg = NULL;
+    struct tlv_hdr *tlv = NULL;
+
+    sprintf(output, "ctrl_interface=/var/run/hostapd\nctrl_interface_group=0\ninterface=%s\n", get_wireless_interface());
 
     for (i = 0; i < wrapper->tlv_num; i++) {
-        for (j = 0; j < sizeof(maps)/sizeof(struct tlv_to_config_name); j++) {
-            if (wrapper->tlv[i]->id == maps[j].tlv_id) {
-                char value[256];
-                memset(value, 0, sizeof(value));
-                memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
-                sprintf(buffer, "%s%s=%s\n", buffer, maps[j].config_name, value);
-                break;
+        tlv = wrapper->tlv[i];
+        cfg = find_hostapd_config(tlv->id);
+        if (!cfg) {
+            indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
+            continue;
+        }
+
+        if (tlv->id == TLV_WPA_KEY_MGMT && (strstr(tlv->value, "SAE") || strstr(tlv->value, "WPA-PSK"))) {
+            has_transition = 1;
+        }
+
+        if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "OWE")) {
+            has_owe = 1;
+        }
+
+        if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "SAE")) {
+            has_sae = 1;
+        }
+
+        if (tlv->id == TLV_WPA && strstr(tlv->value, "2")) {
+            has_wpa = 1;
+        }
+
+        if (tlv->id == TLV_IEEE80211_W) {
+            has_pmf = 1;
+        }
+
+        if (tlv->id == TLV_HW_MODE) {
+            memset(band, 0, sizeof(band));
+            memcpy(band, tlv->value, tlv->len);
+        }
+
+        if (tlv->id == TLV_CHANNEL) {
+            channel = atoi(tlv->value);
+        }
+
+        if (tlv->id == TLV_HE_OPER_CHWIDTH) {
+            chwidth = atoi(tlv->value);
+            chwidthset = 1;
+        }
+
+        if (tlv->id == TLV_IEEE80211_AX && strstr(tlv->value, "1")) {
+            enable_ax = 1;
+        }
+
+        if (tlv->id == TLV_HE_MU_EDCA) {
+            enable_muedca = 1;
+        }
+
+        if (tlv->id == TLV_SAE_GROUPS) {
+            has_sae_groups = 1;
+        }
+
+        memset(buffer, 0, sizeof(buffer));
+        memcpy(buffer, tlv->value, tlv->len);
+        sprintf(output, "%s%s=%s\n", output, cfg->config_name, buffer);
+    }
+
+    if (has_pmf == 0) {
+        if (has_transition) {
+            strcat(output, "ieee80211w=1\n");
+        } else if (has_sae && has_wpa) {
+            strcat(output, "ieee80211w=2\n");
+        } else if (has_owe) {
+            strcat(output, "ieee80211w=2\n");
+        } else if (has_wpa) {
+            strcat(output, "ieee80211w=1\n");
+        }            
+    }
+
+    if (has_sae == 0) {
+        strcat(output, "sae_require_mfp=1\n");
+    }
+
+    // Note: if any new DUT configuration is added for sae_groups,
+    // then the following unconditional sae_groups addition should be
+    // changed to become conditional on there being no other sae_groups
+    // configuration
+    // e.g.:
+    // if IndigoRequestTLV.SAE_GROUPS not in tlv_values:
+    //     field_name = tlv_hostapd_config_mapper.get(IndigoRequestTLV.SAE_GROUPS)
+    //     hostapd_config += "\n" + field_name + "=15 16 17 18 19 20 21"
+    if (!has_sae_groups) {
+        strcat(output, "sae_groups=15 16 17 18 19 20 21\n");
+    }
+
+    // Channel width configuration for ieee80211ax
+    // Default: 20MHz in 2.4G(No configuration required) 80MHz in 5G
+    if (strstr(band, "a") && enable_ax) {
+        if (chwidth > 0) {
+            int center_freq = get_center_freq_index(channel, chwidth);
+            sprintf(buffer, "vht_oper_chwidth=%d\n", chwidth);
+            strcat(output, buffer);
+            sprintf(buffer, "vht_oper_centr_freq_seg0_idx=%d\n", center_freq);
+            strcat(output, buffer);
+            if (chwidthset == 0) {
+                sprintf(buffer, "he_oper_chwidth=%d\n", chwidth);
+                strcat(output, buffer);
             }
+            sprintf(buffer, "he_oper_centr_freq_seg0_idx=%d\n", center_freq);
+            strcat(output, buffer);
         }
     }
 
-    return strlen(buffer);
+    if (enable_muedca) {
+        strcat(output, "he_mu_edca_qos_info_queue_request=1\n");
+        strcat(output, "he_mu_edca_ac_be_aifsn=0\n");
+        strcat(output, "he_mu_edca_ac_be_ecwmin=15\n");
+        strcat(output, "he_mu_edca_ac_be_ecwmax=15\n");
+        strcat(output, "he_mu_edca_ac_be_timer=255\n");
+        strcat(output, "he_mu_edca_ac_bk_aifsn=0\n");
+        strcat(output, "he_mu_edca_ac_bk_aci=1\n");
+        strcat(output, "he_mu_edca_ac_bk_ecwmin=15\n");
+        strcat(output, "he_mu_edca_ac_bk_ecwmax=15\n");
+        strcat(output, "he_mu_edca_ac_bk_timer=255\n");
+        strcat(output, "he_mu_edca_ac_vi_ecwmin=15\n");
+        strcat(output, "he_mu_edca_ac_vi_ecwmax=15\n");
+        strcat(output, "he_mu_edca_ac_vi_aifsn=0\n");
+        strcat(output, "he_mu_edca_ac_vi_aci=2\n");
+        strcat(output, "he_mu_edca_ac_vi_timer=255\n");
+        strcat(output, "he_mu_edca_ac_vo_aifsn=0\n");
+        strcat(output, "he_mu_edca_ac_vo_aci=3\n");
+        strcat(output, "he_mu_edca_ac_vo_ecwmin=15\n");
+        strcat(output, "he_mu_edca_ac_vo_ecwmax=15\n");
+        strcat(output, "he_mu_edca_ac_vo_timer=255\n");
+    }
+
+    // TODO: merge_config_file
+
+    return strlen(output);
 }
 
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
@@ -754,9 +904,8 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     int transition_mode_enabled = 0;
     int owe_configured = 0;
 
-    struct tlv_to_config_name* cfg;
+    struct tlv_to_config_name* cfg = NULL;
 
-    /* TODO */
     sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\npmf=1\n");
 
     for (i = 0; i < wrapper->tlv_num; i++) {
@@ -767,7 +916,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             sprintf(buffer, "%s%s=%s\n", buffer, cfg->config_name, value);
         }
     }
-    sprintf(buffer, "%s%s", buffer, "network={\n");
+    strcat(buffer, "network={\n");
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         cfg = find_hostapd_config(wrapper->tlv[i]->id);
@@ -814,7 +963,6 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     */
 
     strcat(buffer, "}\n");
-    //printf("%s\n", buffer);
 
     return strlen(buffer);
 }
@@ -875,7 +1023,6 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
         resp_len = sizeof(response) - 1;
         wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
         // quick workaround to confirm link
-//        printf("%s %s\n", response, strstr(response, "wpa_state=COMPLETED") ? "Connected" : "Not connected");
         if (strstr(response, "wpa_state=COMPLETED")) {
             printf("Connected.\n");
             status = TLV_VALUE_STATUS_OK;

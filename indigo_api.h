@@ -216,6 +216,8 @@ struct indigo_api {
 #define TLV_STA_OWE_GROUP                       0x008f
 #define TLV_HE_MU_EDCA                          0x0090
 #define TLV_SAE_PMKID_IN_ASSOC                  0x0091
+#define RSNXE_OVERRIDE_EAPOL                    0x0092
+#define TRANSITION_DISABLE                      0x0093
 
 #define TLV_MESSAGE                             0xa000
 #define TLV_STATUS                              0xa001
