@@ -235,6 +235,9 @@ struct tlv_to_config_name maps[] = {
     { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
     { TLV_HE_OPER_CHWIDTH, "he_oper_chwidth", 0 },
     { TLV_IEEE80211_AX, "ieee80211ax", 0 },
+    { TLV_SAE_PWE, "sae_pwe"},
+    { TLV_OWE_GROUPS, "owe_groups"},
+    { TLV_HE_MU_EDCA, "he_mu_edca_qos_info_param_count"},
     { TLV_MBO_ASSOC_DISALLOW, "mbo_assoc_disallow", 0 },
     { TLV_GAS_COMEBACK_DELAY, "gas_comeback_delay", 0 },
     /* wpas, seperate? */
@@ -298,6 +301,8 @@ static int generate_hostapd_config(char *buffer, int buffer_size, struct packet_
         }
     }
 
+    sprintf(buffer, "%sieee80211w=2\nsae_require_mfp=1\nsae_groups=15 16 17 18 19 20 21\n", buffer);
+
     return strlen(buffer);
 }
 
@@ -333,7 +338,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char *message = TLV_VALUE_HOSTAPD_START_OK;
     int len;
 
-    //len = system("hostapd -B -P /run/hostapd.pid -g /run/hostapd-global -ddK -f /tmp/hostapd.log /etc/hostapd/hostapd.conf");
     len = system("hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global -ddK /etc/hostapd/hostapd.conf");
     sleep(1);
 
