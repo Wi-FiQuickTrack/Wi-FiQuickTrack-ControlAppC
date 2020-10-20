@@ -27,7 +27,8 @@
 #include "indigo_api.h"
 #include "utils.h"
 
-int debug_packet = 0;
+int debug_rcv_packet = 0;
+int debug_assemble_packet = 0;
 
 int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
     int parser = 0, ret, i;
@@ -36,7 +37,7 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
 
     ret = parse_message_hdr(&req->hdr, packet, packet_len);
     if (ret > 0) {
-        if (debug_packet) {
+        if (debug_rcv_packet) {
             print_message_hdr(&req->hdr);
         }
         parser += ret;
@@ -50,7 +51,7 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
 
         ret = parse_tlv(req->tlv[req->tlv_num], packet + parser, packet_len - parser);
         if (ret > 0) {
-            if (debug_packet) {
+            if (debug_rcv_packet) {
                 print_tlv(req->tlv[req->tlv_num]);
             }
 
@@ -72,9 +73,9 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
     for (i = 0; i < req->tlv_num; i++) {
         tlv = get_tlv_by_id(req->tlv[i]->id);
         if (tlv) {
-            indigo_logger(LOG_LEVEL_INFO, "TLV: 0x%04x (%s)", tlv->id, tlv->name);
+            indigo_logger(LOG_LEVEL_INFO, "    TLV: 0x%04x (%s)", tlv->id, tlv->name);
         } else {
-            indigo_logger(LOG_LEVEL_WARNING, "TLV: 0x%04x Unknown", req->tlv[i]->id);
+            indigo_logger(LOG_LEVEL_WARNING, "    TLV: 0x%04x Unknown", req->tlv[i]->id);
             return -1;
         }
     }
@@ -153,7 +154,7 @@ int print_hex(char *message, int message_len) {
     for(i = 0; i < message_len; i++)  {
         printf("0x%02x ", (unsigned char)message[i]);
     }
-    printf("\n");
+    printf("\n\n");
     return 0;
 }
 
@@ -191,12 +192,12 @@ void print_tlv(struct tlv_hdr *t) {
     char buffer[256];
     struct indigo_tlv *tlv = get_tlv_by_id(t->id);
 
-    indigo_logger(LOG_LEVEL_INFO, "ID: 0x%04x (%s)", t->id, tlv == NULL ? "Unknown" : tlv->name);
-    indigo_logger(LOG_LEVEL_INFO, "Length: %d", t->len);
+    indigo_logger(LOG_LEVEL_INFO, "    ID: 0x%04x (%s)", t->id, tlv == NULL ? "Unknown" : tlv->name);
+    indigo_logger(LOG_LEVEL_INFO, "    Length: %d", t->len);
 
     memset(buffer, 0, sizeof(buffer));
     if (t->len > 0) {
-        sprintf(buffer, "Value: ");
+        sprintf(buffer, "    Value: ");
     }
     for (i = 0; i < t->len; i++) {
         sprintf(buffer, "%s0x%02x ", buffer, t->value[i]);
@@ -219,8 +220,8 @@ int assemble_packet(char *packet, int packet_size, struct packet_wrapper *wrappe
         }
     }
 
-    // Debug
-    // print_hex(packet, packet_len);
+    if (debug_assemble_packet)
+        print_hex(packet, packet_len);
 
     return packet_len;
 }
