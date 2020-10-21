@@ -27,4 +27,4 @@ SOFTWARE.
 Build & Run
 ------------------------------------------------------------------------
 make clean ; make
-sudo ./app -p <port>
+sudo ./app -p &lt;port&gt;

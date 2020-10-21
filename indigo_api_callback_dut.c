@@ -68,16 +68,59 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     return 0;
 }
 
+#define DEBUG_LEVEL_DISABLE             0
+#define DEBUG_LEVEL_BASIC               1
+#define DEBUG_LEVEL_ADVANCED            2
+
+int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
+int wpas_debug_level = DEBUG_LEVEL_DISABLE;
+
+static int get_debug_level(int value) {
+    if (value == 0) {
+        return DEBUG_LEVEL_DISABLE;
+    } else if (value == 1) {
+        return DEBUG_LEVEL_BASIC;
+    }
+    return DEBUG_LEVEL_ADVANCED;
+}
+
+static void set_hostapd_debug_level(int level) {
+    hostapd_debug_level = level;
+}
+
+static void set_wpas_debug_level(int level) {
+    wpas_debug_level = level;
+}
+
+static char* get_hostapd_debug_arguments() {
+    if (hostapd_debug_level == DEBUG_LEVEL_ADVANCED) {
+        return "-dddK";
+    } else if (hostapd_debug_level == DEBUG_LEVEL_BASIC) {
+        return "-dK";
+    }
+    return "";
+}
+
+static char* get_wpas_debug_arguments() {
+    if (wpas_debug_level == DEBUG_LEVEL_ADVANCED) {
+        return "-ddd";
+    } else if (wpas_debug_level == DEBUG_LEVEL_BASIC) {
+        return "-d";
+    }
+    return "";
+}
+
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_RESET_NOT_OK;
-    char role[256], log_level[256], buffer[256];
+    char buffer[TLV_VALUE_SIZE];
+    char role[TLV_VALUE_SIZE], log_level[TLV_VALUE_SIZE], clear[TLV_VALUE_SIZE];
     struct tlv_hdr *tlv = NULL;
 
     /* TLV: ROLE */
     tlv = find_wrapper_tlv_by_id(req, TLV_ROLE);
     memset(role, 0, sizeof(role));
-    if (!tlv) {
+    if (tlv) {
         memcpy(role, tlv->value, tlv->len);
     } else {
         goto done;
@@ -85,28 +128,36 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     /* TLV: DEBUG_LEVEL */
     tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
     memset(log_level, 0, sizeof(log_level));
-    if (!tlv) {
+    if (tlv) {
         memcpy(log_level, tlv->value, tlv->len);
-    } else {
-        goto done;
+    }
+    /* TLV: CLEAR */
+    tlv = find_wrapper_tlv_by_id(req, TLV_CLEAR);
+    memset(clear, 0, sizeof(clear));
+    if (tlv) {
+        memcpy(clear, tlv->value, tlv->len);
     }
 
-    if (role[0] == DUT_TYPE_STAUT) {
-        /* TODO: Set Debug Level */
+    if (atoi(role) == DUT_TYPE_STAUT) {
         system("killall wpa_supplicant");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
         system("cp -rf sta_reset_config.conf "WPAS_CONF_FILE);
-    } else if (role[0] == DUT_TYPE_APUT) {
-        /* TODO: Set Debug Level */
+        if (strlen(log_level)) {
+            set_wpas_debug_level(get_debug_level(atoi(log_level)));
+        }
+    } else if (atoi(role) == DUT_TYPE_APUT) {
         system("killall hostapd");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
         system("cp -rf ap_reset_config.conf "HOSTAPD_CONF_FILE);
+        if (strlen(log_level)) {
+            set_hostapd_debug_level(get_debug_level(atoi(log_level)));
+        }
     }
     sleep(1);
 
@@ -180,24 +231,174 @@ static struct tlv_to_config_name* find_hostapd_config(int tlv_id) {
     return NULL;
 }
 
-static int generate_hostapd_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
-    int i, j;
+static int get_center_freq_index(int channel, int width) {
+    if (width == 1) {
+        if (channel >= 36 && channel <= 48) {
+            return 42;
+        } else if (channel <= 64) {
+            return 58;
+        } else if (channel >= 100 && channel <= 112) {
+            return 106;
+        } else if (channel <= 128) {
+            return 122;
+        } else if (channel <= 144) {
+            return 138;
+        } else if (channel >= 149 && channel <= 161) {
+            return 155;
+        }
+    } else if (width == 2) {
+        if (channel >= 36 && channel <= 64) {
+            return 50;
+        } else if (channel >= 36 && channel <= 64) {
+            return 114;
+        }
+    }
+    return 0;
+}
 
-    sprintf(buffer, "ctrl_interface=/var/run/hostapd\nctrl_interface_group=0\ninterface=%s\n", get_wireless_interface());
+static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper) {
+    int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
+    int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0;
+    int i;
+    char buffer[512];
+    char band[64];
+
+    struct tlv_to_config_name* cfg = NULL;
+    struct tlv_hdr *tlv = NULL;
+
+    sprintf(output, "ctrl_interface=/var/run/hostapd\nctrl_interface_group=0\ninterface=%s\n", get_wireless_interface());
 
     for (i = 0; i < wrapper->tlv_num; i++) {
-        for (j = 0; j < sizeof(maps)/sizeof(struct tlv_to_config_name); j++) {
-            if (wrapper->tlv[i]->id == maps[j].tlv_id) {
-                char value[256];
-                memset(value, 0, sizeof(value));
-                memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
-                sprintf(buffer, "%s%s=%s\n", buffer, maps[j].config_name, value);
-                break;
+        tlv = wrapper->tlv[i];
+        cfg = find_hostapd_config(tlv->id);
+        if (!cfg) {
+            indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
+            continue;
+        }
+
+        if (tlv->id == TLV_WPA_KEY_MGMT && (strstr(tlv->value, "SAE") || strstr(tlv->value, "WPA-PSK"))) {
+            has_transition = 1;
+        }
+
+        if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "OWE")) {
+            has_owe = 1;
+        }
+
+        if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "SAE")) {
+            has_sae = 1;
+        }
+
+        if (tlv->id == TLV_WPA && strstr(tlv->value, "2")) {
+            has_wpa = 1;
+        }
+
+        if (tlv->id == TLV_IEEE80211_W) {
+            has_pmf = 1;
+        }
+
+        if (tlv->id == TLV_HW_MODE) {
+            memset(band, 0, sizeof(band));
+            memcpy(band, tlv->value, tlv->len);
+        }
+
+        if (tlv->id == TLV_CHANNEL) {
+            channel = atoi(tlv->value);
+        }
+
+        if (tlv->id == TLV_HE_OPER_CHWIDTH) {
+            chwidth = atoi(tlv->value);
+            chwidthset = 1;
+        }
+
+        if (tlv->id == TLV_IEEE80211_AX && strstr(tlv->value, "1")) {
+            enable_ax = 1;
+        }
+
+        if (tlv->id == TLV_HE_MU_EDCA) {
+            enable_muedca = 1;
+        }
+
+        if (tlv->id == TLV_SAE_GROUPS) {
+            has_sae_groups = 1;
+        }
+
+        memset(buffer, 0, sizeof(buffer));
+        memcpy(buffer, tlv->value, tlv->len);
+        sprintf(output, "%s%s=%s\n", output, cfg->config_name, buffer);
+    }
+
+    if (has_pmf == 0) {
+        if (has_transition) {
+            strcat(output, "ieee80211w=1\n");
+        } else if (has_sae && has_wpa) {
+            strcat(output, "ieee80211w=2\n");
+        } else if (has_owe) {
+            strcat(output, "ieee80211w=2\n");
+        } else if (has_wpa) {
+            strcat(output, "ieee80211w=1\n");
+        }            
+    }
+
+    if (has_sae == 0) {
+        strcat(output, "sae_require_mfp=1\n");
+    }
+
+    // Note: if any new DUT configuration is added for sae_groups,
+    // then the following unconditional sae_groups addition should be
+    // changed to become conditional on there being no other sae_groups
+    // configuration
+    // e.g.:
+    // if IndigoRequestTLV.SAE_GROUPS not in tlv_values:
+    //     field_name = tlv_hostapd_config_mapper.get(IndigoRequestTLV.SAE_GROUPS)
+    //     hostapd_config += "\n" + field_name + "=15 16 17 18 19 20 21"
+    if (!has_sae_groups) {
+        strcat(output, "sae_groups=15 16 17 18 19 20 21\n");
+    }
+
+    // Channel width configuration for ieee80211ax
+    // Default: 20MHz in 2.4G(No configuration required) 80MHz in 5G
+    if (strstr(band, "a") && enable_ax) {
+        if (chwidth > 0) {
+            int center_freq = get_center_freq_index(channel, chwidth);
+            sprintf(buffer, "vht_oper_chwidth=%d\n", chwidth);
+            strcat(output, buffer);
+            sprintf(buffer, "vht_oper_centr_freq_seg0_idx=%d\n", center_freq);
+            strcat(output, buffer);
+            if (chwidthset == 0) {
+                sprintf(buffer, "he_oper_chwidth=%d\n", chwidth);
+                strcat(output, buffer);
             }
+            sprintf(buffer, "he_oper_centr_freq_seg0_idx=%d\n", center_freq);
+            strcat(output, buffer);
         }
     }
 
-    return strlen(buffer);
+    if (enable_muedca) {
+        strcat(output, "he_mu_edca_qos_info_queue_request=1\n");
+        strcat(output, "he_mu_edca_ac_be_aifsn=0\n");
+        strcat(output, "he_mu_edca_ac_be_ecwmin=15\n");
+        strcat(output, "he_mu_edca_ac_be_ecwmax=15\n");
+        strcat(output, "he_mu_edca_ac_be_timer=255\n");
+        strcat(output, "he_mu_edca_ac_bk_aifsn=0\n");
+        strcat(output, "he_mu_edca_ac_bk_aci=1\n");
+        strcat(output, "he_mu_edca_ac_bk_ecwmin=15\n");
+        strcat(output, "he_mu_edca_ac_bk_ecwmax=15\n");
+        strcat(output, "he_mu_edca_ac_bk_timer=255\n");
+        strcat(output, "he_mu_edca_ac_vi_ecwmin=15\n");
+        strcat(output, "he_mu_edca_ac_vi_ecwmax=15\n");
+        strcat(output, "he_mu_edca_ac_vi_aifsn=0\n");
+        strcat(output, "he_mu_edca_ac_vi_aci=2\n");
+        strcat(output, "he_mu_edca_ac_vi_timer=255\n");
+        strcat(output, "he_mu_edca_ac_vo_aifsn=0\n");
+        strcat(output, "he_mu_edca_ac_vo_aci=3\n");
+        strcat(output, "he_mu_edca_ac_vo_ecwmin=15\n");
+        strcat(output, "he_mu_edca_ac_vo_ecwmax=15\n");
+        strcat(output, "he_mu_edca_ac_vo_timer=255\n");
+    }
+
+    // TODO: merge_config_file
+
+    return strlen(output);
 }
 
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
@@ -230,12 +431,14 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_HOSTAPD_START_OK;
+    char buffer[128];
     int len;
     char cmd[256];
 
-    // sprintf(cmd, "hostapd -B -P /run/hostapd.pid -g /run/hostapd-global -ddK -f /tmp/hostapd.log %s", HOSTAPD_CONF_FILE);
-    sprintf(cmd, "hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global -ddK %s", HOSTAPD_CONF_FILE);
-    len = system(cmd);
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global %s %s -f /tmp/hostapd.log",
+        get_hostapd_debug_arguments(), HOSTAPD_CONF_FILE);
+    len = system(buffer);
     sleep(1);
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -368,6 +571,7 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
+    size_t resp_len;
 
     /* Check hostapd status. TODO: it may use UDS directly */
     memset(buffer, 0, sizeof(buffer));
@@ -402,7 +606,8 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
     memset(buffer, 0, sizeof(buffer));
     snprintf(buffer, sizeof(buffer), "DISASSOCIATE %s reason=1", address);
     /* Send command to hostapd UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -421,7 +626,8 @@ done:
 }
 
 static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = NULL;
     char buffer[8192];
     char response[1024];
@@ -446,7 +652,7 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
     if (!tlv) {
         find_wrapper_tlv_by_id(req, TLV_GAS_COMEBACK_DELAY);
     }
-    if (!tlv && find_hostapd_config_name(tlv->id) != NULL) {
+    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
         strcpy(param_name, find_hostapd_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
@@ -459,7 +665,8 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
     memset(buffer, 0, sizeof(buffer));
     snprintf(buffer, sizeof(buffer), "SET %s %s", param_name, param_value);
     /* Send command to hostapd UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -478,7 +685,8 @@ done:
 }
 
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK, len = 0;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
@@ -575,8 +783,9 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
         status = TLV_VALUE_STATUS_NOT_OK;
         message = TLV_VALUE_HOSTAPD_CTRL_NOT_OK;
         goto done;
-    }    
-    wpa_ctrl_request(w, request, strlen(request), response, (size_t*)&len, NULL);
+    }
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, request, strlen(request), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -595,7 +804,8 @@ done:
 }
 
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK, len = 0;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
@@ -641,8 +851,9 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
         status = TLV_VALUE_STATUS_NOT_OK;
         message = TLV_VALUE_HOSTAPD_CTRL_NOT_OK;
         goto done;
-    }    
-    wpa_ctrl_request(w, request, strlen(request), response, (size_t*)&len, NULL);
+    }
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, request, strlen(request), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -681,7 +892,7 @@ done:
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     if (status == TLV_VALUE_STATUS_OK) {
-        fill_wrapper_tlv_bytes(resp, TLV_DUT_IP_ADDRESS, strlen(buffer), buffer);
+        fill_wrapper_tlv_bytes(resp, TLV_DUT_WLAN_IP_ADDR, strlen(buffer), buffer);
     }
     return 0;
 }
@@ -742,9 +953,8 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     int transition_mode_enabled = 0;
     int owe_configured = 0;
 
-    struct tlv_to_config_name* cfg;
+    struct tlv_to_config_name* cfg = NULL;
 
-    /* TODO */
     sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\npmf=1\n");
 
     for (i = 0; i < wrapper->tlv_num; i++) {
@@ -755,7 +965,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             sprintf(buffer, "%s%s=%s\n", buffer, cfg->config_name, value);
         }
     }
-    sprintf(buffer, "%s%s", buffer, "network={\n");
+    strcat(buffer, "network={\n");
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         cfg = find_hostapd_config(wrapper->tlv[i]->id);
@@ -802,7 +1012,6 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     */
 
     strcat(buffer, "}\n");
-    printf("%s\n", buffer);
 
     return strlen(buffer);
 }
@@ -831,15 +1040,17 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
     char *message = TLV_VALUE_WPA_S_ASSOC_OK;
     char buffer[256], response[1024];
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    size_t resp_len;
 
     system("sudo rfkill unblock wlan");
     sleep(1);
     system("sudo killall wpa_supplicant");
     sleep(3);
 
-    /* TODO: log level */
+    /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -c %s -i %s", WPAS_CONF_FILE, get_wireless_interface());
+    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+        WPAS_CONF_FILE, get_wpas_debug_arguments(), get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
@@ -859,11 +1070,11 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
     sprintf(buffer, "STATUS");    
     for (i = 0; i < 6; i++) {
         memset(response, 0, sizeof(response));
-        wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
-        // quick workaround to confirm link
-//        printf("%s %s\n", response, strstr(response, "wpa_state=COMPLETED") ? "Connected" : "Not connected");
+        resp_len = sizeof(response) - 1;
+        wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+        // Check link
         if (strstr(response, "wpa_state=COMPLETED")) {
-            printf("Connected.\n");
+            indigo_logger(LOG_LEVEL_DEBUG, "Connected");
             status = TLV_VALUE_STATUS_OK;
             message = TLV_VALUE_WPA_S_ASSOC_OK;            
             break;
@@ -885,7 +1096,8 @@ static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_DISCONNECT_NOT_OK;
     char buffer[256], response[1024];
-    int len, status, i;
+    int status, i;
+    size_t resp_len;
 
     /* Open WPA supplicant UDS socket */
     w = wpa_ctrl_open(get_wpas_ctrl_path());
@@ -899,7 +1111,8 @@ static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "DISCONNECT");
     memset(response, 0, sizeof(response));
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
         goto done;
@@ -922,6 +1135,7 @@ static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_
     char *message = TLV_VALUE_WPA_S_RECONNECT_NOT_OK;
     char buffer[256], response[1024];
     int len, status, i;
+    size_t resp_len;
 
     /* Open WPA supplicant UDS socket */
     w = wpa_ctrl_open(get_wpas_ctrl_path());
@@ -935,7 +1149,8 @@ static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "RECONNECT");
     memset(response, 0, sizeof(response));
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
         goto done;
@@ -954,7 +1169,8 @@ done:
 }
 
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = NULL;
     char buffer[8192];
     char response[1024];
@@ -976,7 +1192,7 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
     /* TLV: MBO_IGNORE_ASSOC_DISALLOW */
     memset(param_value, 0, sizeof(param_value));
     tlv = find_wrapper_tlv_by_id(req, TLV_MBO_IGNORE_ASSOC_DISALLOW);
-    if (!tlv && find_hostapd_config_name(tlv->id) != NULL) {
+    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
         strcpy(param_name, find_hostapd_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
@@ -989,7 +1205,8 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
     memset(buffer, 0, sizeof(buffer));
     snprintf(buffer, sizeof(buffer), "SET %s %s", param_name, param_value);
     /* Send command to wpa_supplicant UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -1008,7 +1225,8 @@ done:
 }
 
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
     char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
     char buffer[1024];
     char response[1024];
@@ -1027,7 +1245,7 @@ static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_
     }
     /* TLV: BTMQUERY_REASON_CODE */
     tlv = find_wrapper_tlv_by_id(req, TLV_BTMQUERY_REASON_CODE);
-    if (!tlv) {
+    if (tlv) {
         memcpy(reason_code, tlv->value, tlv->len);
     } else {
         goto done;
@@ -1035,7 +1253,7 @@ static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_
 
     /* TLV: TLV_CANDIDATE_LIST */
     tlv = find_wrapper_tlv_by_id(req, TLV_CANDIDATE_LIST);
-    if (!tlv) {
+    if (tlv) {
         memcpy(candidate_list, tlv->value, tlv->len);
     }
 
@@ -1046,7 +1264,8 @@ static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_
     }
 
     /* Send command to wpa_supplicant UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -1074,10 +1293,11 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     char anqp_info_id[256];
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
+    size_t resp_len;
 
     /* It may need to check whether to just scan */
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}");
+    len = sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}");
     if (len) {
         write_file(WPAS_CONF_FILE, buffer, len);
     }
@@ -1099,7 +1319,8 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     memset(buffer, 0, sizeof(buffer));
     memset(response, 0, sizeof(response));
     sprintf(buffer, "SCAN");
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
@@ -1109,7 +1330,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* TLV: BSSID */
     tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
-    if (!tlv) {
+    if (tlv) {
         memcpy(bssid, tlv->value, tlv->len);
     } else {
         goto done;
@@ -1117,7 +1338,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* TLV: ANQP_INFO_ID */
     tlv = find_wrapper_tlv_by_id(req, TLV_ANQP_INFO_ID);
-    if (!tlv) {
+    if (tlv) {
         memcpy(anqp_info_id, tlv->value, tlv->len);
     }
 
@@ -1130,7 +1351,10 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     }
 
     /* Send command to wpa_supplicant UDS socket */
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&len, NULL);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    
+    printf("%s -> resp: %s\n", buffer, response);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
