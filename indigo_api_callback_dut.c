@@ -256,6 +256,45 @@ static int get_center_freq_index(int channel, int width) {
     return 0;
 }
 
+#ifdef _RESERVED_
+/* The function is reserved for the defeault hostapd config */
+#define HOSTAPD_DEFAULT_CONFIG_SSID                 "Indigo"
+#define HOSTAPD_DEFAULT_CONFIG_CHANNEL              "36"
+#define HOSTAPD_DEFAULT_CONFIG_HW_MODE              "a"
+#define HOSTAPD_DEFAULT_CONFIG_WPA_PASSPHRASE       "12345678"
+#define HOSTAPD_DEFAULT_CONFIG_IEEE80211N           "1"
+#define HOSTAPD_DEFAULT_CONFIG_WPA                  "2"
+#define HOSTAPD_DEFAULT_CONFIG_WPA_KEY_MGMT         "WPA-PSK"
+#define HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE         "CCMP"
+
+static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
+    if (find_wrapper_tlv_by_id(wrapper, TLV_SSID) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_SSID, strlen(HOSTAPD_DEFAULT_CONFIG_SSID), HOSTAPD_DEFAULT_CONFIG_SSID);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_CHANNEL) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_CHANNEL, strlen(HOSTAPD_DEFAULT_CONFIG_CHANNEL), HOSTAPD_DEFAULT_CONFIG_CHANNEL);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_HW_MODE) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_HW_MODE, strlen(HOSTAPD_DEFAULT_CONFIG_HW_MODE), HOSTAPD_DEFAULT_CONFIG_HW_MODE);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_WPA_PASSPHRASE) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_WPA_PASSPHRASE, strlen(HOSTAPD_DEFAULT_CONFIG_WPA_PASSPHRASE), HOSTAPD_DEFAULT_CONFIG_WPA_PASSPHRASE);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_IEEE80211_N) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_IEEE80211_N, strlen(HOSTAPD_DEFAULT_CONFIG_IEEE80211N), HOSTAPD_DEFAULT_CONFIG_IEEE80211N);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_WPA) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_WPA, strlen(HOSTAPD_DEFAULT_CONFIG_WPA), HOSTAPD_DEFAULT_CONFIG_WPA);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_WPA_KEY_MGMT) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_WPA_KEY_MGMT, strlen(HOSTAPD_DEFAULT_CONFIG_WPA_KEY_MGMT), HOSTAPD_DEFAULT_CONFIG_WPA_KEY_MGMT);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_RSN_PAIRWISE) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_RSN_PAIRWISE, strlen(HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE), HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE);
+    }
+}
+#endif /* _RESERVED_ */
+
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper) {
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0;
@@ -267,6 +306,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     struct tlv_hdr *tlv = NULL;
 
     sprintf(output, "ctrl_interface=/var/run/hostapd\nctrl_interface_group=0\ninterface=%s\n", get_wireless_interface());
+
+#ifdef _RESERVED_
+    /* The function is reserved for the defeault hostapd config */
+    append_hostapd_default_config(wrapper);
+#endif
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
@@ -395,8 +439,6 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "he_mu_edca_ac_vo_ecwmax=15\n");
         strcat(output, "he_mu_edca_ac_vo_timer=255\n");
     }
-
-    // TODO: merge_config_file
 
     return strlen(output);
 }
@@ -946,6 +988,33 @@ struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
     return NULL;
 }
 
+#ifdef _RESERVED_
+/* The function is reserved for the defeault wpas config */
+#define WPAS_DEFAULT_CONFIG_SSID                    "Indigo"
+#define WPAS_DEFAULT_CONFIG_WPA_KEY_MGMT            "WPA-PSK"
+#define WPAS_DEFAULT_CONFIG_PROTO                   "RSN"
+#define HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE         "CCMP"
+#define WPAS_DEFAULT_CONFIG_WPA_PASSPHRASE          "12345678"
+
+static void append_wpas_network_default_config(struct packet_wrapper *wrapper) {
+    if (find_wrapper_tlv_by_id(wrapper, TLV_SSID) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_SSID, strlen(WPAS_DEFAULT_CONFIG_SSID), WPAS_DEFAULT_CONFIG_SSID);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_WPA_KEY_MGMT) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_WPA_KEY_MGMT, strlen(WPAS_DEFAULT_CONFIG_WPA_KEY_MGMT), WPAS_DEFAULT_CONFIG_WPA_KEY_MGMT);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_PROTO) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_PROTO, strlen(WPAS_DEFAULT_CONFIG_PROTO), WPAS_DEFAULT_CONFIG_PROTO);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_RSN_PAIRWISE) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_RSN_PAIRWISE, strlen(HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE), HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE);
+    }
+    if (find_wrapper_tlv_by_id(wrapper, TLV_WPA_PASSPHRASE) == NULL) {
+        add_wrapper_tlv(wrapper, TLV_WPA_PASSPHRASE, strlen(WPAS_DEFAULT_CONFIG_WPA_PASSPHRASE), WPAS_DEFAULT_CONFIG_WPA_PASSPHRASE);
+    }
+}
+#endif /* _RESERVED_ */
+
 static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
     int i, j;
     char value[256];
@@ -966,6 +1035,11 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
         }
     }
     strcat(buffer, "network={\n");
+
+#ifdef _RESERVED_
+    /* The function is reserved for the defeault wpas config */
+    append_wpas_network_default_config(wrapper);
+#endif /* _RESERVED_ */
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         cfg = find_hostapd_config(wrapper->tlv[i]->id);
