@@ -65,4 +65,7 @@ int parse_tlv(struct tlv_hdr *tlv, char *message, int message_len);
 int gen_tlv(char *message, int message_len, struct tlv_hdr *t);
 void print_tlv(struct tlv_hdr *t);
 struct tlv_hdr *find_wrapper_tlv_by_id(struct packet_wrapper *wrapper, int id);
+int add_wrapper_tlv(struct packet_wrapper *wrapper, int id, int len, char *value);
+
+int add_tlv(struct tlv_hdr *tlv, int id, int len, char *value);
 #endif /* _INDIGO_PACKET_ */

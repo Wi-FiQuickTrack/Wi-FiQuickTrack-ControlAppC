@@ -36,9 +36,8 @@ enum {
 
 void indigo_logger(int level, const char *fmt, ...);
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
+char* read_file(char *fn);
 int write_file(char *fn, char *buffer, int len);
-
-
 
 int get_mac_address(char *buffer, int size, char *interface);
 int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);

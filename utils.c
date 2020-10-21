@@ -31,6 +31,7 @@
 
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <linux/if.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -39,6 +40,7 @@
 #include "utils.h"
 #include "eloop.h"
 
+/* Log */
 int stdout_level = LOG_LEVEL_DEBUG;
 int syslog_level = LOG_LEVEL_INFO;
 
@@ -123,6 +125,7 @@ void indigo_logger(int level, const char *fmt, ...) {
     }
 }
 
+/* System */
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
     int pipefds[2], len;
     pid_t pid;
@@ -152,6 +155,23 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
         close(pipefds[0]);
     }
     return len;
+}
+
+char* read_file(char *fn) {
+    struct stat st;
+    int fd, size;
+    char *buffer = NULL;
+
+    memset(&st, 0, sizeof(struct stat));
+    stat(fn, &st);
+    size = st.st_size;
+
+    fd = open(fn, O_RDONLY);
+    if (fd) {
+        buffer = (char*)malloc(sizeof(char)*size);
+        read(fd, buffer, size);
+    }
+    return buffer;
 }
 
 int write_file(char *fn, char *buffer, int len) {
@@ -252,7 +272,7 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
     struct sockaddr_in *sa;
     char *addr = NULL;
 
-    getifaddrs (&ifap);
+    getifaddrs(&ifap);
     for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, name) == 0) {
             sa = (struct sockaddr_in *) ifa->ifa_addr;
