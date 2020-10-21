@@ -9,7 +9,7 @@ class Tlv():
         raw.append(self.id >> 8)
         raw.append(self.id & 0x00ff)
         raw.append(len(self.val))
-        raw += bytes(self.val)
+        raw += bytearray(self.val)
         return raw
 
 class Msg():
@@ -153,6 +153,7 @@ def test_ap_configure():
     m.append_tlv(Tlv(0x000b, bytes(b'2')))
     m.append_tlv(Tlv(0x000c, bytes(b'SAE')))
     m.append_tlv(Tlv(0x000d, bytes(b'CCMP')))
+#    m.append_tlv(Tlv(0x000d, [0x43, 0x43, 0x4d, 0x50] )) # test list
     return m
 
 def test_device_reset():
@@ -200,4 +201,4 @@ elif len(sys.argv) >= 2:
         m = test_get_control_app()
         outputs.append(m.to_bytes())
 
-send_indigo_api('10.252.10.47', 9001)
+send_indigo_api('10.252.10.47', 9006)
