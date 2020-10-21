@@ -37,7 +37,10 @@ class Msg():
         return raw
 
 def get_hexstring(input):
-    return ("".join("0x{:02x} ".format(ord(c)) for c in input)).rstrip()
+    hexstring = ""
+    for b in bytearray(input):
+        hexstring += "0x%02x " % b
+    return hexstring.rstrip()
 
 def send_indigo_api(ip, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -46,20 +49,21 @@ def send_indigo_api(ip, port):
     for output in outputs:
         try:
             # Send Requset
-            print >>sys.stderr, 'sending request'
+            print('sending request')
             sent = sock.sendto(output, server_address)
 
             # Receive ACK
-            print >>sys.stderr, 'waiting to receive ack'
+            print('waiting to receive ack')
             data, server = sock.recvfrom(4096)
-            print >>sys.stderr, 'received "%s"' % get_hexstring(data)
+            print('received "%s"' % get_hexstring(data))
 
             # Receive Response
-            print >>sys.stderr, 'waiting to receive response'
+            print('waiting to receive response')
             data, server = sock.recvfrom(4096)
-            print >>sys.stderr, 'received "%s"' % get_hexstring(data)
+            print('received "%s"' % get_hexstring(data))
             time.sleep(command_interval)
-        except:
+        except Exception as e:
+            print(e)
             print("An exception occurred and closing socket")
             sock.close()
             break
@@ -93,12 +97,12 @@ def start_loopback_client(target_host='10.252.10.47', target_port=20480, count=1
         loopback_data = ''.join(random.choice(letters) for i in range(size))
         try:
             # Send Requset
-            print >>sys.stderr, '[count=%d] sending loopback data len=%d %s...' % (i, len(loopback_data), loopback_data[0:50])
+            print('[count=%d] sending loopback data len=%d %s...' % (i, len(loopback_data), loopback_data[0:50]))
             sent = sock.sendto(loopback_data, server_address)
 
             # Receive Response
             data, server = sock.recvfrom(4096)
-            print >>sys.stderr, '[count=%d] received loopback data len=%d %s...' % (i, len(data), data[0:50])
+            print('[count=%d] received loopback data len=%d %s...' % (i, len(data), data[0:50]))
             recv_count = recv_count + 1
         except:
             print("[count=%d] failed to send socket")
@@ -144,7 +148,6 @@ def test_ap_configure():
     #                00 0c 03 53 41 45 
     #                00 0d 04 43 43 4d 50
     m = Msg(0x1002)
-    
     m.append_tlv(Tlv(0x0001, bytes(b'Indigo_1602839594')))
     m.append_tlv(Tlv(0x0007, bytes(b'1')))
     m.append_tlv(Tlv(0x0002, bytes(b'11')))
@@ -153,7 +156,7 @@ def test_ap_configure():
     m.append_tlv(Tlv(0x000b, bytes(b'2')))
     m.append_tlv(Tlv(0x000c, bytes(b'SAE')))
     m.append_tlv(Tlv(0x000d, bytes(b'CCMP')))
-#    m.append_tlv(Tlv(0x000d, [0x43, 0x43, 0x4d, 0x50] )) # test list
+#    m.append_tlv(Tlv(0x000d, [0x43, 0x43, 0x4d, 0x50] ))
     return m
 
 def test_device_reset():
