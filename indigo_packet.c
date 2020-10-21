@@ -35,6 +35,9 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
     struct indigo_api *api;
     struct indigo_tlv *tlv;
 
+    if (debug_assemble_packet)
+        print_hex(packet, packet_len);
+
     ret = parse_message_hdr(&req->hdr, packet, packet_len);
     if (ret > 0) {
         if (debug_rcv_packet) {
@@ -158,6 +161,24 @@ int print_hex(char *message, int message_len) {
         printf("0x%02x ", (unsigned char)message[i]);
     }
     printf("\n\n");
+    return 0;
+}
+
+int add_wrapper_tlv(struct packet_wrapper *wrapper, int id, int len, char *value) {
+    if (add_tlv(wrapper->tlv[wrapper->tlv_num], id, len, value) == 0) {
+        wrapper->tlv_num++;
+        return 0;
+    }
+    return 1;
+}
+
+int add_tlv(struct tlv_hdr *tlv, int id, int len, char *value) {
+    if (!tlv)
+        return 1;
+    tlv->id = id;
+    tlv->len = len;
+    tlv->value = (char*)malloc(sizeof(char)*len);
+    memcpy(tlv->value, value, len);
     return 0;
 }
 
