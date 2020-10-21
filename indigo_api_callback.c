@@ -652,7 +652,7 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
     if (!tlv) {
         find_wrapper_tlv_by_id(req, TLV_GAS_COMEBACK_DELAY);
     }
-    if (!tlv && find_hostapd_config_name(tlv->id) != NULL) {
+    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
         strcpy(param_name, find_hostapd_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
@@ -1192,7 +1192,7 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
     /* TLV: MBO_IGNORE_ASSOC_DISALLOW */
     memset(param_value, 0, sizeof(param_value));
     tlv = find_wrapper_tlv_by_id(req, TLV_MBO_IGNORE_ASSOC_DISALLOW);
-    if (!tlv && find_hostapd_config_name(tlv->id) != NULL) {
+    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
         strcpy(param_name, find_hostapd_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
@@ -1245,7 +1245,7 @@ static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_
     }
     /* TLV: BTMQUERY_REASON_CODE */
     tlv = find_wrapper_tlv_by_id(req, TLV_BTMQUERY_REASON_CODE);
-    if (!tlv) {
+    if (tlv) {
         memcpy(reason_code, tlv->value, tlv->len);
     } else {
         goto done;
@@ -1253,7 +1253,7 @@ static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_
 
     /* TLV: TLV_CANDIDATE_LIST */
     tlv = find_wrapper_tlv_by_id(req, TLV_CANDIDATE_LIST);
-    if (!tlv) {
+    if (tlv) {
         memcpy(candidate_list, tlv->value, tlv->len);
     }
 
@@ -1320,7 +1320,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     memset(response, 0, sizeof(response));
     sprintf(buffer, "SCAN");
     resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, (size_t*)&resp_len, NULL);
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
