@@ -192,8 +192,10 @@ int main(int argc, char* argv[]) {
     set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);
     set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);
     set_hapd_global_ctrl_path(HAPD_GLOBAL_CTRL_PATH_DEFAULT);
+    set_hapd_conf_file(HAPD_CONF_FILE_DEFAULT);
     set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);
     set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT);
+    set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);
 
     if (parse_parameters(argc, argv)) {
         return 0;

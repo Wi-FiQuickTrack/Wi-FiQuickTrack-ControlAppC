@@ -20,8 +20,9 @@
 /* OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS                          */
 /* SOFTWARE. */
 
-#define BUFFER_LEN                    1024
-#define LARGE_BUFFER_LEN              8192
+#define S_BUFFER_LEN              256
+#define BUFFER_LEN                1024
+#define L_BUFFER_LEN              8192
 
 /* Log */
 enum {
@@ -47,20 +48,26 @@ int loopback_client_status();
 
 #define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
+#define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"
 #define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
 #define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
-#define WIRELESS_INTERFACE_DEFAULT                 "wlan0"
-#define SERVICE_PORT_DEFAULT                       9004
+#define WPAS_CONF_FILE_DEFAULT                      "/etc/wpa_supplicant/wpa_supplicant.conf"
+#define WIRELESS_INTERFACE_DEFAULT                  "wlan0"
+#define SERVICE_PORT_DEFAULT                        9004
 
 char* get_hapd_ctrl_path();
 int set_hapd_ctrl_path(char* path);
 char* get_hapd_global_ctrl_path();
 int set_hapd_global_ctrl_path(char* path);
+char* get_hapd_conf_file();
+int set_hapd_conf_file(char* path);
 
 char* get_wpas_ctrl_path();
 int set_wpas_ctrl_path(char* path);
 char* get_wpas_global_ctrl_path();
 int set_wpas_global_ctrl_path(char* path);
+char* get_wpas_conf_file();
+int set_wpas_conf_file(char* path);
 
 char* get_wireless_interface();
 int set_wireless_interface(char *name);

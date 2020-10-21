@@ -144,7 +144,9 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
-        system("cp -rf sta_reset_config.conf "WPAS_CONF_FILE);
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "cp -rf sta_reset_config.conf %s", get_wpas_conf_file());
+        system(buffer);
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
@@ -154,7 +156,9 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
-        system("cp -rf ap_reset_config.conf "HOSTAPD_CONF_FILE);
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "cp -rf ap_reset_config.conf %s", get_hapd_conf_file());
+        system(buffer);
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
@@ -176,7 +180,7 @@ done:
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
-    char buffer[BUFFER_LEN];
+    char buffer[S_BUFFER_LEN];
     char *parameter[] = {"pidof", "hostapd", NULL};
     char *message = NULL;
 
@@ -266,7 +270,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
 
-    sprintf(output, "ctrl_interface=/var/run/hostapd\nctrl_interface_group=0\ninterface=%s\n", get_wireless_interface());
+    sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, get_wireless_interface());
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
@@ -405,7 +409,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
-    char buffer[10240];
+    char buffer[L_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = "DUT configured as AP : Configuration file created";
 
@@ -417,7 +421,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 
     len = generate_hostapd_config(buffer, sizeof(buffer), req);
     if (len) {
-        write_file(HOSTAPD_CONF_FILE, buffer, len);
+        write_file(get_hapd_conf_file(), buffer, len);
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -431,13 +435,12 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_HOSTAPD_START_OK;
-    char buffer[128];
+    char buffer[S_BUFFER_LEN];
     int len;
-    char cmd[256];
 
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global %s %s -f /tmp/hostapd.log",
-        get_hostapd_debug_arguments(), HOSTAPD_CONF_FILE);
+    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /tmp/hostapd.log",
+        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
     len = system(buffer);
     sleep(1);
 
@@ -564,8 +567,8 @@ static int stop_loop_back_server_handler(struct packet_wrapper *req, struct pack
 
 static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
-    char buffer[8192];
-    char response[1024];
+    char buffer[S_BUFFER_LEN];
+    char response[S_BUFFER_LEN];
     char address[32];
     char *parameter[] = {"pidof", "hostapd", NULL};
     char *message = NULL;
@@ -809,12 +812,11 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
-    char request[4096];
-    char response[4096];
-    char buffer[512];
+    char request[S_BUFFER_LEN];
+    char response[S_BUFFER_LEN];
 
-    char channel[256];
-    char frequency[256];
+    char channel[64];
+    char frequency[64];
 
     memset(channel, 0, sizeof(channel));
     memset(frequency, 0, sizeof(frequency));
@@ -899,11 +901,9 @@ done:
 
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
-    char buffer[10240];
+    char buffer[S_BUFFER_LEN];
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
     char *message = NULL;
-
-    memset(buffer, 0, sizeof(buffer));
 
     system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
     sleep(2);
@@ -948,14 +948,14 @@ struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
 
 static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
     int i, j;
-    char value[256];
+    char value[S_BUFFER_LEN];
     int ieee80211w_configured = 0;
     int transition_mode_enabled = 0;
     int owe_configured = 0;
 
     struct tlv_to_config_name* cfg = NULL;
 
-    sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\npmf=1\n");
+    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         cfg = find_wpas_global_config_name(wrapper->tlv[i]->id);
@@ -1018,14 +1018,14 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 
 static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
-    char buffer[10240];
+    char buffer[L_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = "DUT configured as STA : Configuration file created";
 
     memset(buffer, 0, sizeof(buffer));
     len = generate_wpas_config(buffer, sizeof(buffer), req);
     if (len) {
-        write_file(WPAS_CONF_FILE, buffer, len);
+        write_file(get_wpas_conf_file(), buffer, len);
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -1050,7 +1050,7 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
     sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
-        WPAS_CONF_FILE, get_wpas_debug_arguments(), get_wireless_interface());
+        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
@@ -1172,8 +1172,8 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
     int status = TLV_VALUE_STATUS_NOT_OK;
     size_t resp_len;
     char *message = NULL;
-    char buffer[8192];
-    char response[1024];
+    char buffer[BUFFER_LEN];
+    char response[BUFFER_LEN];
     char param_name[32];
     char param_value[256];
     struct tlv_hdr *tlv = NULL;
@@ -1297,13 +1297,13 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* It may need to check whether to just scan */
     memset(buffer, 0, sizeof(buffer));
-    len = sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}");
+    len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}", WPAS_CTRL_PATH_DEFAULT);
     if (len) {
-        write_file(WPAS_CONF_FILE, buffer, len);
+        write_file(get_wpas_conf_file(), buffer, len);
     }
 
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -c %s -i %s", WPAS_CONF_FILE, get_wireless_interface());
+    sprintf(buffer, "wpa_supplicant -B -c %s -i %s", get_wpas_conf_file(), get_wireless_interface());
     len = system(buffer);
     sleep(2);
 

@@ -24,8 +24,6 @@
 #define _INDIGO_API_CALLBACK
 
 
-#define HOSTAPD_CONF_FILE "/etc/hostapd/hostapd.conf"
-#define WPAS_CONF_FILE "/etc/wpa_supplicant/wpa_supplicant.conf"
 #define LOOPBACK_TIMEOUT 30
 
 
