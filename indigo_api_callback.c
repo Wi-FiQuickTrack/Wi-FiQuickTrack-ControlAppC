@@ -139,7 +139,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (atoi(role) == DUT_TYPE_STAUT) {
-        /* TODO: Set Debug Level */
         system("killall wpa_supplicant");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
@@ -1048,10 +1047,8 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
     system("sudo killall wpa_supplicant");
     sleep(3);
 
-    /* TODO: log level */
+    /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-    //sprintf(buffer, "wpa_supplicant -B -c /etc/wpa_supplicant/wpa_supplicant.conf %s -i %s -f /var/log/supplicant.log",
-    //    get_wpas_debug_arguments(), get_wireless_interface());
     sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
         WPAS_CONF_FILE, get_wpas_debug_arguments(), get_wireless_interface());
     len = system(buffer);
@@ -1075,9 +1072,9 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
         memset(response, 0, sizeof(response));
         resp_len = sizeof(response) - 1;
         wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-        // quick workaround to confirm link
+        // Check link
         if (strstr(response, "wpa_state=COMPLETED")) {
-            printf("Connected.\n");
+            indigo_logger(LOG_LEVEL_DEBUG, "Connected");
             status = TLV_VALUE_STATUS_OK;
             message = TLV_VALUE_WPA_S_ASSOC_OK;            
             break;
