@@ -92,6 +92,48 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     return 0;
 }
 
+#define DEBUG_LEVEL_DISABLE             0
+#define DEBUG_LEVEL_BASIC               1
+#define DEBUG_LEVEL_ADVANCED            2
+
+int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
+int wpas_debug_level = DEBUG_LEVEL_DISABLE;
+
+static int get_debug_level(int value) {
+    if (value == 0) {
+        return DEBUG_LEVEL_DISABLE;
+    } else if (value == 1) {
+        return DEBUG_LEVEL_BASIC;
+    }
+    return DEBUG_LEVEL_ADVANCED;
+}
+
+static void set_hostapd_debug_level(int level) {
+    hostapd_debug_level = level;
+}
+
+static void set_wpas_debug_level(int level) {
+    wpas_debug_level = level;
+}
+
+static char* get_hostapd_debug_arguments() {
+    if (hostapd_debug_level == DEBUG_LEVEL_ADVANCED) {
+        return "-dddK";
+    } else if (hostapd_debug_level == DEBUG_LEVEL_BASIC) {
+        return "-dK";
+    }
+    return "";
+}
+
+static char* get_wpas_debug_arguments() {
+    if (wpas_debug_level == DEBUG_LEVEL_ADVANCED) {
+        return "-ddd";
+    } else if (wpas_debug_level == DEBUG_LEVEL_BASIC) {
+        return "-d";
+    }
+    return "";
+}
+
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_RESET_NOT_OK;
@@ -120,7 +162,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         memcpy(clear, tlv->value, tlv->len);
     }
 
-    if (role[0] == DUT_TYPE_STAUT) {
+    if (atoi(role) == DUT_TYPE_STAUT) {
         /* TODO: Set Debug Level */
         system("killall wpa_supplicant");
         sleep(1);
@@ -128,14 +170,19 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
         system("cp -rf sta_reset_config.conf /etc/wpa_supplicant/wpa_supplicant.conf");
-    } else if (role[0] == DUT_TYPE_APUT) {
-        /* TODO: Set Debug Level */
+        if (strlen(log_level)) {
+            set_wpas_debug_level(get_debug_level(atoi(log_level)));
+        }
+    } else if (atoi(role) == DUT_TYPE_APUT) {
         system("killall hostapd");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
         system("cp -rf ap_reset_config.conf /etc/hostapd/hostapd.conf");
+        if (strlen(log_level)) {
+            set_hostapd_debug_level(get_debug_level(atoi(log_level)));
+        }
     }
     sleep(1);
 
@@ -484,9 +531,12 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_HOSTAPD_START_OK;
+    char buffer[128];
     int len;
 
-    len = system("hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global -ddK /etc/hostapd/hostapd.conf");
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global %s /etc/hostapd/hostapd.conf -f /tmp/hostapd.log", get_hostapd_debug_arguments());
+    len = system(buffer);
     sleep(1);
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -1106,7 +1156,10 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
 
     /* TODO: log level */
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -c /etc/wpa_supplicant/wpa_supplicant.conf -i %s", get_wireless_interface());
+    //sprintf(buffer, "wpa_supplicant -B -c /etc/wpa_supplicant/wpa_supplicant.conf %s -i %s -f /var/log/supplicant.log",
+    //    get_wpas_debug_arguments(), get_wireless_interface());
+    sprintf(buffer, "wpa_supplicant -B -c /etc/wpa_supplicant/wpa_supplicant.conf %s -i %s -f /var/log/supplicant.log", 
+        get_wpas_debug_arguments(), get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
