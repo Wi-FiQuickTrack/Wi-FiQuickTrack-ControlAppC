@@ -77,6 +77,11 @@ struct tlv_to_config_name maps[] = {
     { TLV_IEEE80211_AX, "ieee80211ax", 0 },
     { TLV_MBO_ASSOC_DISALLOW, "mbo_assoc_disallow", 0 },
     { TLV_GAS_COMEBACK_DELAY, "gas_comeback_delay", 0 },
+    { TLV_SAE_PWE, "sae_pwe", 0 },
+    { TLV_OWE_GROUPS, "owe_groups", 0 },
+    { TLV_HE_MU_EDCA, "he_mu_edca_qos_info_param_count", 0 },
+    { TLV_TRANSITION_DISABLE, "transition_disable", 0 },
+
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },
     { TLV_KEY_MGMT, "key_mgmt", 0 },
