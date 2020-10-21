@@ -28,32 +28,8 @@
 #include "indigo_api.h"
 #include "utils.h"
 #include "wpa_ctrl.h"
+#include "indigo_api_callback.h"
 
-/* Basic */
-static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-/* AP */
-static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
-/* STA */
-static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 
 void register_apis() {
     /* Basic */
@@ -169,7 +145,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
-        system("cp -rf sta_reset_config.conf /etc/wpa_supplicant/wpa_supplicant.conf");
+        system("cp -rf sta_reset_config.conf "WPAS_CONF_FILE);
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
@@ -179,7 +155,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
-        system("cp -rf ap_reset_config.conf /etc/hostapd/hostapd.conf");
+        system("cp -rf ap_reset_config.conf "HOSTAPD_CONF_FILE);
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
@@ -235,81 +211,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
    
     return 0;
 }
-
-struct tlv_to_config_name {
-    unsigned short tlv_id;
-    char config_name[NAME_SIZE];
-    int quoted;
-};
-
-struct tlv_to_config_name maps[] = {
-    /* hapds */
-    { TLV_SSID, "ssid", 0 },
-    { TLV_CHANNEL, "channel", 0 },
-    { TLV_WEP_KEY0, "wep_key0", 0 },
-    { TLV_HW_MODE, "hw_mode", 0 },
-    { TLV_AUTH_ALGORITHM, "auth_algs", 0 },
-    { TLV_WEP_DEFAULT_KEY, "wep_default_key", 0 },
-    { TLV_IEEE80211_D, "ieee80211d", 0 },
-    { TLV_IEEE80211_N, "ieee80211n", 0 },
-    { TLV_IEEE80211_AC, "ieee80211ac", 0 },
-    { TLV_COUNTRY_CODE, "country_code", 0 },
-    { TLV_WMM_ENABLED, "wmm_enabled", 0 },
-    { TLV_WPA, "wpa", 0 },
-    { TLV_WPA_KEY_MGMT, "wpa_key_mgmt", 0 },
-    { TLV_RSN_PAIRWISE, "rsn_pairwise", 0 },
-    { TLV_WPA_PASSPHRASE, "wpa_passphrase", 0 },
-    { TLV_WPA_PAIRWISE, "wpa_pairwise", 0 },
-    { TLV_HT_CAPB, "ht_capab", 0 },
-    { TLV_IEEE80211_W, "ieee80211w", 0 },
-    { TLV_IEEE80211_H, "ieee80211h", 0 },
-    { TLV_VHT_OPER_CHWIDTH, "vht_oper_chwidth", 0 },
-    { TLV_VHT_OPER_CENTR_REQ, "vht_oper_centr_freq_seg0_idx", 0 },
-    { TLV_EAP_SERVER, "eap_server", 0 },
-    { TLV_EAPOL_KEY_INDEX_WORKAROUND, "eapol_key_index_workaround", 0 },
-    { TLV_AUTH_SERVER_ADDR, "auth_server_addr", 0 },
-    { TLV_AUTH_SERVER_PORT, "auth_server_port", 0 },
-    { TLV_AUTH_SERVER_SHARED_SECRET, "auth_server_shared_secret", 0 },
-    { TLV_LOGGER_SYSLOG, "logger_syslog", 0 },
-    { TLV_LOGGER_SYSLOG_LEVEL, "logger_syslog_level", 0 },
-    { TLV_MBO, "mbo", 0 },
-    { TLV_MBO_CELL_DATA_CONN_PREF, "mbo_cell_data_conn_pref", 0 },
-    { TLV_BSS_TRANSITION, "bss_transition", 0 },
-    { TLV_INTERWORKING, "interworking", 0 },
-    { TLV_RRM_NEIGHBOR_REPORT, "rrm_neighbor_report", 0 },
-    { TLV_RRM_BEACON_REPORT, "rrm_beacon_report", 0 },
-    { TLV_COUNTRY3, "country3", 0 },
-    { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
-    { TLV_HE_OPER_CHWIDTH, "he_oper_chwidth", 0 },
-    { TLV_IEEE80211_AX, "ieee80211ax", 0 },
-    { TLV_SAE_PWE, "sae_pwe"},
-    { TLV_OWE_GROUPS, "owe_groups"},
-    { TLV_HE_MU_EDCA, "he_mu_edca_qos_info_param_count"},
-    { TLV_MBO_ASSOC_DISALLOW, "mbo_assoc_disallow", 0 },
-    { TLV_GAS_COMEBACK_DELAY, "gas_comeback_delay", 0 },
-    /* wpas, seperate? */
-    { TLV_STA_SSID, "ssid", 1 },
-    { TLV_KEY_MGMT, "key_mgmt", 0 },
-    { TLV_STA_WEP_KEY0, "wep_key0", 0 },
-    { TLV_WEP_TX_KEYIDX, "wep_tx_keyidx", 0 },
-    { TLV_GROUP, "group", 0 },
-    { TLV_PSK, "psk", 1 },
-    { TLV_PROTO, "proto", 0 },
-    { TLV_STA_IEEE80211_W, "ieee80211w", 0 },
-    { TLV_PAIRWISE, "pairwise", 0 },
-    { TLV_EAP, "eap", 0 },
-    { TLV_PHASE1, "phase1", 1 },
-    { TLV_PHASE2, "phase2", 1 },
-    { TLV_IDENTITY, "identity", 1 },
-    { TLV_PASSWORD, "password", 1 },
-    { TLV_CA_CERT, "ca_cert", 1 },
-    { TLV_PRIVATE_KEY, "private_key", 1 },
-    { TLV_CLIENT_CERT, "client_cert", 1 },
-    { TLV_DOMAIN_MATCH, "domain_match", 1 },
-    { TLV_DOMAIN_SUFFIX_MATCH, "domain_suffix_match", 1 },
-    { TLV_PAC_FILE, "pac_file", 1 },
-    { TLV_STA_OWE_GROUP, "owe_group", 0 },
-};
 
 static char* find_hostapd_config_name(int tlv_id) {
     int i;
@@ -517,7 +418,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 
     len = generate_hostapd_config(buffer, sizeof(buffer), req);
     if (len) {
-        write_file("/etc/hostapd/hostapd.conf", buffer, len);
+        write_file(HOSTAPD_CONF_FILE, buffer, len);
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -533,9 +434,11 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char *message = TLV_VALUE_HOSTAPD_START_OK;
     char buffer[128];
     int len;
+    char cmd[256];
 
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global %s /etc/hostapd/hostapd.conf -f /tmp/hostapd.log", get_hostapd_debug_arguments());
+    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g /var/run/hostapd-global %s %s -f /tmp/hostapd.log",
+        get_hostapd_debug_arguments(), HOSTAPD_CONF_FILE);
     len = system(buffer);
     sleep(1);
 
@@ -594,9 +497,6 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
 
     return 0;
 }
-
-/* TODO */
-#define LOOPBACK_TIMEOUT            30
 
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
@@ -1037,12 +937,6 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     return 0;
 }
 
-struct tlv_to_config_name wpas_global_maps[] = {
-    { TLV_STA_SAE_GROUPS, "sae_groups", 0 },
-    { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
-    { TLV_SAE_PWE, "sae_pwe", 0 },
-};
-
 struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
     int i;
     for (i = 0; i < sizeof(wpas_global_maps)/sizeof(struct tlv_to_config_name); i++) {
@@ -1132,7 +1026,7 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     memset(buffer, 0, sizeof(buffer));
     len = generate_wpas_config(buffer, sizeof(buffer), req);
     if (len) {
-        write_file("/etc/wpa_supplicant/wpa_supplicant.conf", buffer, len);
+        write_file(WPAS_CONF_FILE, buffer, len);
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -1158,8 +1052,8 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
     memset(buffer, 0 ,sizeof(buffer));
     //sprintf(buffer, "wpa_supplicant -B -c /etc/wpa_supplicant/wpa_supplicant.conf %s -i %s -f /var/log/supplicant.log",
     //    get_wpas_debug_arguments(), get_wireless_interface());
-    sprintf(buffer, "wpa_supplicant -B -c /etc/wpa_supplicant/wpa_supplicant.conf %s -i %s -f /var/log/supplicant.log", 
-        get_wpas_debug_arguments(), get_wireless_interface());
+    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+        WPAS_CONF_FILE, get_wpas_debug_arguments(), get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
@@ -1406,13 +1300,13 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* It may need to check whether to just scan */
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}");
+    len = sprintf(buffer, "ctrl_interface=/var/run/wpa_supplicant\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}");
     if (len) {
-        write_file("/etc/wpa_supplicant/wpa_supplicant.conf", buffer, len);
+        write_file(WPAS_CONF_FILE, buffer, len);
     }
 
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -c /etc/wpa_supplicant/wpa_supplicant.conf -i %s", get_wireless_interface());
+    sprintf(buffer, "wpa_supplicant -B -c %s -i %s", WPAS_CONF_FILE, get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
@@ -1439,7 +1333,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* TLV: BSSID */
     tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
-    if (!tlv) {
+    if (tlv) {
         memcpy(bssid, tlv->value, tlv->len);
     } else {
         goto done;
@@ -1447,7 +1341,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* TLV: ANQP_INFO_ID */
     tlv = find_wrapper_tlv_by_id(req, TLV_ANQP_INFO_ID);
-    if (!tlv) {
+    if (tlv) {
         memcpy(anqp_info_id, tlv->value, tlv->len);
     }
 
@@ -1462,6 +1356,8 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     /* Send command to wpa_supplicant UDS socket */
     resp_len = sizeof(response) - 1;
     wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    
+    printf("%s -> resp: %s\n", buffer, response);
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
