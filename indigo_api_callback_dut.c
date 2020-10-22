@@ -189,17 +189,21 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     system("killall hostapd 1>/dev/null 2>/dev/null");
     sleep(2);
 
-    len = system("rm -rf /etc/hostapd/*.conf");
+    sprintf(buffer, "rm -rf %s", get_hapd_conf_file());
+    len = system(buffer);
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
     }
     sleep(1);
 
+#ifdef _OPENWRT_
+#else
     len = system("rfkill unblock wlan");
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to run rfkill unblock wlan");
     }
     sleep(1);
+#endif
 
     len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
     if (len) {
@@ -207,6 +211,11 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     } else {
         message = TLV_VALUE_HOSTAPD_STOP_OK;
     }
+
+#ifdef _OPENWRT_
+    sprintf(buffer, "iw dev %s del", get_wireless_interface());
+    system(buffer);
+#endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -303,7 +312,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0;
     int i;
-    char buffer[512];
+    char buffer[512], cfg_item[512];
     char band[64];
 
     struct tlv_to_config_name* cfg = NULL;
@@ -372,7 +381,8 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
         memset(buffer, 0, sizeof(buffer));
         memcpy(buffer, tlv->value, tlv->len);
-        sprintf(output, "%s%s=%s\n", output, cfg->config_name, buffer);
+        sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
+        strcat(output, cfg_item);
     }
 
     if (has_pmf == 0) {
@@ -481,8 +491,17 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     int len;
 
     memset(buffer, 0, sizeof(buffer));
+#ifdef _OPENWRT_
+    sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
+    system(buffer);
+    sleep(1);
+
+    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /tmp/hostapd.log %s",
+        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
+#else
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /tmp/hostapd.log",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
+#endif
     len = system(buffer);
     sleep(1);
 
@@ -954,7 +973,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
     sleep(2);
 
-    len = system("rm -rf /etc/wpa_supplicant/*.conf");
+    sprintf(buffer, "rm -rf %s", get_wpas_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
     }
@@ -974,6 +993,11 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     } else {
         message = TLV_VALUE_WPA_S_STOP_OK;
     }
+
+#ifdef _OPENWRT_
+    sprintf(buffer, "iw dev %s del", get_wireless_interface());
+    system(buffer);
+#endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -1021,7 +1045,7 @@ static void append_wpas_network_default_config(struct packet_wrapper *wrapper) {
 
 static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
     int i, j;
-    char value[S_BUFFER_LEN];
+    char value[S_BUFFER_LEN], cfg_item[S_BUFFER_LEN];
     int ieee80211w_configured = 0;
     int transition_mode_enabled = 0;
     int owe_configured = 0;
@@ -1035,7 +1059,8 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
         if (cfg) {
             memset(value, 0, sizeof(value));
             memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
-            sprintf(buffer, "%s%s=%s\n", buffer, cfg->config_name, value);
+            sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+            strcat(buffer, cfg_item);
         }
     }
     strcat(buffer, "network={\n");
@@ -1061,9 +1086,11 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             }
 
             if (cfg->quoted) {
-                sprintf(buffer, "%s%s=\"%s\"\n", buffer, cfg->config_name, value);
+                sprintf(cfg_item, "%s=\"%s\"\n", cfg->config_name, value);
+                strcat(buffer, cfg_item);
             } else {
-                sprintf(buffer, "%s%s=%s\n", buffer, cfg->config_name, value);
+                sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+                strcat(buffer, cfg_item);
             }
         }        
     }
@@ -1120,15 +1147,28 @@ static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
     size_t resp_len;
 
-    system("sudo rfkill unblock wlan");
+#ifdef _OPENWRT_
+#else
+    system("rfkill unblock wlan");
     sleep(1);
-    system("sudo killall wpa_supplicant");
+#endif
+
+    system("killall wpa_supplicant");
     sleep(3);
 
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
+#ifdef _OPENWRT_
+    sprintf(buffer, "iw phy phy1 interface add %s type station", get_wireless_interface());
+    system(buffer);
+    sleep(1);
+
     sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
+#else
+    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
+#endif
     len = system(buffer);
     sleep(2);
 
