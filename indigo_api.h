@@ -249,6 +249,7 @@ struct indigo_api {
 #define TLV_VALUE_WIRELESS_INTERFACE_NOT_OK     "Wireless interface is not available"
 #define TLV_VALUE_HOSTAPD_CTRL_NOT_OK           "Failed to connect to hostapd control interface"
 #define TLV_VALUE_HOSTAPD_NOT_OK                "Failed to find hostapd PID"
+#define TLV_VALUE_HOSTAPD_RESP_NOT_OK           "Hostapd response is failed"
 
 #define TLV_VALUE_WPA_S_STOP_NOT_OK             "Failed to stop wpa supplicant service."
 #define TLV_VALUE_WPA_S_STOP_OK                 "Indigo tool STA was successfully disconnected"

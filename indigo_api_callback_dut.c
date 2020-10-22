@@ -656,6 +656,7 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        message = TLV_VALUE_HOSTAPD_RESP_NOT_OK;
         goto done;
     }
     status = TLV_VALUE_STATUS_OK;
@@ -715,6 +716,7 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        message = TLV_VALUE_HOSTAPD_RESP_NOT_OK;
         goto done;
     }
     status = TLV_VALUE_STATUS_OK;
@@ -757,7 +759,7 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
 
     /* ControlApp on DUT */
     /* TLV: BSSID (required) */
-    tlv = find_wrapper_tlv_by_id(req, TLV_MBO_ASSOC_DISALLOW);
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
     if (tlv) {
         memcpy(bssid, tlv->value, tlv->len);
     }
@@ -834,6 +836,7 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        message = TLV_VALUE_HOSTAPD_RESP_NOT_OK;
         goto done;
     }
     status = TLV_VALUE_STATUS_OK;
@@ -901,6 +904,7 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
     /* Check response */
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        message = TLV_VALUE_HOSTAPD_RESP_NOT_OK;
         goto done;
     }
     status = TLV_VALUE_STATUS_OK;
