@@ -308,10 +308,12 @@ char wireless_interface[64] = WIRELESS_INTERFACE_DEFAULT;
 char hapd_ctrl_path[64] = HAPD_CTRL_PATH_DEFAULT;
 char hapd_full_ctrl_path[128];
 char hapd_global_ctrl_path[64] = HAPD_GLOBAL_CTRL_PATH_DEFAULT;
+char hapd_conf_file[64] = HAPD_CONF_FILE_DEFAULT;
 
 char wpas_ctrl_path[64] = WPAS_CTRL_PATH_DEFAULT;
 char wpas_full_ctrl_path[128];
 char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
+char wpas_conf_file[64] = WPAS_CONF_FILE_DEFAULT;
 
 char* get_hapd_ctrl_path() {
     memset(hapd_full_ctrl_path, 0, sizeof(hapd_full_ctrl_path));
@@ -335,6 +337,16 @@ int set_hapd_global_ctrl_path(char* path) {
     return 0;
 }
 
+char* get_hapd_conf_file() {
+    return hapd_conf_file;
+}
+
+int set_hapd_conf_file(char* path) {
+    memset(hapd_conf_file, 0, sizeof(hapd_conf_file));
+    snprintf(hapd_conf_file, sizeof(hapd_conf_file), "%s", path);
+    return 0;
+}
+
 char* get_wpas_ctrl_path() {
     memset(wpas_full_ctrl_path, 0, sizeof(wpas_full_ctrl_path));
     sprintf(wpas_full_ctrl_path, "%s/%s", wpas_ctrl_path, wireless_interface);
@@ -352,6 +364,16 @@ char* get_wpas_global_ctrl_path() {
 
 int set_wpas_global_ctrl_path(char* path) {
     snprintf(wpas_global_ctrl_path, sizeof(wpas_global_ctrl_path), "%s", path);
+    return 0;
+}
+
+char* get_wpas_conf_file() {
+    return wpas_conf_file;
+}
+
+int set_wpas_conf_file(char* path) {
+    memset(wpas_conf_file, 0, sizeof(wpas_conf_file));
+    snprintf(wpas_conf_file, sizeof(wpas_conf_file), "%s", path);
     return 0;
 }
 
