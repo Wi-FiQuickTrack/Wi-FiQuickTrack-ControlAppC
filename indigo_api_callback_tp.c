@@ -50,7 +50,7 @@ void register_apis() {
     register_api(API_AP_SET_PARAM , NULL, set_ap_parameter_handler);
     register_api(API_AP_SEND_BTM_REQ, NULL, send_ap_btm_handler);
     /* STA */
-    register_api(API_STA_ASSOCIATE, NULL, start_sta_handler);
+    register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
     register_api(API_STA_DISCONNECT, NULL, stop_sta_handler);
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
@@ -58,6 +58,7 @@ void register_apis() {
     register_api(API_STA_SET_PARAM, NULL, set_sta_parameter_handler);
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
+    register_api(API_STA_START_UP, NULL, start_up_sta_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -1140,7 +1141,7 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     return 0;
 }
 
-static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_ASSOC_OK;
     char buffer[256], response[1024];
@@ -1481,6 +1482,66 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
     
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+
+static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct wpa_ctrl *w = NULL;
+    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    char buffer[256], response[1024];
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    size_t resp_len;
+    char *parameter[] = {"pidof", "wpa_supplicant", NULL};
+
+
+#ifdef _OPENWRT_
+#else
+    system("rfkill unblock wlan");
+    sleep(1);
+#endif
+
+    system("killall wpa_supplicant");
+    sleep(3);
+
+    memset(buffer, 0, sizeof(buffer));
+    // TODO: get PORT from tool's req TLV
+    len = sprintf(buffer, "ctrl_interface=udp:%u\nap_scan=1\n", 10240);
+    if (len) {
+        write_file(get_wpas_conf_file(), buffer, len);
+    }
+
+    /* Start WPA supplicant */
+    memset(buffer, 0 ,sizeof(buffer));
+#ifdef _OPENWRT_
+    sprintf(buffer, "iw phy phy1 interface add %s type station", get_wireless_interface());
+    system(buffer);
+    sleep(1);
+
+    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
+#else
+    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
+#endif
+    len = system(buffer);
+    sleep(2);
+
+    len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
+    if (len) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_WPA_S_START_UP_OK;
+    } else {
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    }
+
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);

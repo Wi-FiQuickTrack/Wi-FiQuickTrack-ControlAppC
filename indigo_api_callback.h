@@ -130,7 +130,8 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
 /* STA */
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);

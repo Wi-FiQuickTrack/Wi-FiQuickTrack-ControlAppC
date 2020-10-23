@@ -86,7 +86,7 @@ def test_loopback_stop():
     m = Msg(0x5004)
     return m
 
-def start_loopback_client(target_host='10.252.10.47', target_port=20480, count=10, size=1000):
+def start_loopback_client(target_host, target_port=20480, count=10, size=1000):
     recv_count = 0
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_address = (target_host, target_port)
@@ -114,6 +114,10 @@ def start_loopback_client(target_host='10.252.10.47', target_port=20480, count=1
 def test_ap_send_disassociate():
     m = Msg(0x1004)
     m.append_tlv(Tlv(0x0028, bytes(b'b8:5d:0a:62:b3:ee')))
+    return m
+
+def test_sta_start_up():
+    m = Msg(0x2008)
     return m
 
 def test_sta_configure():
@@ -171,6 +175,10 @@ def test_device_reset():
 command_interval = 1
 outputs = []
 
+# ContrlAppC ip and port
+peer_ip = '10.252.10.32'
+peer_port = 5001
+
 if len(sys.argv) == 1:
     m = test_get_control_app()
     outputs.append(m.to_bytes())
@@ -182,7 +190,7 @@ elif len(sys.argv) >= 2:
         m = test_loopback_start()
         outputs.append(m.to_bytes())
     elif sys.argv[1] == "loopback_test":
-        start_loopback_client('10.252.10.47', 20480, 10, 1000)
+        start_loopback_client(peer_ip, 20480, 10, 1000)
         m = test_get_control_app()
         outputs.append(m.to_bytes())
     elif sys.argv[1] == "loopback_stop":
@@ -200,8 +208,11 @@ elif len(sys.argv) >= 2:
     elif sys.argv[1] == "ap_configure":
         m = test_ap_configure()
         outputs.append(m.to_bytes())
+    elif sys.argv[1] == "sta_start_up":
+        m = test_sta_start_up()
+        outputs.append(m.to_bytes())
     else:
         m = test_get_control_app()
         outputs.append(m.to_bytes())
 
-send_indigo_api('10.252.10.47', 9006)
+send_indigo_api(peer_ip, peer_port)

@@ -50,7 +50,7 @@ void register_apis() {
     register_api(API_AP_SET_PARAM , NULL, set_ap_parameter_handler);
     register_api(API_AP_SEND_BTM_REQ, NULL, send_ap_btm_handler);
     /* STA */
-    register_api(API_STA_ASSOCIATE, NULL, start_sta_handler);
+    register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
     register_api(API_STA_DISCONNECT, NULL, stop_sta_handler);
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
@@ -1140,7 +1140,7 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     return 0;
 }
 
-static int start_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_ASSOC_OK;
     char buffer[256], response[1024];

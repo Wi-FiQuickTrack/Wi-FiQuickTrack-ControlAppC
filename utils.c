@@ -248,7 +248,7 @@ int loopback_client_start(char *target_ip, int target_port, char *local_ip, int 
     }
     loopback_socket = s;
     eloop_register_timeout(timeout, 0, loopback_client_timeout, (void*)(intptr_t)s, NULL);
-    indigo_logger(LOG_LEVEL_INFO, "Loopback Client starts");
+    indigo_logger(LOG_LEVEL_INFO, "Loopback Client starts ip %s port %u", local_ip, local_port);
 
     return 0;
 }
