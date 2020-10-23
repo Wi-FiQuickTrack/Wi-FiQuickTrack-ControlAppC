@@ -134,6 +134,10 @@ def test_sta_associate():
     m = Msg(0x2000)
     return m
 
+def test_sta_disconnect():
+    m = Msg(0x2002)
+    return m
+
 def test_ap_start():
     m = Msg(0x1000)
     return m
@@ -210,6 +214,9 @@ elif len(sys.argv) >= 2:
         outputs.append(m.to_bytes())
     elif sys.argv[1] == "sta_start_up":
         m = test_sta_start_up()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "sta_disconnect":
+        m = test_sta_disconnect()
         outputs.append(m.to_bytes())
     else:
         m = test_get_control_app()
