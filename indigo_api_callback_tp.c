@@ -498,10 +498,10 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system(buffer);
     sleep(1);
 
-    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /tmp/hostapd.log %s",
+    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
 #else
-    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /tmp/hostapd.log",
+    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
 #endif
     len = system(buffer);
