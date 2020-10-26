@@ -24,7 +24,7 @@
 #define _INDIGO_API_CALLBACK
 
 
-#define LOOPBACK_TIMEOUT 30
+#define LOOPBACK_TIMEOUT 120
 
 
 struct tlv_to_config_name {
@@ -56,6 +56,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_IEEE80211_H, "ieee80211h", 0 },
     { TLV_VHT_OPER_CHWIDTH, "vht_oper_chwidth", 0 },
     { TLV_VHT_OPER_CENTR_REQ, "vht_oper_centr_freq_seg0_idx", 0 },
+    { TLV_IEEE8021_X, "ieee8021x", 0 },
     { TLV_EAP_SERVER, "eap_server", 0 },
     { TLV_EAPOL_KEY_INDEX_WORKAROUND, "eapol_key_index_workaround", 0 },
     { TLV_AUTH_SERVER_ADDR, "auth_server_addr", 0 },
@@ -63,6 +64,17 @@ struct tlv_to_config_name maps[] = {
     { TLV_AUTH_SERVER_SHARED_SECRET, "auth_server_shared_secret", 0 },
     { TLV_LOGGER_SYSLOG, "logger_syslog", 0 },
     { TLV_LOGGER_SYSLOG_LEVEL, "logger_syslog_level", 0 },
+    { TLV_IE_OVERRIDE, "ie_override", 0 }, // HostAPD Python Interface
+    { TLV_RECONFIG, "reconfig", 0 }, // HostAPD Python Interface
+    { TLV_SAME_ANONCE, "same_anonce", 0 }, // # HostAPD Python Interface
+    { TLV_VENDOR_ELEMENTS, "vendor_elements", 0 }, // HostAPD Python Interface
+    { TLV_ASSOCRESP_ELEMENTS, "assocresp_elements", 0 }, // HostAPD Python Interface
+    { TLV_SAE_ANTI_CLOGGING_THRESHOLD, "sae_anti_clogging_threshold", 0 }, // HostAPD Python Interface
+    { TLV_DISABLE_PMKSA_CACHING, "disable_pmksa_caching", 0 },  // HostAPD Python Interface
+    { TLV_SAE_COMMIT_OVERRIDE, "sae_commit_override", 0 },  // HostAPD Python Interface
+    { TLV_SAE_GROUPS, "sae_groups", 0 },
+    { TLV_IEEE80211_AX, "ieee80211ax", 0 },
+    { TLV_HE_OPER_CHWIDTH, "he_oper_chwidth", 0 },
     { TLV_MBO, "mbo", 0 },
     { TLV_MBO_CELL_DATA_CONN_PREF, "mbo_cell_data_conn_pref", 0 },
     { TLV_BSS_TRANSITION, "bss_transition", 0 },
@@ -71,8 +83,6 @@ struct tlv_to_config_name maps[] = {
     { TLV_RRM_BEACON_REPORT, "rrm_beacon_report", 0 },
     { TLV_COUNTRY3, "country3", 0 },
     { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
-    { TLV_HE_OPER_CHWIDTH, "he_oper_chwidth", 0 },
-    { TLV_IEEE80211_AX, "ieee80211ax", 0 },
     { TLV_MBO_ASSOC_DISALLOW, "mbo_assoc_disallow", 0 },
     { TLV_GAS_COMEBACK_DELAY, "gas_comeback_delay", 0 },
     { TLV_SAE_PWE, "sae_pwe", 0 },
