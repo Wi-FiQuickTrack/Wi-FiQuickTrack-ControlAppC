@@ -312,7 +312,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0;
     int i;
-    char buffer[512], cfg_item[512];
+    char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     char band[64];
 
     struct tlv_to_config_name* cfg = NULL;
@@ -1045,7 +1045,7 @@ static void append_wpas_network_default_config(struct packet_wrapper *wrapper) {
 
 static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
     int i, j;
-    char value[S_BUFFER_LEN], cfg_item[S_BUFFER_LEN];
+    char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     int ieee80211w_configured = 0;
     int transition_mode_enabled = 0;
     int owe_configured = 0;
