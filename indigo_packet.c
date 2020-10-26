@@ -212,7 +212,7 @@ int gen_tlv(char *packet, int packet_size, struct tlv_hdr *t) {
 
 void print_tlv(struct tlv_hdr *t) {
     int i;
-    char buffer[S_BUFFER_LEN], t_value[16];
+    char buffer[S_BUFFER_LEN], value[S_BUFFER_LEN];
     struct indigo_tlv *tlv = get_tlv_by_id(t->id);
 
     indigo_logger(LOG_LEVEL_INFO, "    ID: 0x%04x (%s)", t->id, tlv == NULL ? "Unknown" : tlv->name);
@@ -223,8 +223,8 @@ void print_tlv(struct tlv_hdr *t) {
         sprintf(buffer, "    Value: ");
     }
     for (i = 0; i < t->len; i++) {
-        sprintf(t_value, "0x%02x ", t->value[i]);
-        strcat(buffer, t_value);
+        sprintf(value, "%02x ", t->value[i]);
+        strcat(buffer, value);
     }
     indigo_logger(LOG_LEVEL_INFO, buffer);
 }
