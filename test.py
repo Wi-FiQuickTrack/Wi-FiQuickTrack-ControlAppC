@@ -167,6 +167,12 @@ def test_ap_configure():
 #    m.append_tlv(Tlv(0x000d, [0x43, 0x43, 0x4d, 0x50] ))
     return m
 
+def test_assign_static_ip():
+    # Bytes to DUT : 01 50 06 00 cc ff ff 00 55 0b 31 39 32 2e 31 36 38 2e 31 2e 31
+    m = Msg(0x5006)
+    m.append_tlv(Tlv(0x0055, bytes(b'192.168.1.1')))
+    return m
+
 def test_device_reset():
     # REQ: 01 50 07 01 4f ff ff 00 5c 01 32 00 57 01 30
     # RSP: 01 00 01 01 4f ff ff a0 01 01 30 a0 00 15 41 43 4b 3a 20 43 6f 6d 6d 61 6e 64 20 72 65 63 65 69 76 65 64
@@ -217,6 +223,9 @@ elif len(sys.argv) >= 2:
         outputs.append(m.to_bytes())
     elif sys.argv[1] == "sta_disconnect":
         m = test_sta_disconnect()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "assign_static_ip":
+        m = test_assign_static_ip()
         outputs.append(m.to_bytes())
     else:
         m = test_get_control_app()
