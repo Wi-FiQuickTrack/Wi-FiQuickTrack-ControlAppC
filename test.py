@@ -61,6 +61,7 @@ def send_indigo_api(ip, port):
             print('waiting to receive response')
             data, server = sock.recvfrom(4096)
             print('received "%s"' % get_hexstring(data))
+            print('(ascii)  "%s"' % (data))
             time.sleep(command_interval)
         except Exception as e:
             print(e)
@@ -84,6 +85,15 @@ def test_loopback_start():
 
 def test_loopback_stop():
     m = Msg(0x5004)
+    return m
+
+def test_loopback_send_data():
+    m = Msg(0x5008)
+    m.append_tlv(Tlv(0x0058, bytes(b'10.252.10.32')))
+    m.append_tlv(Tlv(0x0054, bytes(b'20480')))
+    m.append_tlv(Tlv(0x0067, bytes(b'12')))
+    m.append_tlv(Tlv(0x0069, bytes(b'1')))
+    m.append_tlv(Tlv(0x00c0, bytes(b'1200')))
     return m
 
 def start_loopback_client(target_host, target_port=20480, count=10, size=1000):
@@ -146,6 +156,10 @@ def test_ap_stop():
     m = Msg(0x1001)
     return m
 
+def test_get_mac_addr():
+    m = Msg(0x5001)
+    return m
+
 def test_ap_configure():
     # Bytes to DUT : 01 10 02 01 51 ff ff 00 01 11 49 6e 64 69 67 6f 5f 31 36 30 32 38 33 39 35 39 34
     #                00 07 01 31
@@ -186,7 +200,7 @@ command_interval = 1
 outputs = []
 
 # ContrlAppC ip and port
-peer_ip = '10.252.10.32'
+peer_ip = '10.252.10.31'
 peer_port = 5001
 
 if len(sys.argv) == 1:
@@ -202,6 +216,9 @@ elif len(sys.argv) >= 2:
     elif sys.argv[1] == "loopback_test":
         start_loopback_client(peer_ip, 20480, 10, 1000)
         m = test_get_control_app()
+        outputs.append(m.to_bytes())
+    elif sys.argv[1] == "loopback_send_data":
+        m = test_loopback_send_data()
         outputs.append(m.to_bytes())
     elif sys.argv[1] == "loopback_stop":
         m = test_loopback_stop()
@@ -226,6 +243,8 @@ elif len(sys.argv) >= 2:
         outputs.append(m.to_bytes())
     elif sys.argv[1] == "assign_static_ip":
         m = test_assign_static_ip()
+    elif sys.argv[1] == "get_mac_addr":
+        m = test_get_mac_addr()
         outputs.append(m.to_bytes())
     else:
         m = test_get_control_app()

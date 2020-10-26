@@ -76,6 +76,10 @@ struct indigo_api {
 #define API_ASSIGN_STATIC_IP                    0x5006
 #define API_DEVICE_RESET                        0x5007
 
+/* TODO: updated value when they are available */
+#define API_INDIGO_SEND_LOOP_BACK_DATA          0x5008
+/* end of TODO */
+
 /* TLV definition */
 #define TLV_SSID                                0x0001
 #define TLV_CHANNEL                             0x0002
@@ -223,11 +227,20 @@ struct indigo_api {
 #define TLV_RSNXE_OVERRIDE_EAPOL                0x0092
 #define TLV_TRANSITION_DISABLE                  0x0093
 
+/* TODO: updated value when they are available */
+#define TLV_UDP_PACKET_SIZE                     0x00c0
+/* end of TODO */
+
+// class IndigoResponseTLV
+// List of TLV used in the Indigo API response and ACK messages from the DUT
 #define TLV_MESSAGE                             0xa000
 #define TLV_STATUS                              0xa001
 #define TLV_DUT_WLAN_IP_ADDR                    0xa002
 #define TLV_DUT_MAC_ADDR                        0xa003
 #define TLV_CONTROL_APP_VERSION                 0xa004
+/* TODO: updated value when they are available */
+#define TLV_LOOP_BACK_DATA_RECEIVED             0xa005
+/* end of TODO */
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
@@ -250,6 +263,8 @@ struct indigo_api {
 #define TLV_VALUE_ASSIGN_STATIC_IP_NOT_OK       "Static IP failed to be assigned to wireless interface"
 #define TLV_VALUE_LOOPBACK_SVR_START_OK         "Loop back server initialized"
 #define TLV_VALUE_LOOPBACK_SVR_START_NOT_OK     "Failed to initialise loop back server"
+#define TLV_VALUE_SEND_LOOPBACK_DATA_OK         "Send Loop back data successful"
+#define TLV_VALUE_SEND_LOOPBACK_DATA_NOT_OK     "Send Loop back data failed"
 #define TLV_VALUE_WIRELESS_INTERFACE_NOT_OK     "Wireless interface is not available"
 #define TLV_VALUE_HOSTAPD_CTRL_NOT_OK           "Failed to connect to hostapd control interface"
 #define TLV_VALUE_HOSTAPD_NOT_OK                "Failed to find hostapd PID"

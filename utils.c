@@ -267,6 +267,74 @@ int loopback_client_status() {
     return !!loopback_socket;
 }
 
+int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, int rate)
+{
+    int s = 0, i = 0;
+    struct sockaddr_in addr;
+    int pkt_sent = 0, pkt_rcv = 0;
+    char message[1600], server_reply[1600];
+    ssize_t recv_len = 0, send_len = 0;
+
+    /* Open UDP socket */
+    s = socket(PF_INET, SOCK_DGRAM, 0);
+    if (s < 0)
+    {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open socket");
+        return -1;
+    }
+
+    struct timeval timeout = {3, 0}; //3s
+    setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
+    setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    if (target_ip)
+    {
+        addr.sin_addr.s_addr = inet_addr(target_ip);
+    }
+    addr.sin_port = htons(target_port);
+
+    if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
+    {
+        indigo_logger(LOG_LEVEL_ERROR, "Connect failed. Error");
+        close(s);
+        return -1;
+    }
+
+    memset(&message, 0, sizeof(message));
+    for (i = 0; (i < packet_size) && (i < sizeof(message)); i++)
+        message[i] = 0x0A;
+
+    for (pkt_sent = 0; pkt_sent < packet_count; pkt_sent++)
+    {
+        memset(&server_reply, 0, sizeof(server_reply));
+
+        send_len = send(s, message, strlen(message), 0);
+        if (send_len < 0)
+        {
+            indigo_logger(LOG_LEVEL_INFO, "Send failed on packet %d", pkt_sent);
+            continue;
+        }
+        indigo_logger(LOG_LEVEL_INFO, "Packet %d: Send loopback %d bytes data to ip %s port %u",
+                      pkt_sent, send_len, target_ip, target_port);
+
+        recv_len = recv(s, server_reply, sizeof(server_reply), 0);
+        if (recv_len < 0)
+        {
+            indigo_logger(LOG_LEVEL_INFO, "recv failed on packet %d", pkt_sent);
+            continue;
+        }
+        pkt_rcv++;
+        sleep(rate);
+
+        indigo_logger(LOG_LEVEL_INFO, "Receive echo %d bytes data", recv_len);
+    }
+    close(s);
+
+    return pkt_rcv;
+}
+
 int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
     struct ifaddrs *ifap, *ifa;
     struct sockaddr_in *sa;

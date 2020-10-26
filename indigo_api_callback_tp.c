@@ -38,6 +38,7 @@ void register_apis() {
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
     register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
     register_api(API_INDIGO_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
+    register_api(API_INDIGO_SEND_LOOP_BACK_DATA, NULL, send_loopback_data_handler);
     /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
     register_api(API_DEVICE_RESET, NULL, reset_device_handler);
@@ -623,6 +624,67 @@ static int stop_loop_back_server_handler(struct packet_wrapper *req, struct pack
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_LOOP_BACK_STOP_OK), TLV_VALUE_LOOP_BACK_STOP_OK);
+
+    return 0;
+}
+
+
+static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct tlv_hdr *tlv;
+    char dut_ip[64];
+    char dut_port[32];
+    char rate[16], pkt_count[16], pkt_size[16];
+    int status = TLV_VALUE_STATUS_NOT_OK, recvd = 0;
+    char *message = TLV_VALUE_SEND_LOOPBACK_DATA_NOT_OK;
+
+    /* TLV: TLV_DUT_IP_ADDRESS */
+    memset(dut_ip, 0, sizeof(dut_ip));
+    tlv = find_wrapper_tlv_by_id(req, TLV_DUT_IP_ADDRESS);
+    if (tlv) {
+        memcpy(dut_ip, tlv->value, tlv->len);
+    } else {
+        goto done;
+    }
+    /* TODO:   TLV: TLV_DUT_UDP_PORT ? */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_UDP_PORT);
+    if (tlv) {
+        memcpy(dut_port, tlv->value, tlv->len);
+    } else {
+        goto done;
+    }
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_UDP_PACKET_RATE);
+    if (tlv) {
+        memcpy(rate, tlv->value, tlv->len);
+    } else {
+        snprintf(rate, sizeof(rate), "1");
+    }
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_PACKET_COUNT);
+    if (tlv) {
+        memcpy(pkt_count, tlv->value, tlv->len);
+    } else {
+        snprintf(pkt_count, sizeof(pkt_count), "10");
+    }
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_UDP_PACKET_SIZE);
+    if (tlv) {
+        memcpy(pkt_size, tlv->value, tlv->len);
+    } else {
+        snprintf(pkt_size, sizeof(pkt_size), "1000");
+    }
+
+    /* Start loopback */
+    recvd = send_loopback_data(dut_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atoi(rate));
+    if (recvd > 0) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_SEND_LOOPBACK_DATA_OK;
+    }
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    fill_wrapper_tlv_byte(resp, TLV_LOOP_BACK_DATA_RECEIVED, recvd);
 
     return 0;
 }

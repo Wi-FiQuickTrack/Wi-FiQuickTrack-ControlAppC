@@ -21,7 +21,7 @@
 /* SOFTWARE. */
 
 #define S_BUFFER_LEN              256
-#define BUFFER_LEN                1024
+#define BUFFER_LEN                1536
 #define L_BUFFER_LEN              8192
 
 /* Log */
@@ -44,6 +44,7 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);
 int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout);
 int loopback_client_stop();
 int loopback_client_status();
+int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, int rate);
 
 #define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
