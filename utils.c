@@ -27,8 +27,11 @@
 #include <syslog.h>
 #include <fcntl.h>
 #include <unistd.h>
+#ifdef _OPENWRT_
+#include <sys/time.h>
+#else
 #include <time.h>
-
+#endif
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
