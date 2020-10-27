@@ -29,9 +29,8 @@
 #include <unistd.h>
 #ifdef _OPENWRT_
 #include <sys/time.h>
-#else
-#include <time.h>
 #endif
+#include <time.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
