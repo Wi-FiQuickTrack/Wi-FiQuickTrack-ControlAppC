@@ -332,14 +332,14 @@ static void add_mu_edca_params(char *output) {
     strcat(output, "he_mu_edca_ac_vo_timer=255\n");
 }
 
-static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper) {
-    int i;
+static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
+    int i, ctrl_iface = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
 
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
 
-    sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, get_wireless_interface());
+    sprintf(output, "ctrl_interface_group=0\ninterface=%s\n", ifname);
 
 #ifdef _RESERVED_
     /* The function is reserved for the defeault hostapd config */
@@ -359,9 +359,13 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
         strcat(output, cfg_item);
 
+        if (tlv->id == TLV_CONTROL_INTERFACE)
+            ctrl_iface = 1;
         if (tlv->id == TLV_HE_MU_EDCA)
             add_mu_edca_params(output);
     }
+    if (ctrl_iface == 0)
+        indigo_logger(LOG_LEVEL_ERROR, "No Remote UDP ctrl interface TLV for TP");
 
     return strlen(output);
 }
@@ -370,17 +374,20 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
-    char buffer[L_BUFFER_LEN];
+    char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = "DUT configured as AP : Configuration file created";
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_INTERFACE_NAME);
+    memset(ifname, 0, sizeof(ifname));
     if (tlv) {
-        memcpy(buffer, tlv->value, tlv->len);
+        memcpy(ifname, tlv->value, tlv->len);
+    } else {
+        sprintf(ifname, "%s", get_wireless_interface());
     }
 
-    len = generate_hostapd_config(buffer, sizeof(buffer), req);
+    len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
     if (len) {
         write_file(get_hapd_conf_file(), buffer, len);
     }
@@ -396,20 +403,28 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_HOSTAPD_START_OK;
-    char buffer[S_BUFFER_LEN];
+    char buffer[S_BUFFER_LEN], g_ctrl_iface[64];
     int len;
+    struct tlv_hdr *tlv;
 
     memset(buffer, 0, sizeof(buffer));
+    tlv = find_wrapper_tlv_by_id(req, TLV_GLOBAL_CTRL_IFACE);
+    memset(g_ctrl_iface, 0, sizeof(g_ctrl_iface));
+    if (tlv) {
+        memcpy(g_ctrl_iface, tlv->value, tlv->len);
+    } else {
+        sprintf(g_ctrl_iface, "%s", get_hapd_global_ctrl_path());
+    }
 #ifdef _OPENWRT_
     sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
     system(buffer);
     sleep(1);
 
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
+        g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
 #else
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
+        g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
 #endif
     len = system(buffer);
     sleep(1);

@@ -233,6 +233,7 @@ struct indigo_api {
 #define TLV_TEST_PLATFORM_PORT                  0x0096
 #define TLV_CONTROL_INTERFACE                   0x0097
 #define TLV_UDP_PACKET_SIZE                     0x00c0
+#define TLV_GLOBAL_CTRL_IFACE                   0x00c1
 /* end of TODO */
 
 // class IndigoResponseTLV

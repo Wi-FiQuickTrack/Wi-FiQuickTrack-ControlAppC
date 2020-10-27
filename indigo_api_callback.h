@@ -89,6 +89,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_OWE_GROUPS, "owe_groups", 0 },
     { TLV_HE_MU_EDCA, "he_mu_edca_qos_info_param_count", 0 },
     { TLV_TRANSITION_DISABLE, "transition_disable", 0 },
+    { TLV_CONTROL_INTERFACE, "ctrl_interface", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },

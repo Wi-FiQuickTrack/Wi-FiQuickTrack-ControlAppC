@@ -308,7 +308,7 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 }
 #endif /* _RESERVED_ */
 
-static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper) {
+static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0;
     int i;
@@ -318,7 +318,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
 
-    sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, get_wireless_interface());
+    sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, ifname);
 
 #ifdef _RESERVED_
     /* The function is reserved for the defeault hostapd config */
@@ -461,17 +461,20 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
-    char buffer[L_BUFFER_LEN];
+    char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = "DUT configured as AP : Configuration file created";
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_INTERFACE_NAME);
+    memset(ifname, 0, sizeof(ifname))
     if (tlv) {
-        memcpy(buffer, tlv->value, tlv->len);
+        memcpy(ifname, tlv->value, tlv->len);
+    } {
+        sprintf(ifname, "%s", get_wireless_interface());
     }
 
-    len = generate_hostapd_config(buffer, sizeof(buffer), req);
+    len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
     if (len) {
         write_file(get_hapd_conf_file(), buffer, len);
     }
