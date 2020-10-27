@@ -470,7 +470,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     memset(ifname, 0, sizeof(ifname));
     if (tlv) {
         memcpy(ifname, tlv->value, tlv->len);
-    } {
+    } else {
         sprintf(ifname, "%s", get_wireless_interface());
     }
 
