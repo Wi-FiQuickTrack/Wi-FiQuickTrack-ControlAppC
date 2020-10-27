@@ -715,7 +715,7 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
     memset(param_value, 0, sizeof(param_value));
     tlv = find_wrapper_tlv_by_id(req, TLV_MBO_ASSOC_DISALLOW);
     if (!tlv) {
-        find_wrapper_tlv_by_id(req, TLV_GAS_COMEBACK_DELAY);
+        tlv = find_wrapper_tlv_by_id(req, TLV_GAS_COMEBACK_DELAY);
     }
     if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
         strcpy(param_name, find_hostapd_config_name(tlv->id));
