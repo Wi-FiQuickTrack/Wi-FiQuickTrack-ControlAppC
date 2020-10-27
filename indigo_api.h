@@ -226,8 +226,12 @@ struct indigo_api {
 #define TLV_SAE_PMKID_IN_ASSOC                  0x0091
 #define TLV_RSNXE_OVERRIDE_EAPOL                0x0092
 #define TLV_TRANSITION_DISABLE                  0x0093
+#define TLV_SAE_CONFIRM_IMMEDIATE               0x0094
 
 /* TODO: updated value when they are available */
+#define TLV_TEST_PLATFORM_IP                    0x0095
+#define TLV_TEST_PLATFORM_PORT                  0x0096
+#define TLV_CONTROL_INTERFACE                   0x0097
 #define TLV_UDP_PACKET_SIZE                     0x00c0
 /* end of TODO */
 
