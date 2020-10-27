@@ -1076,6 +1076,10 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             memset(value, 0, sizeof(value));
             memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
 
+            if (wrapper->tlv[i]->id == TLV_IEEE80211_W) {
+                ieee80211w_configured = 1;
+            }
+
             if (wrapper->tlv[i]->id == TLV_KEY_MGMT) {
                 if (strstr(value, "WPA-PSK") || strstr(value, "SAE")) {
                     transition_mode_enabled = 1;
