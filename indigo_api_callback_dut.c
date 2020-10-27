@@ -467,7 +467,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_INTERFACE_NAME);
-    memset(ifname, 0, sizeof(ifname))
+    memset(ifname, 0, sizeof(ifname));
     if (tlv) {
         memcpy(ifname, tlv->value, tlv->len);
     } {
