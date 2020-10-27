@@ -333,7 +333,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
-        if (tlv->id == TLV_WPA_KEY_MGMT && (strstr(tlv->value, "SAE") || strstr(tlv->value, "WPA-PSK"))) {
+        if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "SAE") && strstr(tlv->value, "WPA-PSK")) {
             has_transition = 1;
         }
 
