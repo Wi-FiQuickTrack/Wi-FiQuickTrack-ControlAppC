@@ -397,7 +397,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }            
     }
 
-    if (has_sae == 0) {
+    if (has_sae == 1) {
         strcat(output, "sae_require_mfp=1\n");
     }
 
