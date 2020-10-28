@@ -81,3 +81,5 @@ char* get_wireless_interface();
 int set_wireless_interface(char *name);
 int get_service_port();
 int set_service_port(int port);
+
+size_t strlcpy(char *dest, const char *src, size_t siz);

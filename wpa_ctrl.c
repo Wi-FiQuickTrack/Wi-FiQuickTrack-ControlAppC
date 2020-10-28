@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <errno.h>
 #ifndef CONFIG_NATIVE_WINDOWS
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -25,6 +26,7 @@
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 #include "wpa_ctrl.h"
+#include "utils.h"
 #ifdef CONFIG_NATIVE_WINDOWS
 #include "common.h"
 #endif /* CONFIG_NATIVE_WINDOWS */
@@ -44,6 +46,7 @@ struct wpa_ctrl {
 #ifdef CONFIG_CTRL_IFACE_UDP
 	struct sockaddr_in local;
 	struct sockaddr_in dest;
+	char *cookie;
 #else /* CONFIG_CTRL_IFACE_UDP */
 	struct sockaddr_un local;
 	struct sockaddr_un dest;
@@ -56,6 +59,10 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	struct wpa_ctrl *ctrl;
 #ifndef CONFIG_CTRL_IFACE_UDP
 	static int counter = 0;
+#else
+    unsigned short port = 0;
+    char buf[128];
+	size_t len;
 #endif /* CONFIG_CTRL_IFACE_UDP */
 
 	ctrl = malloc(sizeof(*ctrl));
@@ -72,7 +79,11 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	}
 
 	ctrl->local.sin_family = AF_INET;
+#ifdef CONFIG_CTRL_IFACE_UDP
+	ctrl->local.sin_addr.s_addr = INADDR_ANY;
+#else /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 	ctrl->local.sin_addr.s_addr = htonl((127 << 24) | 1);
+#endif /* CONFIG_CTRL_IFACE_UDP_REMOTE */
 	if (bind(ctrl->s, (struct sockaddr *) &ctrl->local,
 		 sizeof(ctrl->local)) < 0) {
 		close(ctrl->s);
@@ -80,15 +91,24 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 		return NULL;
 	}
 
+    sscanf(ctrl_path, "udp:%hu", &port);
+
 	ctrl->dest.sin_family = AF_INET;
 	ctrl->dest.sin_addr.s_addr = htonl((127 << 24) | 1);
-	ctrl->dest.sin_port = htons(WPA_CTRL_IFACE_PORT);
+	ctrl->dest.sin_port = htons(port);
 	if (connect(ctrl->s, (struct sockaddr *) &ctrl->dest,
 		    sizeof(ctrl->dest)) < 0) {
 		perror("connect");
 		close(ctrl->s);
 		free(ctrl);
 		return NULL;
+	}
+
+	len = sizeof(buf) - 1;
+	if (wpa_ctrl_request(ctrl, "GET_COOKIE", 10, buf, &len, NULL) == 0) {
+		buf[len] = '\0';
+		ctrl->cookie = strdup(buf);
+	    printf("%s\n\n", ctrl->cookie);
 	}
 #else /* CONFIG_CTRL_IFACE_UDP */
 	ctrl->s = socket(PF_UNIX, SOCK_DGRAM, 0);
@@ -127,6 +147,9 @@ void wpa_ctrl_close(struct wpa_ctrl *ctrl)
 {
 #ifndef CONFIG_CTRL_IFACE_UDP
 	unlink(ctrl->local.sun_path);
+#else
+    if (ctrl->cookie)
+        free(ctrl->cookie);
 #endif /* CONFIG_CTRL_IFACE_UDP */
 	close(ctrl->s);
 	free(ctrl);
@@ -140,9 +163,33 @@ int wpa_ctrl_request(struct wpa_ctrl *ctrl, const char *cmd, size_t cmd_len,
 	struct timeval tv;
 	int res;
 	fd_set rfds;
+	const char *_cmd;
+	char *cmd_buf = NULL;
+	size_t _cmd_len;
 
-	if (send(ctrl->s, cmd, cmd_len, 0) < 0)
+#ifdef CONFIG_CTRL_IFACE_UDP
+	if (ctrl->cookie) {
+		char *pos;
+		_cmd_len = strlen(ctrl->cookie) + 1 + cmd_len;
+		cmd_buf = malloc(_cmd_len);
+		if (cmd_buf == NULL)
+			return -1;
+		_cmd = cmd_buf;
+		pos = cmd_buf;
+		strlcpy(pos, ctrl->cookie, _cmd_len);
+		pos += strlen(ctrl->cookie);
+		*pos++ = ' ';
+		memcpy(pos, cmd, cmd_len);
+	} else
+#endif /* CONFIG_CTRL_IFACE_UDP */
+	{
+		_cmd = cmd;
+		_cmd_len = cmd_len;
+	}
+
+	if (send(ctrl->s, _cmd, _cmd_len, 0) < 0) {
 		return -1;
+	}
 
 	for (;;) {
 		tv.tv_sec = 2;
@@ -152,8 +199,12 @@ int wpa_ctrl_request(struct wpa_ctrl *ctrl, const char *cmd, size_t cmd_len,
 		res = select(ctrl->s + 1, &rfds, NULL, NULL, &tv);
 		if (FD_ISSET(ctrl->s, &rfds)) {
 			res = recv(ctrl->s, reply, *reply_len, 0);
-			if (res < 0)
+		    if (res < 0 && errno == EINTR) {
+			    continue;
+			}
+			if (res < 0) {
 				return res;
+			}
 			if (res > 0 && reply[0] == '<') {
 				/* This is an unsolicited message from
 				 * wpa_supplicant, not the reply to the

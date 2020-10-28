@@ -24,7 +24,7 @@
 #define _INDIGO_API_CALLBACK
 
 
-#define LOOPBACK_TIMEOUT 120
+#define LOOPBACK_TIMEOUT 180
 
 
 struct tlv_to_config_name {
@@ -119,6 +119,7 @@ struct tlv_to_config_name wpas_global_maps[] = {
     { TLV_STA_SAE_GROUPS, "sae_groups", 0 },
     { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
     { TLV_SAE_PWE, "sae_pwe", 0 },
+    { TLV_CONTROL_INTERFACE, "ctrl_interface", 0 },
 };
 
 

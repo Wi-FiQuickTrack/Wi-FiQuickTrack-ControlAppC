@@ -1034,10 +1034,19 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     int ieee80211w_configured = 0;
     int transition_mode_enabled = 0;
     int owe_configured = 0;
+    char port[16];
+    struct tlv_hdr *tlv = NULL;
 
     struct tlv_to_config_name* cfg = NULL;
 
-    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
+    tlv = find_wrapper_tlv_by_id(wrapper, TLV_CONTROL_INTERFACE);
+    if (tlv) {
+        set_wpas_ctrl_path(tlv->value);
+    } else {
+        return 0;
+    }
+
+    sprintf(buffer, "ap_scan=1\npmf=1\n");
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         cfg = find_wpas_global_config_name(wrapper->tlv[i]->id);
@@ -1110,7 +1119,7 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     int len;
     char buffer[L_BUFFER_LEN];
     struct tlv_hdr *tlv;
-    char *message = "DUT configured as STA : Configuration file created";
+    char *message = "Test Platform configured as STA : Configuration file created";
 
     memset(buffer, 0, sizeof(buffer));
     len = generate_wpas_config(buffer, sizeof(buffer), req);
@@ -1154,10 +1163,11 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #endif
+    indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
     len = system(buffer);
-    sleep(2);
+    sleep(5);
 
-    /* Open WPA supplicant UDS socket */
+    /* Open WPA supplicant UDP socket */
     w = wpa_ctrl_open(get_wpas_ctrl_path());
     if (!w) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
@@ -1175,6 +1185,7 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
         memset(response, 0, sizeof(response));
         resp_len = sizeof(response) - 1;
         wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+        printf("wpa ctrl response: %s\n", response);
         // Check link
         if (strstr(response, "wpa_state=COMPLETED")) {
             indigo_logger(LOG_LEVEL_DEBUG, "Connected");
