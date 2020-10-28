@@ -1463,6 +1463,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     /* TLV: BSSID */
     tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
     if (tlv) {
+        memset(bssid, 0, sizeof(bssid));
         memcpy(bssid, tlv->value, tlv->len);
     } else {
         goto done;
@@ -1471,6 +1472,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     /* TLV: ANQP_INFO_ID */
     tlv = find_wrapper_tlv_by_id(req, TLV_ANQP_INFO_ID);
     if (tlv) {
+        memset(anqp_info_id, 0, sizeof(anqp_info_id));
         memcpy(anqp_info_id, tlv->value, tlv->len);
     }
 
