@@ -27,6 +27,7 @@
 #include "indigo_api.h"
 #include "utils.h"
 
+int capture_packet = 0, capture_count = 0;
 int debug_packet = 0;
 
 int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
@@ -84,6 +85,29 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
             }
         }
     }
+
+    if (capture_packet) {
+        char fn[S_BUFFER_LEN], value[8];
+        char *buffer;
+        int buffer_len = packet_len*6;
+        api = get_api_by_id(req->hdr.type);
+        if (api) {
+            sprintf(fn, "%02d_%s", capture_count++, api->name);
+        }
+        buffer = (char*)malloc(sizeof(char)*buffer_len);
+        if (!buffer) {
+            return 0;
+        }
+        memset(buffer, 0, buffer_len);
+        for (i = 0; i < packet_len; i++) {
+            memset(value, 0, sizeof(value));
+            sprintf(value, "0x%02x%s", (unsigned char)(packet[i]&0x00ff), (i<packet_len-1) ? ", " : "");
+            strcat(buffer, value);
+        }
+        write_file(fn, buffer, strlen(buffer));
+        free(buffer);
+    }
+
     return 0;
 }
 

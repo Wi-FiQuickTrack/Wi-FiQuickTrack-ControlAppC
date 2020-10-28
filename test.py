@@ -72,6 +72,33 @@ def send_indigo_api(ip, port):
     print("closing socket")
     sock.close()
 
+def send_indigo_api_raw(ip, port, raw):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server_address = (ip, port)
+
+    try:
+        # Send Requset
+        print('sending request')
+        sent = sock.sendto(raw, server_address)
+
+        # Receive ACK
+        print('waiting to receive ack')
+        data, server = sock.recvfrom(4096)
+        print('received "%s"' % get_hexstring(data))
+
+        # Receive Response
+        print('waiting to receive response')
+        data, server = sock.recvfrom(4096)
+        print('received "%s"' % get_hexstring(data))
+        print('(ascii)  "%s"' % (data))
+        time.sleep(command_interval)
+    except Exception as e:
+        print(e)
+        print("An exception occurred and closing socket")
+        sock.close()
+
+    print("closing socket")
+    sock.close()
 
 def test_get_control_app():
     m = Msg(0x5002)
@@ -195,13 +222,22 @@ def test_device_reset():
     m.append_tlv(Tlv(0x0057, bytes(0x30)))
     return m
 
+def test_hex_file(ip, port, fn):
+    raw = bytearray()
+    f = open(fn, "r")
+    txt = f.read()
+    data = txt.split(", ")
+    for d in data:
+        hex_int = int(d, 16)
+        raw.append(hex_int & 0x00ff)
+    send_indigo_api_raw(ip, port, raw)
 
 command_interval = 1
 outputs = []
 
 # ContrlAppC ip and port
-peer_ip = '10.252.10.31'
-peer_port = 5001
+peer_ip = '10.252.10.47'
+peer_port = 9004
 
 if len(sys.argv) == 1:
     m = test_get_control_app()
@@ -246,6 +282,9 @@ elif len(sys.argv) >= 2:
     elif sys.argv[1] == "get_mac_addr":
         m = test_get_mac_addr()
         outputs.append(m.to_bytes())
+    elif sys.argv[1] == "file":
+        test_hex_file(peer_ip, peer_port, sys.argv[2])
+        sys.exit()
     else:
         m = test_get_control_app()
         outputs.append(m.to_bytes())

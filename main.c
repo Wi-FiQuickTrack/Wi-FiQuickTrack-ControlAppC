@@ -39,6 +39,7 @@
 static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx);
 static int parse_parameters(int argc, char *argv[]);
 static void usage();
+extern int capture_packet;
 extern int debug_packet;
 
 /* Initiate the service port. */
@@ -163,20 +164,23 @@ static void usage() {
 static int parse_parameters(int argc, char *argv[]) {
     int c;
 
-    while ((c = getopt(argc, argv, "i:hp:d")) != -1) {
+    while ((c = getopt(argc, argv, "i:hp:dc")) != -1) {
         switch (c) {
+        case 'c':
+            capture_packet = 1;
+            break;
         case 'd':
             debug_packet = 1;
-            break;
-        case 'p':
-            set_service_port(atoi(optarg));
-            break;
-        case 'i':
-            set_wireless_interface(optarg);
             break;
         case 'h':
             usage();
             return 1;
+        case 'i':
+            set_wireless_interface(optarg);
+            break;
+        case 'p':
+            set_service_port(atoi(optarg));
+            break;
         }
     }
     return 0;
