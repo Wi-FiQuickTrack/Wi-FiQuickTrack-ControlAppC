@@ -155,6 +155,7 @@ def test_ap_send_disassociate():
 
 def test_sta_start_up():
     m = Msg(0x2008)
+    m.append_tlv(Tlv(0x0097, bytes(b'udp:10240')))
     return m
 
 def test_sta_configure():

@@ -1498,7 +1498,7 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
     size_t resp_len;
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
-
+    struct tlv_hdr *tlv = NULL;
 
 #ifdef _OPENWRT_
 #else
@@ -1509,11 +1509,16 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     system("killall wpa_supplicant");
     sleep(3);
 
-    memset(buffer, 0, sizeof(buffer));
-    // TODO: get PORT from tool's req TLV
-    len = sprintf(buffer, "ctrl_interface=udp:%u\nap_scan=1\n", 10240);
-    if (len) {
-        write_file(get_wpas_conf_file(), buffer, len);
+    tlv = find_wrapper_tlv_by_id(req, TLV_CONTROL_INTERFACE);
+    if (tlv) {
+        set_wpas_ctrl_path(tlv->value);
+        memset(buffer, 0, sizeof(buffer));
+        len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", tlv->value);
+        if (len) {
+            write_file(get_wpas_conf_file(), buffer, len);
+        }
+    } else {
+        return 0;
     }
 
     /* Start WPA supplicant */
