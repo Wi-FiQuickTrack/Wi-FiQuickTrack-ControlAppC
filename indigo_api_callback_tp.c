@@ -359,13 +359,17 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
         strcat(output, cfg_item);
 
-        if (tlv->id == TLV_CONTROL_INTERFACE)
+        if (tlv->id == TLV_CONTROL_INTERFACE) {
             ctrl_iface = 1;
+            set_hapd_ctrl_path(tlv->value);
+        }
         if (tlv->id == TLV_HE_MU_EDCA)
             add_mu_edca_params(output);
     }
-    if (ctrl_iface == 0)
+    if (ctrl_iface == 0) {
         indigo_logger(LOG_LEVEL_ERROR, "No Remote UDP ctrl interface TLV for TP");
+        return 0;
+    }
 
     return strlen(output);
 }
