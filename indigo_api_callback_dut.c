@@ -189,8 +189,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     system("killall hostapd 1>/dev/null 2>/dev/null");
     sleep(2);
 
-    sprintf(buffer, "rm -rf %s", get_hapd_conf_file());
-    len = system(buffer);
+    len = unlink(get_hapd_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
     }
@@ -980,7 +979,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
     sleep(2);
 
-    sprintf(buffer, "rm -rf %s", get_wpas_conf_file());
+    len = unlink(get_wpas_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
     }
