@@ -581,8 +581,6 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
     tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_IP_ADDRESS);
     if (tlv) {
         memcpy(tool_ip, tlv->value, tlv->len);
-    } else {
-        goto done;
     }
     /* TLV: TLV_TOOL_UDP_PORT */
     tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_UDP_PORT);
