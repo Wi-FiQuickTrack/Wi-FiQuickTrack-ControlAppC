@@ -58,6 +58,7 @@ struct indigo_api indigo_api_list[] = {
     { API_ASSIGN_STATIC_IP, "ASSIGN_STATIC_IP", NULL, NULL },
     { API_DEVICE_RESET, "DEVICE_RESET", NULL, NULL },
     { API_INDIGO_SEND_LOOP_BACK_DATA, "INDIGO_SEND_LOOP_BACK_DATA", NULL, NULL },
+    { API_BROADCAST_ARP_TEST, "BROADCAST_ARP_TEST", NULL, NULL },
 };
 
 struct indigo_tlv indigo_tlv_list[] = {

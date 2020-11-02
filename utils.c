@@ -337,6 +337,23 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
     return pkt_rcv;
 }
 
+int send_broadcast_arp(char *target_ip, int *send_count, int rate)
+{
+    char buffer[S_BUFFER_LEN];
+    FILE *fp;
+    int recv = 0;
+
+    snprintf(buffer, sizeof(buffer), "arping -i %s %s -c %d -W %d | grep packet", get_wireless_interface(), target_ip, *send_count, rate);
+    fp = popen(buffer, "r");
+    if (fp == NULL)
+        return 0;
+    //arping output format: 1 packets transmitted, 1 packets received,   0% unanswered (0 extra)
+    fscanf(fp, "%d %*s %*s %d", &recv , send_count);
+    pclose(fp);
+
+    return recv;
+}
+
 int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
     struct ifaddrs *ifap, *ifa;
     struct sockaddr_in *sa;

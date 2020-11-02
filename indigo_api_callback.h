@@ -133,6 +133,7 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int broadcast_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* AP */
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);

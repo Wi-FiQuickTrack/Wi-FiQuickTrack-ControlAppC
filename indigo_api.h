@@ -78,6 +78,7 @@ struct indigo_api {
 
 /* TODO: updated value when they are available */
 #define API_INDIGO_SEND_LOOP_BACK_DATA          0x5008
+#define API_BROADCAST_ARP_TEST                  0x5009
 /* end of TODO */
 
 /* TLV definition */
@@ -245,6 +246,8 @@ struct indigo_api {
 #define TLV_CONTROL_APP_VERSION                 0xa004
 /* TODO: updated value when they are available */
 #define TLV_LOOP_BACK_DATA_RECEIVED             0xa005
+#define TLV_ARP_SENT_NUM                        0xa006
+#define TLV_ARP_RECV_NUM                        0xa007
 /* end of TODO */
 
 /* TLV Value */
@@ -274,6 +277,8 @@ struct indigo_api {
 #define TLV_VALUE_HOSTAPD_CTRL_NOT_OK           "Failed to connect to hostapd control interface"
 #define TLV_VALUE_HOSTAPD_NOT_OK                "Failed to find hostapd PID"
 #define TLV_VALUE_HOSTAPD_RESP_NOT_OK           "Hostapd response is failed"
+#define TLV_VALUE_BROADCAST_ARP_TEST_OK         "Broadcast ARP test successful"
+#define TLV_VALUE_BROADCAST_ARP_TEST_NOT_OK     "Broadcast ARP test failed"
 
 
 #define TLV_VALUE_WPA_S_START_UP_OK             "wpa_supplicant is initialized successfully"
