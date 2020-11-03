@@ -147,7 +147,7 @@ done:
     /* Clean up resource */
     free_packet_wrapper(&req);
     free_packet_wrapper(&resp);
-    indigo_logger(LOG_LEVEL_DEBUG, "API %s: Complete", api->name);
+    indigo_logger(LOG_LEVEL_DEBUG, "API %s: Complete", api ? api->name : "Unknown");
 }
 
 /* Show the usage */
