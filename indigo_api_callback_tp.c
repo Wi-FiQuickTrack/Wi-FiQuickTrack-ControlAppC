@@ -572,8 +572,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     } else {
         goto done;
     }
-    /* TODO:   TLV: TLV_DUT_UDP_PORT ? */
-    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_UDP_PORT);
+    tlv = find_wrapper_tlv_by_id(req, TLV_DUT_UDP_PORT);
     if (tlv) {
         memcpy(dut_port, tlv->value, tlv->len);
     } else {
