@@ -228,13 +228,16 @@ struct indigo_api {
 #define TLV_RSNXE_OVERRIDE_EAPOL                0x0092
 #define TLV_TRANSITION_DISABLE                  0x0093
 #define TLV_SAE_CONFIRM_IMMEDIATE               0x0094
+#define TLV_SCAN_ENTRY_FLUSH                    0x0095
 
 /* TODO: updated value when they are available */
-#define TLV_TEST_PLATFORM_IP                    0x0095
-#define TLV_TEST_PLATFORM_PORT                  0x0096
-#define TLV_CONTROL_INTERFACE                   0x0097
-#define TLV_UDP_PACKET_SIZE                     0x00c0
-#define TLV_GLOBAL_CTRL_IFACE                   0x00c1
+#define TLV_TEST_PLATFORM_IP                    0x0096
+#define TLV_TEST_PLATFORM_PORT                  0x0097
+#define TLV_CONTROL_INTERFACE                   0x0098
+#define TLV_UDP_PACKET_SIZE                     0x0099
+#define TLV_UDP_PACKET_SIZE                     0x0099
+#define TLV_DUT_UDP_PORT                        0x009a
+#define TLV_GLOBAL_CTRL_IFACE                   0x009b
 /* end of TODO */
 
 // class IndigoResponseTLV
