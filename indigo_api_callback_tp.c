@@ -192,14 +192,15 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     system("killall hostapd 1>/dev/null 2>/dev/null");
     sleep(2);
 
-    sprintf(buffer, "rm -rf %s", get_hapd_conf_file());
-    len = system(buffer);
+    len = unlink(get_hapd_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
     }
     sleep(1);
 
 #ifdef _OPENWRT_
+    sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
+    system(buffer);
 #else
     len = system("rfkill unblock wlan");
     if (len) {
@@ -421,7 +422,12 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         sprintf(g_ctrl_iface, "%s", get_hapd_global_ctrl_path());
     }
 #ifdef _OPENWRT_
+#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
+    system(buffer);
+    sleep(1);
+#endif
+    sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
     system(buffer);
     sleep(1);
 
@@ -1011,7 +1017,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
     sleep(2);
 
-    sprintf(buffer, "rm -rf %s", get_wpas_conf_file());
+    len = unlink(get_wpas_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
     }
@@ -1206,10 +1212,11 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
 #ifdef _OPENWRT_
+#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw phy phy1 interface add %s type station", get_wireless_interface());
     system(buffer);
     sleep(1);
-
+#endif
     sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #else
@@ -1573,10 +1580,11 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
 #ifdef _OPENWRT_
+#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw phy phy1 interface add %s type station", get_wireless_interface());
     system(buffer);
     sleep(1);
-
+#endif
     sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #else
