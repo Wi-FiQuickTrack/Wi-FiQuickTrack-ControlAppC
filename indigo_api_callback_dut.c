@@ -216,6 +216,8 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     sprintf(buffer, "iw dev %s del", get_wireless_interface());
     system(buffer);
 #endif
+    sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
+    system(buffer);
 #endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -498,6 +500,9 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #ifdef _OPENWRT_
 #ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
+    system(buffer);
+    sleep(1);
+    sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
     system(buffer);
     sleep(1);
 #endif
