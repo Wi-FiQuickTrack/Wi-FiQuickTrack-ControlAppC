@@ -566,7 +566,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     struct tlv_hdr *tlv;
     char dut_ip[64];
     char dut_port[32];
-    char rate[16], pkt_count[16], pkt_size[16];
+    char rate[16], pkt_count[16], pkt_size[16], recv_count[16];
     int status = TLV_VALUE_STATUS_NOT_OK, recvd = 0;
     char *message = TLV_VALUE_SEND_LOOPBACK_DATA_NOT_OK;
 
@@ -607,16 +607,18 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     }
 
     /* Start loopback */
+    snprintf(recv_count, sizeof(recv_count), "0");
     recvd = send_loopback_data(dut_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atoi(rate));
     if (recvd > 0) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_SEND_LOOPBACK_DATA_OK;
+        snprintf(recv_count, sizeof(recv_count), "%d", recvd);
     }
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    fill_wrapper_tlv_byte(resp, TLV_LOOP_BACK_DATA_RECEIVED, recvd);
+    fill_wrapper_tlv_bytes(resp, TLV_LOOP_BACK_DATA_RECEIVED, strlen(recv_count), recv_count);
 
     return 0;
 }
