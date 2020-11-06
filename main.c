@@ -140,7 +140,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
         sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
     } else {
-        indigo_logger(LOG_LEVEL_DEBUG, "API %s: No handle function", api->name);
+        indigo_logger(LOG_LEVEL_DEBUG, "API %s (0x%04x): No handle function", req.hdr.type, api ? api->name : "Unknown");
     }
 
 done:
