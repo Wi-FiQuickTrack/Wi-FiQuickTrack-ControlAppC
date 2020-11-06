@@ -217,8 +217,10 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     }
 
 #ifdef _OPENWRT_
+#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw dev %s del", get_wireless_interface());
     system(buffer);
+#endif
 #endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -1043,8 +1045,10 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     }
 
 #ifdef _OPENWRT_
+#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw dev %s del", get_wireless_interface());
     system(buffer);
+#endif
 #endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
