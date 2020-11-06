@@ -46,6 +46,7 @@ struct indigo_api {
 /* Message type definition */
 #define API_CMD_RESPONSE                        0x0000
 #define API_CMD_ACK                             0x0001
+
 #define API_AP_START_UP                         0x1000
 #define API_AP_STOP                             0x1001
 #define API_AP_CONFIGURE                        0x1002
@@ -53,6 +54,7 @@ struct indigo_api {
 #define API_AP_SEND_DISCONNECT                  0x1004
 #define API_AP_SET_PARAM                        0x1005
 #define API_AP_SEND_BTM_REQ                     0x1006
+#define API_AP_SEND_ARP_TEST                    0x1007
 
 #define API_STA_ASSOCIATE                       0x2000
 #define API_STA_CONFIGURE                       0x2001
@@ -78,7 +80,6 @@ struct indigo_api {
 
 /* TODO: updated value when they are available */
 #define API_INDIGO_SEND_LOOP_BACK_DATA          0x5008
-#define API_BROADCAST_ARP_TEST                  0x5009
 /* end of TODO */
 
 /* TLV definition */

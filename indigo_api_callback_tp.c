@@ -42,7 +42,6 @@ void register_apis() {
     /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
     register_api(API_DEVICE_RESET, NULL, reset_device_handler);
-    register_api(API_BROADCAST_ARP_TEST, NULL, broadcast_arp_handler);
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
@@ -51,6 +50,7 @@ void register_apis() {
     register_api(API_AP_SEND_DISCONNECT, NULL, send_ap_disconnect_handler);
     register_api(API_AP_SET_PARAM , NULL, set_ap_parameter_handler);
     register_api(API_AP_SEND_BTM_REQ, NULL, send_ap_btm_handler);
+    register_api(API_AP_SEND_ARP_TEST, NULL, send_ap_arp_handler);
     /* STA */
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
@@ -623,10 +623,10 @@ done:
     return 0;
 }
 
-static int broadcast_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
     char target_ip[64];
-    char rate[16], arp_count[16];
+    char rate[16], arp_count[16], recv_count[16];
     int status = TLV_VALUE_STATUS_NOT_OK, recvd = 0, send = 0;
     char *message = TLV_VALUE_BROADCAST_ARP_TEST_NOT_OK;
 
@@ -657,17 +657,19 @@ static int broadcast_arp_handler(struct packet_wrapper *req, struct packet_wrapp
     }
 
     /* Send broadcast ARP */
+    memset(recv_count, 0, sizeof(recv_count));
     recvd = send_broadcast_arp(target_ip, &send, atoi(rate));
     if (recvd > 0) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_BROADCAST_ARP_TEST_OK;
+	snprintf(recv_count, sizeof(recv_count), "%d", recvd);
     }
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    fill_wrapper_tlv_byte(resp, TLV_ARP_SENT_NUM, send);
-    fill_wrapper_tlv_byte(resp, TLV_ARP_RECV_NUM, recvd);
+    //fill_wrapper_tlv_byte(resp, TLV_ARP_SENT_NUM, send);
+    fill_wrapper_tlv_bytes(resp, TLV_ARP_RECV_NUM, strlen(recv_count), recv_count);
 
     return 0;
 }
