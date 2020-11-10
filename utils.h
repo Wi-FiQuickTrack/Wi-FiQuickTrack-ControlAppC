@@ -20,6 +20,9 @@
 /* OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS                          */
 /* SOFTWARE. */
 
+#ifndef _INDIGO_UTILS_
+#define _INDIGO_UTILS_  1
+
 #define S_BUFFER_LEN              256
 #define BUFFER_LEN                1536
 #define L_BUFFER_LEN              8192
@@ -85,3 +88,18 @@ int set_service_port(int port);
 
 size_t strlcpy(char *dest, const char *src, size_t siz);
 int get_key_value(char *value, char *buffer, char *token);
+
+
+enum {
+    BAND_24GHZ = 0,
+    BAND_5GHZ = 1
+};
+
+struct channel_info {
+    int channel;
+    int freq;
+};
+
+int verify_band_from_freq(int freq, int band);
+
+#endif

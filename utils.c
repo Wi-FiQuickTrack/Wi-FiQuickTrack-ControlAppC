@@ -476,6 +476,32 @@ int set_service_port(int port) {
     return 0;
 }
 
+struct channel_info band_24[] = { {1, 2412}, {2, 2417}, {3, 2422}, {4, 2427}, {5, 2432}, {6, 2437}, {7, 2442}, {8, 2447}, {9, 2452}, {10, 2457}, {11, 2462} };
+struct channel_info band_5[] = { {36, 5180}, {40, 5200}, {44, 5220}, {48, 5240}, {52, 5260}, {56, 5280}, {60, 5300}, {64, 5320}, {100, 5500}, {104, 5520}, {108, 5540}, 
+                                 {112, 5560}, {116, 5580}, {120, 5600}, {124, 5620}, {128, 5640}, {132, 5660}, {136, 5680}, {140, 5700}, {144, 5720}, {149, 5745}, 
+                                 {153, 5765}, {157, 5785}, {161, 5805}, {165, 8525} };
+
+int verify_band_from_freq(int freq, int band) {
+    struct channel_info *info = NULL;
+    int i, size = 0;
+
+    if (band == BAND_24GHZ) {
+        info = band_24;
+        size = sizeof(band_24)/sizeof(struct channel_info);
+    } else {
+        info = band_5;
+        size = sizeof(band_5)/sizeof(struct channel_info);
+    }
+
+    for (i = 0; i < size; i++) {
+        if (freq == info[i].freq) {
+            return 0;
+        }
+    }
+
+    return -1;
+}
+
 /* String operation */
 size_t strlcpy(char *dest, const char *src, size_t siz) {
 	const char *s = src;
