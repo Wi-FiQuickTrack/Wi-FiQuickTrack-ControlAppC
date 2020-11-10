@@ -84,3 +84,4 @@ int get_service_port();
 int set_service_port(int port);
 
 size_t strlcpy(char *dest, const char *src, size_t siz);
+int get_key_value(char *value, char *buffer, char *token);

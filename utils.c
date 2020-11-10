@@ -269,8 +269,7 @@ int loopback_client_status() {
     return !!loopback_socket;
 }
 
-int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, int rate)
-{
+int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, int rate) {
     int s = 0, i = 0;
     struct sockaddr_in addr;
     int pkt_sent = 0, pkt_rcv = 0;
@@ -279,8 +278,7 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
 
     /* Open UDP socket */
     s = socket(PF_INET, SOCK_DGRAM, 0);
-    if (s < 0)
-    {
+    if (s < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to open socket");
         return -1;
     }
@@ -291,14 +289,12 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    if (target_ip)
-    {
+    if (target_ip) {
         addr.sin_addr.s_addr = inet_addr(target_ip);
     }
     addr.sin_port = htons(target_port);
 
-    if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-    {
+    if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Connect failed. Error");
         close(s);
         return -1;
@@ -308,8 +304,7 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
     for (i = 0; (i < packet_size) && (i < sizeof(message)); i++)
         message[i] = 0x0A;
 
-    for (pkt_sent = 0; pkt_sent < packet_count; pkt_sent++)
-    {
+    for (pkt_sent = 0; pkt_sent < packet_count; pkt_sent++) {
         memset(&server_reply, 0, sizeof(server_reply));
 
         send_len = send(s, message, strlen(message), 0);
@@ -337,8 +332,7 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
     return pkt_rcv;
 }
 
-int send_broadcast_arp(char *target_ip, int *send_count, int rate)
-{
+int send_broadcast_arp(char *target_ip, int *send_count, int rate) {
     char buffer[S_BUFFER_LEN];
     FILE *fp;
     int recv = 0;
@@ -482,8 +476,8 @@ int set_service_port(int port) {
     return 0;
 }
 
-size_t strlcpy(char *dest, const char *src, size_t siz)
-{
+/* String operation */
+size_t strlcpy(char *dest, const char *src, size_t siz) {
 	const char *s = src;
 	size_t left = siz;
 
@@ -504,4 +498,37 @@ size_t strlcpy(char *dest, const char *src, size_t siz)
 	}
 
 	return s - src - 1;
+}
+
+int get_key_value(char *value, char *buffer, char *token) {
+    char *ptr = NULL, *endptr = NULL;
+    char _token[S_BUFFER_LEN];
+
+    if (!value || !buffer || !token) {
+        return -1;
+    }
+
+    memset(_token, 0, sizeof(_token));
+    sprintf(_token, "\n%s=", token);
+    ptr = strstr(buffer, _token);
+    if (!ptr) {
+        sprintf(_token, "%s=", token);
+        if (strncmp(buffer, _token, strlen(_token)) == 0) {
+            ptr = buffer;
+        }
+    }
+
+    if (!ptr) {
+        return -1;
+    }
+
+    ptr += strlen(_token);
+    endptr = strstr(ptr, "\n");
+    if (endptr) {
+        strncpy(value, ptr, endptr - ptr);
+    } else {
+        strcpy(value, ptr);
+    }
+
+    return 0;
 }
