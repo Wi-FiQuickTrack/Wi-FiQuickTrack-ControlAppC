@@ -560,15 +560,119 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
 // ACK:  Bytes from DUT : 01 00 01 00 ee ff ff a0 01 01 30 a0 00 15 41 43 4b 3a 20 43 6f 6d 6d 61 6e 64 20 72 65 63 65 69 76 65 64 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: '9c:b6:d0:19:40:c7', <IndigoResponseTLV.DUT_MAC_ADDR: 40963>: '9c:b6:d0:19:40:c7'} 
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    char buffer[64];
+    struct tlv_hdr *tlv;
+    struct wpa_ctrl *w = NULL;
 
-    get_mac_address(buffer, sizeof(buffer), get_wireless_interface());
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len = 0;
+    char *message = TLV_VALUE_NOT_OK;
 
+    char cmd[16];
+    char response[L_BUFFER_LEN];
+
+    char band[S_BUFFER_LEN];
+    char ssid[S_BUFFER_LEN];
+    char role[S_BUFFER_LEN];
+
+    char connected_freq[S_BUFFER_LEN];
+    char connected_ssid[S_BUFFER_LEN];
+    char mac_addr[S_BUFFER_LEN];
+
+    if (req->tlv_num == 0) {
+        get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_OK;
+
+        goto done;
+    } else {
+        /* TLV: TLV_DEVICE_ROLE */
+        memset(role, 0, sizeof(role));
+        tlv = find_wrapper_tlv_by_id(req, TLV_DEVICE_ROLE);
+        if (tlv) {
+            memcpy(role, tlv->value, tlv->len);
+        }
+
+        /* TLV: TLV_BAND */
+        memset(band, 0, sizeof(band));
+        tlv = find_wrapper_tlv_by_id(req, TLV_BAND);
+        if (tlv) {
+            memcpy(band, tlv->value, tlv->len);
+        }
+
+        /* TLV: TLV_SSID */
+        memset(ssid, 0, sizeof(ssid));
+        tlv = find_wrapper_tlv_by_id(req, TLV_SSID);
+        if (tlv) {
+            memcpy(ssid, tlv->value, tlv->len);
+        }
+    }
+
+    if (atoi(role) == DUT_TYPE_STAUT) {
+        w = wpa_ctrl_open(get_wpas_ctrl_path());
+    } else {
+        w = wpa_ctrl_open(get_hapd_ctrl_path());
+    }
+
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to %s", atoi(role) == DUT_TYPE_STAUT ? "wpa_supplicant" : "hostapd");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_NOT_OK;
+        goto done;
+    }
+
+    /* Assemble hostapd command */
+    memset(cmd, 0, sizeof(cmd));
+    snprintf(cmd, sizeof(cmd), "STATUS");
+    /* Send command to hostapd UDS socket */
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, cmd, strlen(cmd), response, &resp_len, NULL);
+
+    /* Check response */
+    get_key_value(connected_freq, response, "freq");
+
+    if (atoi(role) == DUT_TYPE_STAUT) {
+        get_key_value(connected_ssid, response, "ssid");
+        get_key_value(mac_addr, response, "address");
+    } else {
+        get_key_value(connected_ssid, response, "ssid[0]");
+        get_key_value(mac_addr, response, "bssid[0]");
+    }
+
+    /* Check band and connected freq*/
+    if (strlen(band)) {
+        if (verify_band_from_freq(atoi(connected_freq), strcmp(band, "2.4GHz") == 0 ? BAND_24GHZ : BAND_5GHZ) == 0) {
+            status = TLV_VALUE_STATUS_OK;
+            message = TLV_VALUE_OK;
+        } else {
+            status = TLV_VALUE_STATUS_NOT_OK;
+            message = "Unable to get mac address associated with the given band";
+            goto done;
+        }
+    }
+
+    /* Check SSID and connected SSID */
+    if (strlen(ssid)) {
+        if (strcmp(ssid, connected_ssid) == 0) {
+            status = TLV_VALUE_STATUS_OK;
+            message = TLV_VALUE_OK;
+        } else {
+            status = TLV_VALUE_STATUS_NOT_OK;
+            message = "Unable to get mac address associated with the given ssid";
+            goto done;
+        }
+    }
+
+    /* TODO: BSSID */
+
+done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(buffer), buffer);
-    fill_wrapper_tlv_bytes(resp, TLV_DUT_MAC_ADDR, strlen(buffer), buffer);
-
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (status == TLV_VALUE_STATUS_OK)
+        fill_wrapper_tlv_bytes(resp, TLV_DUT_MAC_ADDR, strlen(mac_addr), mac_addr);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
     return 0;
 }
 
