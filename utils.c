@@ -382,6 +382,94 @@ int get_mac_address(char *buffer, int size, char *interface) {
     return 1;
 }
 
+int bridge_created = 0;
+
+int is_bridge_created() {
+    return bridge_created;
+}
+
+int create_bridge(char *br) {
+    char cmd[S_BUFFER_LEN];
+
+    /* Create new bridge */
+    br = NULL ? "br0" : br;
+    sprintf(cmd, "brctl addbr %s", br);
+    system(cmd);
+
+    /* Bring up bridge */
+    sprintf(cmd, "ifconfig %s up", br);
+    system(cmd);
+
+    bridge_created = 1;
+
+    return 0;
+}
+
+int add_interface_to_bridge(char *br, char *ifname) {
+    char cmd[S_BUFFER_LEN];
+
+    /* Reset IP address */
+    sprintf(cmd, "ifconfig %s 0.0.0.0", ifname);
+    system(cmd);
+
+    /* Add interface to bridge */
+    br = NULL ? "br0" : br;
+    sprintf(cmd, "brctl addif %s %s", br, ifname);
+    system(cmd);
+    return 0;
+}
+
+int reset_bridge(char *br) {
+    char cmd[S_BUFFER_LEN];
+
+    br = NULL ? "br0" : br;
+    /* Bring down bridge */
+    sprintf(cmd, "ifconfig %s down", br);
+    system(cmd);
+    sprintf(cmd, "brctl delbr %s", br);
+    system(cmd);
+ 
+    bridge_created = 0;
+
+    return 0;
+}
+
+int add_wireless_interface(char *ifname) {
+    char cmd[S_BUFFER_LEN];
+
+    sprintf(cmd, "iw dev %s interface add %s type managed", get_wireless_interface(), ifname);
+    system(cmd);
+
+    return 0;
+}
+
+int delete_wireless_interface(char *ifname) {
+    char cmd[S_BUFFER_LEN];
+
+    sprintf(cmd, "iw dev %s del", ifname);
+    system(cmd);
+
+    return 0;
+}
+
+int control_interface(char *ifname, char *op) {
+    char cmd[S_BUFFER_LEN];
+
+    sprintf(cmd, "ip link set %s %s", ifname, op);
+    system(cmd);
+ 
+    return 0;
+}
+
+int set_interface_ip(char *ifname, char *ip) {
+    char cmd[S_BUFFER_LEN];
+
+    sprintf(cmd, "ifconfig %s %s", ifname, ip);
+    system(cmd);
+ 
+    return 0;
+}
+
 /* Environment */
 int service_port = SERVICE_PORT_DEFAULT;
 char wireless_interface[64] = WIRELESS_INTERFACE_DEFAULT;

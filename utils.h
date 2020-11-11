@@ -50,6 +50,15 @@ int loopback_client_status();
 int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, int rate);
 int send_broadcast_arp(char *target_ip, int *send_count, int rate);
 
+int is_bridge_created();
+int create_bridge(char *br);
+int add_interface_to_bridge(char *br, char *interface);
+int reset_bridge(char *br);
+int control_interface(char *ifname, char *op);
+int set_interface_ip(char *ifname, char *ip);
+int add_wireless_interface(char *ifname);
+int delete_wireless_interface(char *ifname);
+
 #define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
 #ifdef _OPENWRT_
