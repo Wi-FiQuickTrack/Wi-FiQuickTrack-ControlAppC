@@ -283,7 +283,8 @@ struct indigo_api {
 #define TLV_VALUE_HOSTAPD_RESP_NOT_OK           "Hostapd response is failed"
 #define TLV_VALUE_BROADCAST_ARP_TEST_OK         "Broadcast ARP test successful"
 #define TLV_VALUE_BROADCAST_ARP_TEST_NOT_OK     "Broadcast ARP test failed"
-
+#define TLV_VALUE_CREATE_BRIDGE_OK              "Bridge network is created successfully"
+#define TLV_VALUE_CREATE_BRIDGE_NOT_OK          "Failed to create bridge network"
 
 #define TLV_VALUE_WPA_S_START_UP_OK             "wpa_supplicant is initialized successfully"
 #define TLV_VALUE_WPA_S_START_UP_NOT_OK         "The wpa_supplicant was unable to initialize."

@@ -523,6 +523,63 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     return 0;
 }
 
+
+static int create_bridge_network_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int len;
+    char cmd[S_BUFFER_LEN];
+    char static_ip[S_BUFFER_LEN];
+    char new_interface[S_BUFFER_LEN];
+    struct tlv_hdr *tlv;
+    char *message = TLV_VALUE_ASSIGN_STATIC_IP_OK;
+
+    /* TLV: TLV_STATIC_IP */
+    memset(static_ip, 0, sizeof(static_ip));
+    tlv = find_wrapper_tlv_by_id(req, TLV_STATIC_IP);
+    if (tlv) {
+        memcpy(static_ip, tlv->value, tlv->len);
+    } else {
+        message = "Failed.";
+        goto response;
+    }
+
+    /* TLV: TLV_NEW_INTERFACE_NAME */
+    memset(new_interface, 0, sizeof(new_interface));
+    tlv = find_wrapper_tlv_by_id(req, TLV_NEW_INTERFACE_NAME);
+    if (tlv) {
+        memcpy(new_interface, tlv->value, tlv->len);
+    } else {
+        message = "Failed.";
+        goto response;
+    }
+
+    /* Add new interface */
+    sprintf(cmd, "iw dev %s interface add %s type managed", get_wireless_interface(), new_interface);
+    system(cmd);
+
+    /* Create new bridge */
+    create_bridge("br0");
+
+    /* Up new interface */
+    control_interface(new_interface, "up");
+
+    /* Up original interface */
+    control_interface(get_wireless_interface(), "up");
+
+    /* Reset new interface IP address */
+    set_interface_ip(new_interface, "0.0.0.0");
+
+    /* Reset original interface IP address */
+    set_interface_ip(get_wireless_interface(), "0.0.0.0");
+
+    response:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+
 // Bytes to DUT : 01 50 06 00 ed ff ff 00 55 0c 31 39 32 2e 31 36 38 2e 31 30 2e 33
 // ACK  :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'} 
