@@ -724,9 +724,12 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (status == TLV_VALUE_STATUS_OK)
+    if (status == TLV_VALUE_STATUS_OK) {
+        fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(mac_addr), mac_addr);
         fill_wrapper_tlv_bytes(resp, TLV_DUT_MAC_ADDR, strlen(mac_addr), mac_addr);
+    } else {
+        fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    }
     if (w) {
         wpa_ctrl_close(w);
     }
