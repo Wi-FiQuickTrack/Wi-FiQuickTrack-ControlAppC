@@ -314,11 +314,14 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 #endif /* _RESERVED_ */
 
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
-    int has_ht_capab = 0, has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
+    int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0;
     int i;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     char band[64];
+#ifdef _OPENWRT_
+    int ht40 = 0;
+#endif
 
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
@@ -336,10 +339,6 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
             continue;
-        }
-
-        if (tlv->id == TLV_HT_CAPB) {
-            has_ht_capab = 1;
         }
 
         if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "SAE") && strstr(tlv->value, "WPA-PSK")) {
@@ -388,6 +387,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             has_sae_groups = 1;
         }
 
+#ifdef _OPENWRT_
+        if (tlv->id == TLV_HT_CAPB && strstr(tlv->value, "40")) {
+            ht40 = 1;
+        }
+#endif
+
         memset(buffer, 0, sizeof(buffer));
         memcpy(buffer, tlv->value, tlv->len);
         sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
@@ -425,12 +430,6 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     // Channel width configuration for ieee80211ax
     // Default: 20MHz in 2.4G(No configuration required) 80MHz in 5G
     if (strstr(band, "a") && enable_ax) {
-#ifdef _OPENWRT_
-#else
-        if (!has_ht_capab) {
-            strcat(output, "ht_capab=[HT40-][HT40+]\n");
-        }
-#endif
         if (chwidth > 0) {
             int center_freq = get_center_freq_index(channel, chwidth);
             sprintf(buffer, "vht_oper_chwidth=%d\n", chwidth);
@@ -468,6 +467,32 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "he_mu_edca_ac_vo_ecwmax=15\n");
         strcat(output, "he_mu_edca_ac_vo_timer=255\n");
     }
+
+#ifdef _OPENWRT_
+    if (channel) {
+        if (!strncmp(band, "a", 1))
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.channel=\'%d\'", channel);
+        else
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi1.channel=\'%d\'", channel);
+        system(buffer);
+    }
+    if (!strncmp(band, "a", 1)) {
+        if (chwidth == 2) {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT160\'");
+        } else if (chwidth == 0){
+            if (ht40)
+                snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT40\'");
+            else
+                snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT20\'");
+        } else {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT80\'");
+        }
+        system(buffer);
+    }
+    // Check mode ???
+
+    system("uci commit");
+#endif
 
     return strlen(output);
 }
@@ -535,6 +560,16 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
     memset(buffer, 0, sizeof(buffer));
 #ifdef _OPENWRT_
+    // Apply radio configurations
+    system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
+    sleep(1);
+    system("wifi down");
+    sleep(2);
+    system("wifi up");
+    sleep(3);
+    system("killall hostapd");
+    sleep(2);
+
 #ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
     system(buffer);
