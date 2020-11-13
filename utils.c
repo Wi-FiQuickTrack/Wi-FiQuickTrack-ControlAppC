@@ -416,6 +416,7 @@ int add_interface_to_bridge(char *br, char *ifname) {
     br = NULL ? "br0" : br;
     sprintf(cmd, "brctl addif %s %s", br, ifname);
     system(cmd);
+
     return 0;
 }
 
@@ -472,7 +473,6 @@ int set_interface_ip(char *ifname, char *ip) {
 
 /* Environment */
 int service_port = SERVICE_PORT_DEFAULT;
-char wireless_interface[64] = WIRELESS_INTERFACE_DEFAULT;
 
 char hapd_ctrl_path[64] = HAPD_CTRL_PATH_DEFAULT;
 char hapd_full_ctrl_path[128];
@@ -486,7 +486,7 @@ char wpas_conf_file[64] = WPAS_CONF_FILE_DEFAULT;
 
 char* get_hapd_ctrl_path() {
     memset(hapd_full_ctrl_path, 0, sizeof(hapd_full_ctrl_path));
-    sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, wireless_interface);
+    sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, get_default_wireless_interface_info());
     return hapd_full_ctrl_path;
 }
 
@@ -518,7 +518,7 @@ int set_hapd_conf_file(char* path) {
 
 char* get_wpas_ctrl_path() {
     memset(wpas_full_ctrl_path, 0, sizeof(wpas_full_ctrl_path));
-    sprintf(wpas_full_ctrl_path, "%s/%s", wpas_ctrl_path, wireless_interface);
+    sprintf(wpas_full_ctrl_path, "%s/%s", wpas_ctrl_path, get_default_wireless_interface_info());
     return wpas_full_ctrl_path;
 }
 
@@ -546,12 +546,87 @@ int set_wpas_conf_file(char* path) {
     return 0;
 }
 
+int interface_count = 0;
+struct interface_info interfaces[8];
+
+int add_wireless_interface_info(int band, int bssid, char *name) {
+    interfaces[interface_count].band = band;
+    interfaces[interface_count].bssid = -1;
+    strcpy(interfaces[interface_count++].ifname, name);
+    return 0;
+}
+
+int show_wireless_interface_info() {
+    int i;
+    char *band;
+    printf("interface_count=%d\n", interface_count);
+
+    for (i = 0; i < interface_count; i++) {
+        if (interfaces[i].band == BAND_24GHZ) {
+            band = "2.4GHz";
+        } else if (interfaces[i].band == BAND_5GHZ) {
+            band = "5GHz";
+        } else {
+            band = "Dual";
+        }
+
+        printf("Interface Name: %s, Band: %s, BSSID: %d\n", 
+            interfaces[i].ifname, band, interfaces[i].bssid);
+    }
+    return 0;
+}
+
+int parse_wireless_interface_info(char *info) {
+    char *token = NULL;
+    char *delimit = ",";
+
+    token = strtok(info, delimit);
+  
+    while(token != NULL) {
+        if (strncmp(token, "2:", 2) == 0) {
+            add_wireless_interface_info(BAND_24GHZ, -1, token+2);
+        } else if (strncmp(token, "5:", 2) == 0) {
+            add_wireless_interface_info(BAND_5GHZ, -1, token+2);
+        } else if (strncmp(token, "d:", 2) == 0) {
+            add_wireless_interface_info(BAND_DUAL, -1, token+2);
+        } else {
+            return -1;
+        }
+        token = strtok(NULL, delimit);
+    }    
+
+    return 0;
+}
+
+char* get_default_wireless_interface_info() {
+    return interfaces[0].ifname;
+}
+
+struct interface_info* get_wireless_interface_info_by_band(int band) {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        if (interfaces[i].band == BAND_DUAL || interfaces[i].band == band) {
+            return &interfaces[i];
+        }
+    }
+
+    return NULL;
+}
+
 char* get_wireless_interface() {
-    return wireless_interface;
+    return get_default_wireless_interface_info();
 }
 
 int set_wireless_interface(char *name) {
-    snprintf(wireless_interface, sizeof(wireless_interface), "%s", name);
+    memset(interfaces, 0, sizeof(interfaces));
+    interface_count = 0;
+
+    if (strstr(name, ":")) {
+        parse_wireless_interface_info(name);
+    } else {
+        add_wireless_interface_info(BAND_DUAL, -1, name);
+    }
     return 0;
 }
 

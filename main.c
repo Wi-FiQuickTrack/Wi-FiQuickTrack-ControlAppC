@@ -153,10 +153,10 @@ done:
 /* Show the usage */
 static void usage() {
     printf("usage:\n");
-    printf("app [-h] [-p<port number>] [-i<wireless interface>]\n\n");
+    printf("app [-h] [-p<port number>] [-i<wireless interface>|-i<band>:<interface>[,<band>:<interface>]]\n\n");
     printf("usage:\n");
     printf("  -d = debug received and sent message\n");
-    printf("  -i = wireless interface used by the test\n");
+    printf("  -i = Specify the interface. E.g., -i wlan0. Or, <band>:<interface>. band can be 2 for 2.4GHz, 5 for 5GHz and d for the Dual. E.g., -i 2:wlan0,2:wlan1,5:wlan32,5:wlan33\n");
     printf("  -p = port number of the application\n\n");
 }
 

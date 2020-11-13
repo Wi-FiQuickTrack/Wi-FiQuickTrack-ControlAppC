@@ -94,6 +94,8 @@ char* get_wireless_interface();
 int set_wireless_interface(char *name);
 int get_service_port();
 int set_service_port(int port);
+char* get_default_wireless_interface_info();
+struct interface_info* get_wireless_interface_info_by_band(int band);
 
 size_t strlcpy(char *dest, const char *src, size_t siz);
 int get_key_value(char *value, char *buffer, char *token);
@@ -101,12 +103,20 @@ int get_key_value(char *value, char *buffer, char *token);
 
 enum {
     BAND_24GHZ = 0,
-    BAND_5GHZ = 1
+    BAND_5GHZ = 1,
+    BAND_DUAL = 2
 };
 
 struct channel_info {
     int channel;
     int freq;
+};
+
+struct interface_info {
+    int band;
+    int bssid;
+    char ifname[16];
+    char ssid[64];
 };
 
 int verify_band_from_freq(int freq, int band);
