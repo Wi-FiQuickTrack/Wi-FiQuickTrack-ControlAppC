@@ -220,6 +220,8 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     system(buffer);
 #endif
 
+    clear_interfaces_resource();
+
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
@@ -473,23 +475,48 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len;
+    int len = 0;
     char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = "DUT configured as AP : Configuration file created";
+    int bss_identifier = 0, band, mbssid_enable, transmitter, identifier;
+    struct interface_info* wlan;
+    char bss_identifier_str[16];
 
     memset(buffer, 0, sizeof(buffer));
-    tlv = find_wrapper_tlv_by_id(req, TLV_INTERFACE_NAME);
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
     memset(ifname, 0, sizeof(ifname));
     if (tlv) {
-        memcpy(ifname, tlv->value, tlv->len);
+        memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
+        memcpy(bss_identifier_str, tlv->value, tlv->len);
+        bss_identifier = atoi(bss_identifier_str);
+        band = bss_identifier & 0x07;
+        mbssid_enable = (bss_identifier & 0x08) >> 3;
+        transmitter = (bss_identifier & 0x10) >> 4;
+        identifier = (bss_identifier & 0xE0) >> 5;
+        wlan = get_avail_wireless_interface(band);
+        if (wlan) {
+            set_wireless_interface_resource(wlan, identifier);
+            len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan->ifname);
+            if (len) {
+                write_file(wlan->hapd_conf_file, buffer, len);
+            }
+        }
+        printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d ifname %s hapd_conf_file %s\n", 
+               bss_identifier,
+               band,
+               mbssid_enable,
+               transmitter,
+               identifier,
+               wlan ? wlan->ifname : "n/a",
+               wlan ? wlan->hapd_conf_file: "n/a"
+               );       
     } else {
         sprintf(ifname, "%s", get_wireless_interface());
-    }
-
-    len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
-    if (len) {
-        write_file(get_hapd_conf_file(), buffer, len);
+        len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
+        if (len) {
+            write_file(get_hapd_conf_file(), buffer, len);
+        }
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);

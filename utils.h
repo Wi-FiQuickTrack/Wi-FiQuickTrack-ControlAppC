@@ -37,6 +37,26 @@ enum {
     LOG_LEVEL_ERROR = 5
 };
 
+enum {
+    BAND_24GHZ = 0,
+    BAND_5GHZ = 1,
+    BAND_DUAL = 2
+};
+
+struct channel_info {
+    int channel;
+    int freq;
+};
+
+struct interface_info {
+    int identifier; // valid only for multiple VAPs case
+    int band;
+    int bssid;
+    char ifname[16];
+    char ssid[64];
+    char hapd_conf_file[64];
+};
+
 void indigo_logger(int level, const char *fmt, ...);
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 char* read_file(char *fn);
@@ -63,6 +83,7 @@ int delete_wireless_interface(char *ifname);
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
 #ifdef _OPENWRT_
 #define HAPD_CONF_FILE_DEFAULT                      "/tmp/hostapd.conf"
+#define HAPD_CONF_FILE_DEFAULT_PATH                 "/tmp"
 #else
 #define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"
 #endif /* _OPENWRT_ */
@@ -96,28 +117,12 @@ int get_service_port();
 int set_service_port(int port);
 char* get_default_wireless_interface_info();
 struct interface_info* get_wireless_interface_info_by_band(int band);
+struct interface_info* get_avail_wireless_interface(int band);
+void set_wireless_interface_resource(struct interface_info* wlan, int identifier);
+void clear_interfaces_resource();
 
 size_t strlcpy(char *dest, const char *src, size_t siz);
 int get_key_value(char *value, char *buffer, char *token);
-
-
-enum {
-    BAND_24GHZ = 0,
-    BAND_5GHZ = 1,
-    BAND_DUAL = 2
-};
-
-struct channel_info {
-    int channel;
-    int freq;
-};
-
-struct interface_info {
-    int band;
-    int bssid;
-    char ifname[16];
-    char ssid[64];
-};
 
 int verify_band_from_freq(int freq, int band);
 

@@ -552,6 +552,7 @@ struct interface_info interfaces[8];
 int add_wireless_interface_info(int band, int bssid, char *name) {
     interfaces[interface_count].band = band;
     interfaces[interface_count].bssid = -1;
+    interfaces[interface_count].identifier = -1;
     strcpy(interfaces[interface_count++].ifname, name);
     return 0;
 }
@@ -570,8 +571,8 @@ int show_wireless_interface_info() {
             band = "Dual";
         }
 
-        printf("Interface Name: %s, Band: %s, BSSID: %d\n", 
-            interfaces[i].ifname, band, interfaces[i].bssid);
+        printf("Interface Name: %s, Band: %s, BSSID: %d identifier %d\n", 
+            interfaces[i].ifname, band, interfaces[i].bssid, interfaces[i].identifier);
     }
     return 0;
 }
@@ -608,6 +609,38 @@ struct interface_info* get_wireless_interface_info_by_band(int band) {
     for (i = 0; i < interface_count; i++) {
         if (interfaces[i].band == BAND_DUAL || interfaces[i].band == band) {
             return &interfaces[i];
+        }
+    }
+
+    return NULL;
+}
+
+struct interface_info* get_avail_wireless_interface(int band) {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        if ((interfaces[i].identifier == -1) && (interfaces[i].band == BAND_DUAL || interfaces[i].band == band)) {
+            return &interfaces[i];
+        }
+    }
+
+    return NULL;
+}
+
+void set_wireless_interface_resource(struct interface_info* wlan, int identifier) {
+    wlan->identifier = identifier;
+    snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
+}
+
+void clear_interfaces_resource() {
+    int i, err = 0;
+    for (i = 0; i < interface_count; i++)
+    {
+        interfaces[i].identifier = -1;
+        err = unlink(interfaces[i].hapd_conf_file);
+        if (err)
+        {
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove %s", interfaces[i].hapd_conf_file);
         }
     }
 
