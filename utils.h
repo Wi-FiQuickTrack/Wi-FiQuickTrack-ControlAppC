@@ -86,6 +86,7 @@ int delete_wireless_interface(char *ifname);
 #define HAPD_CONF_FILE_DEFAULT_PATH                 "/tmp"
 #else
 #define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"
+#define HAPD_CONF_FILE_DEFAULT_PATH                 "/etc/hostapd/"
 #endif /* _OPENWRT_ */
 #define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
 #define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before

@@ -644,7 +644,7 @@ void clear_interfaces_resource() {
         }
     }
 
-    return NULL;
+    return ;
 }
 
 char* get_wireless_interface() {
