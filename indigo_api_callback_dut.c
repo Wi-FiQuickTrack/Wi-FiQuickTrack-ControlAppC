@@ -316,7 +316,7 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
-    int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0;
+    int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
     int i;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     char band[64];
@@ -376,6 +376,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             chwidthset = 1;
         }
 
+        if (tlv->id == TLV_VHT_OPER_CHWIDTH) {
+            chwidth = atoi(tlv->value);
+            vht_chwidthset = 1;
+        }
+
         if (tlv->id == TLV_IEEE80211_AX && strstr(tlv->value, "1")) {
             enable_ax = 1;
         }
@@ -430,13 +435,15 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
     // Channel width configuration for ieee80211ax
     // Default: 20MHz in 2.4G(No configuration required) 80MHz in 5G
-    if (strstr(band, "a") && enable_ax) {
-        if (chwidth > 0) {
-            int center_freq = get_center_freq_index(channel, chwidth);
+    if (strstr(band, "a") && (chwidth > 0)) {
+        int center_freq = get_center_freq_index(channel, chwidth);
+        if (vht_chwidthset == 0) {
             sprintf(buffer, "vht_oper_chwidth=%d\n", chwidth);
             strcat(output, buffer);
-            sprintf(buffer, "vht_oper_centr_freq_seg0_idx=%d\n", center_freq);
-            strcat(output, buffer);
+        }
+        sprintf(buffer, "vht_oper_centr_freq_seg0_idx=%d\n", center_freq);
+        strcat(output, buffer);
+        if (enable_ax) {
             if (chwidthset == 0) {
                 sprintf(buffer, "he_oper_chwidth=%d\n", chwidth);
                 strcat(output, buffer);
