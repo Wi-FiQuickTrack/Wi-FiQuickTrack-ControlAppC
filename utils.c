@@ -39,6 +39,7 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 
+#include "vendor_specific.h"
 #include "utils.h"
 #include "eloop.h"
 
@@ -629,6 +630,7 @@ struct interface_info* get_avail_wireless_interface(int band) {
 
 void set_wireless_interface_resource(struct interface_info* wlan, int identifier) {
     wlan->identifier = identifier;
+    memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
     snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
 }
 

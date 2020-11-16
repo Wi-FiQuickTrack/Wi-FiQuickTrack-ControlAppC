@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include "indigo_api.h"
+#include "vendor_specific.h"
 #include "utils.h"
 #include "wpa_ctrl.h"
 #include "indigo_api_callback.h"
@@ -535,7 +536,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                identifier,
                wlan ? wlan->ifname : "n/a",
                wlan ? wlan->hapd_conf_file: "n/a"
-               );       
+               );
     } else {
         sprintf(ifname, "%s", get_wireless_interface());
         len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);

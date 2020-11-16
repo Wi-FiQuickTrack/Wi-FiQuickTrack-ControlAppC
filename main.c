@@ -32,6 +32,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 
+#include "vendor_specific.h"
 #include "eloop.h"
 #include "indigo_api.h"
 #include "utils.h"

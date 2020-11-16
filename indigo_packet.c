@@ -24,6 +24,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "vendor_specific.h"
 #include "indigo_api.h"
 #include "utils.h"
 

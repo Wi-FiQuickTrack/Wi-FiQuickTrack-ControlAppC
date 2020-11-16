@@ -79,24 +79,6 @@ int set_interface_ip(char *ifname, char *ip);
 int add_wireless_interface(char *ifname);
 int delete_wireless_interface(char *ifname);
 
-#define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
-#define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
-#ifdef _OPENWRT_
-#define HAPD_CONF_FILE_DEFAULT                      "/tmp/hostapd.conf"
-#define HAPD_CONF_FILE_DEFAULT_PATH                 "/tmp"
-#else
-#define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"
-#define HAPD_CONF_FILE_DEFAULT_PATH                 "/etc/hostapd/"
-#endif /* _OPENWRT_ */
-#define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
-#define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
-#ifdef _OPENWRT_
-#define WPAS_CONF_FILE_DEFAULT                      "/tmp/wpa_supplicant.conf"
-#else
-#define WPAS_CONF_FILE_DEFAULT                      "/etc/wpa_supplicant/wpa_supplicant.conf"
-#endif /* _OPENWRT_ */
-#define WIRELESS_INTERFACE_DEFAULT                  "wlan0"
-#define SERVICE_PORT_DEFAULT                        9004
 
 char* get_hapd_ctrl_path();
 int set_hapd_ctrl_path(char* path);

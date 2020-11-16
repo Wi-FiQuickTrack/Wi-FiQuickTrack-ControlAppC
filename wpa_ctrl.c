@@ -25,6 +25,7 @@
 #include <sys/un.h>
 #endif /* CONFIG_NATIVE_WINDOWS */
 
+#include "vendor_specific.h"
 #include "wpa_ctrl.h"
 #include "utils.h"
 #ifdef CONFIG_NATIVE_WINDOWS

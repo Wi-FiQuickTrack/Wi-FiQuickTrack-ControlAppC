@@ -26,6 +26,7 @@
 #include <unistd.h>
 
 #include "indigo_api.h"
+#include "vendor_specific.h"
 #include "utils.h"
 #include "wpa_ctrl.h"
 #include "indigo_api_callback.h"
