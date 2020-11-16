@@ -57,6 +57,13 @@ struct interface_info {
     char hapd_conf_file[64];
 };
 
+struct bss_identifier_info {
+    int identifier;
+    int band;
+    int mbssid_enable;
+    int transmitter;
+};
+
 void indigo_logger(int level, const char *fmt, ...);
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 char* read_file(char *fn);
@@ -80,6 +87,7 @@ int add_wireless_interface(char *ifname);
 int delete_wireless_interface(char *ifname);
 
 
+char* get_hapd_ctrl_path_by_id(int identifier);
 char* get_hapd_ctrl_path();
 int set_hapd_ctrl_path(char* path);
 char* get_hapd_global_ctrl_path();
@@ -109,5 +117,7 @@ size_t strlcpy(char *dest, const char *src, size_t siz);
 int get_key_value(char *value, char *buffer, char *token);
 
 int verify_band_from_freq(int freq, int band);
+
+void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
 
 #endif

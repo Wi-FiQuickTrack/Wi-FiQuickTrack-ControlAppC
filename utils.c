@@ -47,6 +47,10 @@
 int stdout_level = LOG_LEVEL_DEBUG;
 int syslog_level = LOG_LEVEL_INFO;
 
+/* multiple VAPs */
+int interface_count = 0;
+struct interface_info interfaces[8];
+
 void debug_print_timestamp(void) {
     time_t rawtime;
     struct tm *info;
@@ -485,6 +489,30 @@ char wpas_full_ctrl_path[128];
 char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
 char wpas_conf_file[64] = WPAS_CONF_FILE_DEFAULT;
 
+char* get_wireless_interface_name_by_id(int identifier) {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        if (identifier >= 0 && interfaces[i].identifier == identifier) {
+            return interfaces[i].ifname;
+        }
+    }
+
+    return NULL;
+}
+
+char* get_hapd_ctrl_path_by_id(int identifier) {
+    memset(hapd_full_ctrl_path, 0, sizeof(hapd_full_ctrl_path));
+    if (identifier >= 0) {
+        sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, get_wireless_interface_name_by_id(identifier));
+    }
+    else {
+        sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, get_default_wireless_interface_info());
+    }
+    printf("hapd_full_ctrl_path: %s", hapd_full_ctrl_path);
+    return hapd_full_ctrl_path;
+}
+
 char* get_hapd_ctrl_path() {
     memset(hapd_full_ctrl_path, 0, sizeof(hapd_full_ctrl_path));
     sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, get_default_wireless_interface_info());
@@ -547,8 +575,6 @@ int set_wpas_conf_file(char* path) {
     return 0;
 }
 
-int interface_count = 0;
-struct interface_info interfaces[8];
 
 int add_wireless_interface_info(int band, int bssid, char *name) {
     interfaces[interface_count].band = band;
@@ -628,10 +654,20 @@ struct interface_info* get_avail_wireless_interface(int band) {
     return NULL;
 }
 
+/* Parse BSS IDENTIFIER TLV */
+void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
+    bss->band = bss_identifier & 0x07;
+    bss->mbssid_enable = (bss_identifier & 0x08) >> 3;
+    bss->transmitter = (bss_identifier & 0x10) >> 4;
+    bss->identifier = (bss_identifier & 0xE0) >> 5;
+    return;
+}
+
 void set_wireless_interface_resource(struct interface_info* wlan, int identifier) {
     wlan->identifier = identifier;
     memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
     snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
+    show_wireless_interface_info();
 }
 
 void clear_interfaces_resource() {

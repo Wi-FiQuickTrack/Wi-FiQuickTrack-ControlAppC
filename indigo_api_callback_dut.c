@@ -512,30 +512,29 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = "DUT configured as AP : Configuration file created";
-    int bss_identifier = 0, band, mbssid_enable, transmitter, identifier;
+    int bss_identifier = 0;
     struct interface_info* wlan;
     char bss_identifier_str[16];
+   struct bss_identifier_info bss_info;
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
     memset(ifname, 0, sizeof(ifname));
+    memset(&bss_info, 0, sizeof(bss_info));
     if (tlv) {
         memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
         memcpy(bss_identifier_str, tlv->value, tlv->len);
         bss_identifier = atoi(bss_identifier_str);
-        band = bss_identifier & 0x07;
-        mbssid_enable = (bss_identifier & 0x08) >> 3;
-        transmitter = (bss_identifier & 0x10) >> 4;
-        identifier = (bss_identifier & 0xE0) >> 5;
-        wlan = get_avail_wireless_interface(band);
+        parse_bss_identifier(bss_identifier, &bss_info);
+        wlan = get_avail_wireless_interface(bss_info.band);
         if (wlan) {
-            set_wireless_interface_resource(wlan, identifier);
+            set_wireless_interface_resource(wlan, bss_info.identifier);
             len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan->ifname);
             if (len) {
                 write_file(wlan->hapd_conf_file, buffer, len);
             }
 #ifdef _OPENWRT_
-            if (mbssid_enable) {
+            if (bss_info.mbssid_enable) {
                 system("uci set wireless.qcawifi=qcawifi");
                 system("uci set wireless.qcawifi.mbss_ie_enable=1");
                 system("uci commit");
@@ -544,10 +543,10 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         }
         printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d ifname %s hapd_conf_file %s\n", 
                bss_identifier,
-               band,
-               mbssid_enable,
-               transmitter,
-               identifier,
+               bss_info.band,
+               bss_info.mbssid_enable,
+               bss_info.transmitter,
+               bss_info.identifier,
                wlan ? wlan->ifname : "n/a",
                wlan ? wlan->hapd_conf_file: "n/a"
                );
@@ -721,6 +720,10 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     char connected_freq[S_BUFFER_LEN];
     char connected_ssid[S_BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
+    int bss_identifier = 0;
+    struct interface_info* wlan;
+    char bss_identifier_str[16];
+    struct bss_identifier_info bss_info;
 
     if (req->tlv_num == 0) {
         get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
@@ -749,12 +752,28 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         if (tlv) {
             memcpy(ssid, tlv->value, tlv->len);
         }
+
+        memset(&bss_info, 0, sizeof(bss_info));
+        tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
+        if (tlv) {
+            memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
+            memcpy(bss_identifier_str, tlv->value, tlv->len);
+            bss_identifier = atoi(bss_identifier_str);
+            parse_bss_identifier(bss_identifier, &bss_info);
+
+            printf("TLV_BSS_IDENTIFIER 0x%x identifier %d \n", 
+                    bss_identifier,
+                    bss_info.identifier
+                    );
+        } else {
+            bss_info.identifier = -1;
+        }
     }
 
     if (atoi(role) == DUT_TYPE_STAUT) {
         w = wpa_ctrl_open(get_wpas_ctrl_path());
     } else {
-        w = wpa_ctrl_open(get_hapd_ctrl_path());
+        w = wpa_ctrl_open(get_hapd_ctrl_path_by_id(bss_info.identifier));
     }
 
     if (!w) {
@@ -780,6 +799,12 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     } else {
         get_key_value(connected_ssid, response, "ssid[0]");
         get_key_value(mac_addr, response, "bssid[0]");
+    }
+
+    if (bss_info.identifier >= 0) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_OK;
+        goto done;
     }
 
     /* Check band and connected freq*/
