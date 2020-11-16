@@ -1102,6 +1102,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     int ieee80211w_configured = 0;
     int transition_mode_enabled = 0;
     int owe_configured = 0;
+    int sae_only = 0;
     char port[16];
     struct tlv_hdr *tlv = NULL;
 
@@ -1138,9 +1139,16 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             memset(value, 0, sizeof(value));
             memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
 
+            if (wrapper->tlv[i]->id == TLV_IEEE80211_W) {
+                ieee80211w_configured = 1;
+            }
+
             if (wrapper->tlv[i]->id == TLV_KEY_MGMT) {
-                if (strstr(value, "WPA-PSK") || strstr(value, "SAE")) {
+                if (strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
                     transition_mode_enabled = 1;
+                }
+                if (!strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
+                    sae_only = 1;
                 }
                 if (strstr(value, "OWE")) {
                     owe_configured = 1;
@@ -1159,6 +1167,8 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 
     if (ieee80211w_configured == 0 && transition_mode_enabled) {
         strcat(buffer, "ieee80211w=1\n");
+    } else if (ieee80211w_configured == 0 && sae_only) {
+        strcat(buffer, "ieee80211w=2\n");
     } else if (owe_configured) {
         strcat(buffer, "ieee80211w=2\n");
     }
