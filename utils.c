@@ -649,6 +649,25 @@ void clear_interfaces_resource() {
     return ;
 }
 
+char* get_all_hapd_conf_files() {
+    int i, valid_id_cnt = 0;
+    static char conf_files[128];
+
+    memset(conf_files, 0, sizeof(conf_files));
+    for (i = 0; i < interface_count; i++)
+    {
+        if (interfaces[i].identifier != -1) {
+            valid_id_cnt++;
+            strncat(conf_files, interfaces[i].hapd_conf_file, strlen(interfaces[i].hapd_conf_file));
+            strncat(conf_files, " ", 1);
+        }
+    }
+    if (valid_id_cnt)
+        return conf_files;
+    else
+        return hapd_conf_file;
+}
+
 char* get_wireless_interface() {
     return get_default_wireless_interface_info();
 }

@@ -103,6 +103,7 @@ struct interface_info* get_wireless_interface_info_by_band(int band);
 struct interface_info* get_avail_wireless_interface(int band);
 void set_wireless_interface_resource(struct interface_info* wlan, int identifier);
 void clear_interfaces_resource();
+char* get_all_hapd_conf_files();
 
 size_t strlcpy(char *dest, const char *src, size_t siz);
 int get_key_value(char *value, char *buffer, char *token);

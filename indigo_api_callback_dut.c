@@ -527,6 +527,13 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
             if (len) {
                 write_file(wlan->hapd_conf_file, buffer, len);
             }
+#ifdef _OPENWRT_
+            if (mbssid_enable) {
+                system("uci set wireless.qcawifi=qcawifi");
+                system("uci set wireless.qcawifi.mbss_ie_enable=1");
+                system("uci commit");
+            }
+#endif
         }
         printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d ifname %s hapd_conf_file %s\n", 
                bss_identifier,
@@ -581,10 +588,10 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #endif
 
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
+        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_all_hapd_conf_files());
 #else
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_hapd_conf_file());
+        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_all_hapd_conf_files());
 #endif
     len = system(buffer);
     sleep(1);
