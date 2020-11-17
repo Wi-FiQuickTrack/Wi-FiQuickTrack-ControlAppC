@@ -119,5 +119,6 @@ int get_key_value(char *value, char *buffer, char *token);
 int verify_band_from_freq(int freq, int band);
 
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
+struct interface_info* get_wireless_interface_info(int band, int identifier);
 
 #endif

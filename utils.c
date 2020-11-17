@@ -50,6 +50,7 @@ int syslog_level = LOG_LEVEL_INFO;
 /* multiple VAPs */
 int interface_count = 0;
 struct interface_info interfaces[8];
+int bss_id[3]; // 2.4G, 5G, Dual Band
 
 void debug_print_timestamp(void) {
     time_t rawtime;
@@ -489,6 +490,21 @@ char wpas_full_ctrl_path[128];
 char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
 char wpas_conf_file[64] = WPAS_CONF_FILE_DEFAULT;
 
+struct interface_info* get_wireless_interface_info(int band, int identifier) {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        printf("in: band %d id %d vs if band %d id %d\n",
+                band, identifier, interfaces[i].band, interfaces[i].identifier);
+        if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == band) && 
+             (interfaces[i].identifier == identifier)) {
+            return &interfaces[i];
+        }
+    }
+
+    return NULL;
+}
+
 char* get_wireless_interface_name_by_id(int identifier) {
     int i;
 
@@ -579,7 +595,7 @@ int set_wpas_conf_file(char* path) {
 int add_wireless_interface_info(int band, int bssid, char *name) {
     interfaces[interface_count].band = band;
     interfaces[interface_count].bssid = -1;
-    interfaces[interface_count].identifier = -1;
+    interfaces[interface_count].identifier = ++bss_id[band];
     strcpy(interfaces[interface_count++].ifname, name);
     return 0;
 }
@@ -664,7 +680,7 @@ void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
 }
 
 void set_wireless_interface_resource(struct interface_info* wlan, int identifier) {
-    wlan->identifier = identifier;
+    //wlan->identifier = identifier;
     memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
     snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
     show_wireless_interface_info();
@@ -674,7 +690,7 @@ void clear_interfaces_resource() {
     int i, err = 0;
     for (i = 0; i < interface_count; i++)
     {
-        interfaces[i].identifier = -1;
+        //interfaces[i].identifier = -1;
         err = unlink(interfaces[i].hapd_conf_file);
         if (err)
         {

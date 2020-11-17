@@ -242,6 +242,7 @@ struct indigo_api {
 #define TLV_UDP_PACKET_SIZE                     0x009c
 #define TLV_DUT_UDP_PORT                        0x009d
 #define TLV_GLOBAL_CTRL_IFACE                   0x009e
+#define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x009f
 /* end of TODO */
 
 // class IndigoResponseTLV

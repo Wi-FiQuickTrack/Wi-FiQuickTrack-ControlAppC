@@ -405,7 +405,27 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 #endif
 
         memset(buffer, 0, sizeof(buffer));
-        memcpy(buffer, tlv->value, tlv->len);
+        if (tlv->id == TLV_OWE_TRANSITION_BSS_IDENTIFIER) {
+            struct bss_identifier_info bss_info;
+            struct interface_info *wlan;
+            int bss_identifier;
+            char bss_identifier_str[8];
+            memset(&bss_info, 0, sizeof(bss_info));
+            memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
+            memcpy(bss_identifier_str, tlv->value, tlv->len);
+            bss_identifier = atoi(bss_identifier_str);
+            parse_bss_identifier(bss_identifier, &bss_info);
+            wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
+            printf("TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
+                    bss_identifier,
+                    bss_info.identifier,
+                    wlan ? wlan->ifname : "n/a"
+                    );
+            if (wlan)
+                memcpy(buffer, wlan->ifname, strlen(wlan->ifname));
+        } else {
+            memcpy(buffer, tlv->value, tlv->len);
+        }
         sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
         strcat(output, cfg_item);
     }
@@ -531,7 +551,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         memcpy(bss_identifier_str, tlv->value, tlv->len);
         bss_identifier = atoi(bss_identifier_str);
         parse_bss_identifier(bss_identifier, &bss_info);
-        wlan = get_avail_wireless_interface(bss_info.band);
+        wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
         if (wlan) {
             set_wireless_interface_resource(wlan, bss_info.identifier);
             len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan->ifname);
@@ -793,11 +813,13 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     snprintf(cmd, sizeof(cmd), "STATUS");
     /* Send command to hostapd UDS socket */
     resp_len = sizeof(response) - 1;
+    memset(response, 0, sizeof(response));
     wpa_ctrl_request(w, cmd, strlen(cmd), response, &resp_len, NULL);
 
     /* Check response */
     get_key_value(connected_freq, response, "freq");
 
+    memset(mac_addr, 0, sizeof(mac_addr));
     if (atoi(role) == DUT_TYPE_STAUT) {
         get_key_value(connected_ssid, response, "ssid");
         get_key_value(mac_addr, response, "address");
@@ -807,6 +829,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (bss_info.identifier >= 0) {
+        printf("mac_addr %s\n", mac_addr);
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_OK;
         goto done;
