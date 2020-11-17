@@ -64,10 +64,11 @@ struct indigo_api {
 #define API_STA_SET_PARAM                       0x2005
 #define API_STA_SEND_BTM_QUERY                  0x2006
 #define API_STA_SEND_ANQP_QUERY                 0x2007
-
-/* TODO: updated value when they are available */
 #define API_STA_START_UP                        0x2008
-/* end of TODO */
+#define API_STA_SET_CHANNEL_WIDTH               0x200a
+#define API_STA_SET_WMM_MODE                    0x200b
+#define API_STA_POWER_SAVE                      0x200c
+#define API_STA_GET_CHANNEL_WIDTH               0x200d
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001

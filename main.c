@@ -112,7 +112,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     if (api) {
         indigo_logger(LOG_LEVEL_DEBUG, "API %s: Found handler", api->name);
     } else {
-        indigo_logger(LOG_LEVEL_ERROR, "API %s: No registered handler", api->name);
+        indigo_logger(LOG_LEVEL_ERROR, "API Unknown (0x%04x): No registered handler", req.hdr.type);
         fill_wrapper_ack(&resp, req.hdr.seq, 0x31, "Unable to find the API handler");
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
         sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 

@@ -59,6 +59,11 @@ void register_apis() {
     register_api(API_STA_SET_PARAM, NULL, set_sta_parameter_handler);
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
+    /* TODO: Add the handlers */
+    register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
+    register_api(API_STA_SET_WMM_MODE, NULL, NULL);
+    register_api(API_STA_POWER_SAVE, NULL, NULL);
+    register_api(API_STA_GET_CHANNEL_WIDTH, NULL, NULL);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
