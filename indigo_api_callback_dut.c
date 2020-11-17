@@ -588,10 +588,10 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
     system(buffer);
     sleep(1);
+#endif
     sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
     system(buffer);
     sleep(1);
-#endif
 
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_all_hapd_conf_files());
