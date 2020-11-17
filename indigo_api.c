@@ -223,6 +223,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_UDP_PACKET_SIZE, "UDP_PACKET_SIZE" },
     { TLV_DUT_UDP_PORT, "DUT_UDP_PORT" },
     { TLV_GLOBAL_CTRL_IFACE, "GLOBAL_CTRL_IFACE" },
+    { TLV_OWE_TRANSITION_BSS_IDENTIFIER, "OWE_TRANSITION_BSS_IDENTIFIER" },
 
     // class IndigoResponseTLV
     { TLV_MESSAGE, "MESSAGE" },
