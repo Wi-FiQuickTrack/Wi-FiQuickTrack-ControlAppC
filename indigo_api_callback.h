@@ -64,7 +64,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_AUTH_SERVER_SHARED_SECRET, "auth_server_shared_secret", 0 },
     { TLV_LOGGER_SYSLOG, "logger_syslog", 0 },
     { TLV_LOGGER_SYSLOG_LEVEL, "logger_syslog_level", 0 },
-    { TLV_IE_OVERRIDE, "ie_override", 0 }, // HostAPD Python Interface
+    { TLV_IE_OVERRIDE, "own_ie_override", 0 }, // HostAPD Python Interface
     { TLV_RECONFIG, "reconfig", 0 }, // HostAPD Python Interface
     { TLV_SAME_ANONCE, "same_anonce", 0 }, // # HostAPD Python Interface
     { TLV_VENDOR_ELEMENTS, "vendor_elements", 0 }, // HostAPD Python Interface
