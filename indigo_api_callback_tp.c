@@ -62,11 +62,10 @@ void register_apis() {
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_START_UP, NULL, start_up_sta_handler);
-    /* TODO: Add the handlers */
-    register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
-    register_api(API_STA_SET_WMM_MODE, NULL, NULL);
-    register_api(API_STA_POWER_SAVE, NULL, NULL);
-    register_api(API_STA_GET_CHANNEL_WIDTH, NULL, NULL);
+    register_api(API_STA_SET_PHY_NODE, NULL, set_sta_phy_mode_handler);
+    register_api(API_STA_SET_CHANNEL_WIDTH, NULL, set_sta_channel_width_handler);
+    register_api(API_STA_SET_WMM_MODE, NULL, set_sta_wmm_mode_handler);
+    register_api(API_STA_POWER_SAVE, NULL, set_sta_power_save_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -1635,5 +1634,140 @@ done:
     if (w) {
         wpa_ctrl_close(w);
     }
+    return 0;
+}
+
+static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_NOT_OK;
+    char buffer[BUFFER_LEN];
+    char param_value[256];
+    struct tlv_hdr *tlv = NULL;
+
+    /* TLV: TLV_PHYMODE */
+    memset(param_value, 0, sizeof(param_value));
+    tlv = find_wrapper_tlv_by_id(req, TLV_PHYMODE);
+    if (tlv) {
+        memcpy(param_value, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_ERROR, "PHY mode value: %s", param_value);
+    } else {
+        goto done;
+    }
+
+    /* Check response */
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int set_sta_channel_width_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_NOT_OK;
+    char buffer[BUFFER_LEN];
+    char param_value[256];
+    struct tlv_hdr *tlv = NULL;
+
+    /* TLV: TLV_CHANNEL_WIDTH */
+    memset(param_value, 0, sizeof(param_value));
+    tlv = find_wrapper_tlv_by_id(req, TLV_CHANNEL_WIDTH);
+    if (tlv) {
+        memcpy(param_value, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_ERROR, "channel width value: %s", param_value);
+    } else {
+        goto done;
+    }
+
+    /* Check response */
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int set_sta_wmm_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_NOT_OK;
+    char buffer[BUFFER_LEN];
+    char param_value[256];
+    struct tlv_hdr *tlv = NULL;
+
+    /* TLV: TLV_STA_POWER_SAVE */
+    memset(param_value, 0, sizeof(param_value));
+    tlv = find_wrapper_tlv_by_id(req, TLV_WMM_MODE);
+    if (tlv) {
+        memcpy(param_value, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_ERROR, "wmm mode value: %s", param_value);
+    } else {
+        goto done;
+    }
+
+    /* Check response */
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_POWER_SAVE_NOT_OK;
+    char buffer[BUFFER_LEN];
+    char param_value[256], conf[8], result[8];
+    struct tlv_hdr *tlv = NULL;
+    FILE *fp;
+    char *iface = 0;
+
+    /* TLV: TLV_STA_POWER_SAVE */
+    memset(param_value, 0, sizeof(param_value));
+    tlv = find_wrapper_tlv_by_id(req, TLV_STA_POWER_SAVE);
+    if (tlv) {
+        memcpy(param_value, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "power save value: %s", param_value);
+    } else {
+        goto done;
+    }
+
+    /* Assemble wpa_supplicant command */
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(conf, "%s", !strcmp(param_value, "False") ? "off" : "on");
+    iface = get_wireless_interface();
+    sprintf(buffer, "iw dev %s set power_save %s && iw dev %s get power_save", 
+            iface, (char *)&conf, iface);
+    indigo_logger(LOG_LEVEL_DEBUG, "cmd: %s", buffer);
+    system(buffer);
+
+    fp = popen(buffer, "r");
+    if (fp == NULL)
+        goto done;
+
+    /* Power save output format: Power save: on */
+    fscanf(fp, "%*s %*s %s", (char *)&result);
+    pclose(fp);
+    indigo_logger(LOG_LEVEL_DEBUG, "power save config: %s, result: %s", conf, result);
+
+    /* Check response */
+    if (!strcmp(conf, result)) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_POWER_SAVE_OK;
+    }
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
     return 0;
 }

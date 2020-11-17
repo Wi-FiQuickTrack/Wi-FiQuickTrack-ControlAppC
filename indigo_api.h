@@ -65,10 +65,10 @@ struct indigo_api {
 #define API_STA_SEND_BTM_QUERY                  0x2006
 #define API_STA_SEND_ANQP_QUERY                 0x2007
 #define API_STA_START_UP                        0x2008
+#define API_STA_SET_PHY_NODE                    0x2009
 #define API_STA_SET_CHANNEL_WIDTH               0x200a
 #define API_STA_SET_WMM_MODE                    0x200b
 #define API_STA_POWER_SAVE                      0x200c
-#define API_STA_GET_CHANNEL_WIDTH               0x200d
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -304,6 +304,8 @@ struct indigo_api {
 #define TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK        "Failed to WNM_BSS_QUERY"
 #define TLV_VALUE_RESET_OK                      "Device reset successfully"
 #define TLV_VALUE_RESET_NOT_OK                  "Failed to run Device reset"
+#define TLV_VALUE_POWER_SAVE_OK                 "Set power save value successfully"
+#define TLV_VALUE_POWER_SAVE_NOT_OK             "Failed to set power save value"
 
 #define WPA_CTRL_OK                             "OK"
 
