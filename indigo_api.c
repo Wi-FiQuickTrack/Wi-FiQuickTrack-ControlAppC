@@ -295,7 +295,7 @@ void register_api(int id, api_callback_func verify, api_callback_func handle) {
         api->verify = verify;
         api->handle = handle;
     } else {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to find the API 0x%04x", id);
+        indigo_logger(LOG_LEVEL_ERROR, "API 0x%04x has no callback function", id);
     }
 }
 
