@@ -50,7 +50,7 @@ int syslog_level = LOG_LEVEL_INFO;
 /* multiple VAPs */
 int interface_count = 0;
 struct interface_info interfaces[8];
-int bss_id[3]; // 2.4G, 5G, Dual Band
+int bss_id[3] = {0, 0, 0}; // 2.4G, 5G, Dual Band
 
 void debug_print_timestamp(void) {
     time_t rawtime;
@@ -704,8 +704,7 @@ char* get_all_hapd_conf_files() {
     static char conf_files[128];
 
     memset(conf_files, 0, sizeof(conf_files));
-    for (i = 0; i < interface_count; i++)
-    {
+    for (i = 0; i < interface_count; i++) {
         if (interfaces[i].identifier != -1) {
             valid_id_cnt++;
             strncat(conf_files, interfaces[i].hapd_conf_file, strlen(interfaces[i].hapd_conf_file));
