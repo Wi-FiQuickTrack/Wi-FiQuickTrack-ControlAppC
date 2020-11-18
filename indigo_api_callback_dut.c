@@ -79,6 +79,7 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 
 int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
 int wpas_debug_level = DEBUG_LEVEL_DISABLE;
+int hostapd_bss_cfg = 0;
 
 static int get_debug_level(int value) {
     if (value == 0) {
@@ -586,6 +587,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
             len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan->ifname);
             if (len) {
                 write_file(wlan->hapd_conf_file, buffer, len);
+                hostapd_bss_cfg = 1;
             }
 #ifdef _OPENWRT_
             if (bss_info.mbssid_enable) {
@@ -609,6 +611,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
         if (len) {
             write_file(get_hapd_conf_file(), buffer, len);
+            hostapd_bss_cfg = 0;
         }
     }
 
@@ -645,10 +648,12 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #endif
 
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_all_hapd_conf_files());
+        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), 
+        hostapd_bss_cfg ? get_all_hapd_conf_files() : get_hapd_conf_file());
 #else
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_all_hapd_conf_files());
+        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(),
+        hostapd_bss_cfg ? get_all_hapd_conf_files() : get_hapd_conf_file());
 #endif
     len = system(buffer);
     sleep(1);
