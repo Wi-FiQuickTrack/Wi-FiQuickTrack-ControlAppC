@@ -494,8 +494,6 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
     int i;
 
     for (i = 0; i < interface_count; i++) {
-        printf("in: band %d id %d vs if band %d id %d\n",
-                band, identifier, interfaces[i].band, interfaces[i].identifier);
         if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == band) && 
              (interfaces[i].identifier == identifier)) {
             return &interfaces[i];
