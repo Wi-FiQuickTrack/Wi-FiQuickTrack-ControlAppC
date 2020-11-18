@@ -419,6 +419,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 #endif
 
         memset(buffer, 0, sizeof(buffer));
+        memset(cfg_item, 0, sizeof(cfg_item));
         if (tlv->id == TLV_OWE_TRANSITION_BSS_IDENTIFIER) {
             struct bss_identifier_info bss_info;
             struct interface_info *wlan;
@@ -435,13 +436,21 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                     bss_info.identifier,
                     wlan ? wlan->ifname : "n/a"
                     );
-            if (wlan)
+            if (wlan) {
                 memcpy(buffer, wlan->ifname, strlen(wlan->ifname));
+                sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
+                strcat(output, cfg_item);
+                if (has_owe) {
+                    memset(cfg_item, 0, sizeof(cfg_item));
+                    sprintf(cfg_item, "ignore_broadcast_ssid=1\n");
+                    strcat(output, cfg_item);
+                }
+            }
         } else {
             memcpy(buffer, tlv->value, tlv->len);
+            sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
+            strcat(output, cfg_item);
         }
-        sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
-        strcat(output, cfg_item);
     }
 
     if (has_pmf == 0) {
