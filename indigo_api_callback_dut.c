@@ -63,7 +63,6 @@ void register_apis() {
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
     register_api(API_STA_SET_WMM_MODE, NULL, NULL);
     register_api(API_STA_POWER_SAVE, NULL, NULL);
-    register_api(API_STA_GET_CHANNEL_WIDTH, NULL, NULL);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
