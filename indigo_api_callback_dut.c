@@ -326,6 +326,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     char band[64];
 #ifdef _OPENWRT_
     int ht40 = 0;
+    char country[16], wifi_name[16];
+
+    memset(country, 0, sizeof(country));
 #endif
 
     struct tlv_to_config_name* cfg = NULL;
@@ -390,6 +393,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         if (tlv->id == TLV_HE_MU_EDCA) {
+#ifdef _OPENWRT_
+            continue;
+#endif
             enable_muedca = 1;
         }
 
@@ -401,6 +407,15 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_HT_CAPB && strstr(tlv->value, "40")) {
             ht40 = 1;
         }
+
+        if (tlv->id == TLV_COUNTRY_CODE) {
+            memcpy(country, tlv->value, tlv->len);
+            continue;
+        }
+
+        if (tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H)
+            continue;
+
 #endif
 
         memset(buffer, 0, sizeof(buffer));
@@ -501,13 +516,20 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     }
 
 #ifdef _OPENWRT_
-    if (channel) {
-        if (!strncmp(band, "a", 1))
-            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.channel=\'%d\'", channel);
-        else
-            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi1.channel=\'%d\'", channel);
+    if (!strncmp(band, "a", 1)) {
+        snprintf(wifi_name, sizeof(wifi_name), "wifi0");
+    } else {
+        snprintf(wifi_name, sizeof(wifi_name), "wifi1");
+    }
+
+    if (strlen(country) > 0) {
+        snprintf(buffer, sizeof(buffer), "uci set wireless.%s.country=\'%s\'", wifi_name, country);
         system(buffer);
     }
+
+    snprintf(buffer, sizeof(buffer), "uci set wireless.%s.channel=\'%d\'", wifi_name, channel);
+    system(buffer);
+
     if (!strncmp(band, "a", 1)) {
         if (chwidth == 2) {
             snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT160\'");
@@ -521,7 +543,6 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
         system(buffer);
     }
-    // Check mode ???
 
     system("uci commit");
 #endif
@@ -613,9 +634,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system(buffer);
     sleep(1);
 #endif
-    sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
-    system(buffer);
-    sleep(1);
 
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), get_all_hapd_conf_files());
