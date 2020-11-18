@@ -132,6 +132,7 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int create_bridge_network_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);

@@ -398,7 +398,6 @@ int create_bridge(char *br) {
     char cmd[S_BUFFER_LEN];
 
     /* Create new bridge */
-    br = NULL ? "br0" : br;
     sprintf(cmd, "brctl addbr %s", br);
     system(cmd);
 
@@ -419,9 +418,9 @@ int add_interface_to_bridge(char *br, char *ifname) {
     system(cmd);
 
     /* Add interface to bridge */
-    br = NULL ? "br0" : br;
     sprintf(cmd, "brctl addif %s %s", br, ifname);
     system(cmd);
+    printf("%s\n", cmd);
 
     return 0;
 }
@@ -429,7 +428,6 @@ int add_interface_to_bridge(char *br, char *ifname) {
 int reset_bridge(char *br) {
     char cmd[S_BUFFER_LEN];
 
-    br = NULL ? "br0" : br;
     /* Bring down bridge */
     sprintf(cmd, "ifconfig %s down", br);
     system(cmd);
@@ -477,6 +475,16 @@ int set_interface_ip(char *ifname, char *ip) {
     return 0;
 }
 
+int add_all_wireless_interface_to_bridge(char *br) {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        control_interface(interfaces[i].ifname, "up");
+        add_interface_to_bridge(br, interfaces[i].ifname);
+    }
+
+    return 0;
+}
 /* Environment */
 int service_port = SERVICE_PORT_DEFAULT;
 
@@ -523,7 +531,7 @@ char* get_hapd_ctrl_path_by_id(int identifier) {
     else {
         sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, get_default_wireless_interface_info());
     }
-    printf("hapd_full_ctrl_path: %s", hapd_full_ctrl_path);
+    printf("hapd_full_ctrl_path: %s\n", hapd_full_ctrl_path);
     return hapd_full_ctrl_path;
 }
 

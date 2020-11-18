@@ -39,7 +39,7 @@ void register_apis() {
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
     register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
     register_api(API_INDIGO_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
-    /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
+    register_api(API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK, NULL, create_bridge_network_handler);
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
     register_api(API_DEVICE_RESET, NULL, reset_device_handler);
     /* AP */
@@ -168,6 +168,8 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
+        if (is_bridge_created())
+            reset_bridge(BRIDGE_WLANS);
     }
     sleep(1);
 
@@ -665,7 +667,42 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     return 0;
 }
 
+#ifndef SUPPORT_DYNAMIC_ADD_INTERFACE
+static int create_bridge_network_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int err = 0;
+    char cmd[S_BUFFER_LEN];
+    char static_ip[S_BUFFER_LEN];
+    struct tlv_hdr *tlv;
+    char *message = TLV_VALUE_CREATE_BRIDGE_OK;
 
+    /* TLV: TLV_STATIC_IP */
+    memset(static_ip, 0, sizeof(static_ip));
+    tlv = find_wrapper_tlv_by_id(req, TLV_STATIC_IP);
+    if (tlv) {
+        memcpy(static_ip, tlv->value, tlv->len);
+    } else {
+        message = TLV_VALUE_CREATE_BRIDGE_NOT_OK;
+        err = -1;
+        goto response;
+    }
+
+    /* Create new bridge */
+    create_bridge(BRIDGE_WLANS);
+
+    add_all_wireless_interface_to_bridge(BRIDGE_WLANS);
+
+    set_interface_ip(BRIDGE_WLANS, static_ip);
+
+    response:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, err >= 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+#else
+/* Should be deprecated ?
+ */
 static int create_bridge_network_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
     char cmd[S_BUFFER_LEN];
@@ -720,7 +757,7 @@ static int create_bridge_network_handler(struct packet_wrapper *req, struct pack
 
     return 0;
 }
-
+#endif
 
 // Bytes to DUT : 01 50 06 00 ed ff ff 00 55 0c 31 39 32 2e 31 36 38 2e 31 30 2e 33
 // ACK  :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
@@ -860,7 +897,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (bss_info.identifier >= 0) {
-        printf("mac_addr %s\n", mac_addr);
+        printf("Get mac_addr %s\n", mac_addr);
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_OK;
         goto done;
@@ -929,10 +966,10 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
     } else {
         goto done;
     }
-    /* Find network interface. If br0 exists, then use it. Otherwise, it uses the initiation value. */
+    /* Find network interface. If BRIDGE_WLANS exists, then use it. Otherwise, it uses the initiation value. */
     memset(local_ip, 0, sizeof(local_ip));
-    if (find_interface_ip(local_ip, sizeof(local_ip), "br0")) {
-        indigo_logger(LOG_LEVEL_DEBUG, "use %s", "br0");
+    if (find_interface_ip(local_ip, sizeof(local_ip), BRIDGE_WLANS)) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", BRIDGE_WLANS);
     } else if (find_interface_ip(local_ip, sizeof(local_ip), get_wireless_interface())) {
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wireless_interface());
 // #ifdef __TEST__        
@@ -1287,7 +1324,7 @@ static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper
     char *message = NULL;
     char buffer[64];
 
-    if (find_interface_ip(buffer, sizeof(buffer), "br0")) {
+    if (find_interface_ip(buffer, sizeof(buffer), BRIDGE_WLANS)) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_OK;
     } else if (find_interface_ip(buffer, sizeof(buffer), get_wireless_interface())) {
