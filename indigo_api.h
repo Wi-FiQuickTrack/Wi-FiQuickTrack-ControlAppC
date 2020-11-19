@@ -67,8 +67,7 @@ struct indigo_api {
 #define API_STA_START_UP                        0x2008
 #define API_STA_SET_PHY_NODE                    0x2009
 #define API_STA_SET_CHANNEL_WIDTH               0x200a
-#define API_STA_SET_WMM_MODE                    0x200b
-#define API_STA_POWER_SAVE                      0x200c
+#define API_STA_POWER_SAVE                      0x200b
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001

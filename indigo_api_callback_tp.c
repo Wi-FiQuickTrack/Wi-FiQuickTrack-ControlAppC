@@ -64,7 +64,6 @@ void register_apis() {
     register_api(API_STA_START_UP, NULL, start_up_sta_handler);
     register_api(API_STA_SET_PHY_NODE, NULL, set_sta_phy_mode_handler);
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, set_sta_channel_width_handler);
-    register_api(API_STA_SET_WMM_MODE, NULL, set_sta_wmm_mode_handler);
     register_api(API_STA_POWER_SAVE, NULL, set_sta_power_save_handler);
 }
 
@@ -1678,34 +1677,6 @@ static int set_sta_channel_width_handler(struct packet_wrapper *req, struct pack
     if (tlv) {
         memcpy(param_value, tlv->value, tlv->len);
         indigo_logger(LOG_LEVEL_ERROR, "channel width value: %s", param_value);
-    } else {
-        goto done;
-    }
-
-    /* Check response */
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_OK;
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-
-    return 0;
-}
-
-static int set_sta_wmm_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK;
-    char *message = TLV_VALUE_NOT_OK;
-    char buffer[BUFFER_LEN];
-    char param_value[256];
-    struct tlv_hdr *tlv = NULL;
-
-    /* TLV: TLV_STA_POWER_SAVE */
-    memset(param_value, 0, sizeof(param_value));
-    tlv = find_wrapper_tlv_by_id(req, TLV_WMM_MODE);
-    if (tlv) {
-        memcpy(param_value, tlv->value, tlv->len);
-        indigo_logger(LOG_LEVEL_ERROR, "wmm mode value: %s", param_value);
     } else {
         goto done;
     }

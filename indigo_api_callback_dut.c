@@ -61,7 +61,6 @@ void register_apis() {
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     /* TODO: Add the handlers */
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
-    register_api(API_STA_SET_WMM_MODE, NULL, NULL);
     register_api(API_STA_POWER_SAVE, NULL, NULL);
 }
 
