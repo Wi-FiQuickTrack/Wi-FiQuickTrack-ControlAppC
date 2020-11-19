@@ -234,15 +234,13 @@ struct indigo_api {
 #define TLV_OWE_TRANSITION_IFNAME               0x0097
 #define TLV_BEACON_HEXDUMP_REQUIRED             0x0098
 
-/* TODO: updated value when they are available */
-#define TLV_TEST_PLATFORM_IP                    0x0099
-#define TLV_TEST_PLATFORM_PORT                  0x009a
-#define TLV_CONTROL_INTERFACE                   0x009b
-#define TLV_UDP_PACKET_SIZE                     0x009c
-#define TLV_DUT_UDP_PORT                        0x009d
-#define TLV_GLOBAL_CTRL_IFACE                   0x009e
-#define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x009f
-/* end of TODO */
+#define TLV_TEST_PLATFORM_IP                    0x009a
+#define TLV_TEST_PLATFORM_PORT                  0x009b
+#define TLV_CONTROL_INTERFACE                   0x009c
+#define TLV_UDP_PACKET_SIZE                     0x009d
+#define TLV_DUT_UDP_PORT                        0x009e
+#define TLV_GLOBAL_CTRL_IFACE                   0x009f
+#define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x00a0
 
 // class IndigoResponseTLV
 // List of TLV used in the Indigo API response and ACK messages from the DUT
@@ -251,11 +249,9 @@ struct indigo_api {
 #define TLV_DUT_WLAN_IP_ADDR                    0xa002
 #define TLV_DUT_MAC_ADDR                        0xa003
 #define TLV_CONTROL_APP_VERSION                 0xa004
-/* TODO: updated value when they are available */
 #define TLV_LOOP_BACK_DATA_RECEIVED             0xa005
 #define TLV_ARP_SENT_NUM                        0xa006
 #define TLV_ARP_RECV_NUM                        0xa007
-/* end of TODO */
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
