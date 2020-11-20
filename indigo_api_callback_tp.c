@@ -81,7 +81,7 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 #define DEBUG_LEVEL_ADVANCED            2
 
 int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
-int wpas_debug_level = DEBUG_LEVEL_DISABLE;
+int wpas_debug_level = DEBUG_LEVEL_BASIC;
 
 static int get_debug_level(int value) {
     if (value == 0) {
@@ -1345,10 +1345,11 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
-    char *message = TLV_VALUE_WPA_S_ASSOC_OK;
+    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
     char buffer[256], response[1024];
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
     size_t resp_len;
+    char *parameter[] = {"pidof", "wpa_supplicant", NULL};
 
 #ifdef _OPENWRT_
 #else
@@ -1375,35 +1376,12 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 #endif
     indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
     len = system(buffer);
-    sleep(5);
+    sleep(1);
 
-    /* Open WPA supplicant UDP socket */
-    w = wpa_ctrl_open(get_wpas_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_WPA_S_ASSOC_NOT_OK;
-        goto done;
-    }
-
-    /* Send command to hostapd UDS socket */
-    status = TLV_VALUE_STATUS_NOT_OK;
-    message = TLV_VALUE_WPA_S_ASSOC_NOT_OK;
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "STATUS");    
-    for (i = 0; i < 6; i++) {
-        memset(response, 0, sizeof(response));
-        resp_len = sizeof(response) - 1;
-        wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-        printf("wpa ctrl response: %s\n", response);
-        // Check link
-        if (strstr(response, "wpa_state=COMPLETED")) {
-            indigo_logger(LOG_LEVEL_DEBUG, "Connected");
-            status = TLV_VALUE_STATUS_OK;
-            message = TLV_VALUE_WPA_S_ASSOC_OK;            
-            break;
-        }
-        sleep(2);
+    len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
+    if (len) {
+        message = TLV_VALUE_WPA_S_START_UP_OK;
+        status = TLV_VALUE_STATUS_OK;
     }
 
 done:
