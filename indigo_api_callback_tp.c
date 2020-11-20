@@ -31,6 +31,7 @@
 #include "wpa_ctrl.h"
 #include "indigo_api_callback.h"
 
+struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO};
 
 void register_apis() {
     /* Basic */
@@ -1192,6 +1193,23 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
         wps_config = appended_supplicant_conf_str.rstrip()
     */
 
+    if (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11AC) {
+        system("modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
+    } else if (sta_hw_config.phymode == PHYMODE_11BG || sta_hw_config.phymode == PHYMODE_11A) {
+        strcat(buffer, "disable_ht=1\n");
+        system("modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
+    } else if (sta_hw_config.phymode == PHYMODE_11NA) {
+        strcat(buffer, "disable_vht=1\n");
+        system("modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
+    } else if (sta_hw_config.phymode == PHYMODE_11AXG || sta_hw_config.phymode == PHYMODE_11AXA) {
+        system("modprobe -r iwlwifi;sudo modprobe iwlwifi");
+    }
+
+    if (sta_hw_config.chwidth = CHWIDTH_20 &&
+        ((sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11NA))) {
+        strcat(buffer, "disable_ht40=1\n");
+    }
+
     strcat(buffer, "}\n");
 
     return strlen(buffer);
@@ -1653,6 +1671,30 @@ static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wr
         goto done;
     }
 
+    if (strcmp(param_value, "auto") == 0) {
+        sta_hw_config.phymode = PHYMODE_AUTO;
+        system("modprobe -r iwlwifi;sudo modprobe iwlwifi");
+    } else if (strcmp(param_value, "11bgn") == 0) {
+        sta_hw_config.phymode = PHYMODE_11BGN;
+    } else if (strcmp(param_value, "11bg") == 0) {
+        sta_hw_config.phymode = PHYMODE_11BG;
+    } else if (strcmp(param_value, "11b") == 0) {
+        /* not supported */
+        sta_hw_config.phymode = PHYMODE_11B;
+    } else if (strcmp(param_value, "11a") == 0) {
+        sta_hw_config.phymode = PHYMODE_11A;
+    } else if (strcmp(param_value, "11na") == 0) {
+        sta_hw_config.phymode = PHYMODE_11NA;
+    } else if (strcmp(param_value, "11ac") == 0) {
+        sta_hw_config.phymode = PHYMODE_11AC;
+    } else if (strcmp(param_value, "11axg") == 0) {
+        sta_hw_config.phymode = PHYMODE_11AXG;
+    } else if (strcmp(param_value, "11axa") == 0) {
+        sta_hw_config.phymode = PHYMODE_11AXA;
+    } else {
+        goto done;
+    }
+
     /* Check response */
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
@@ -1677,6 +1719,23 @@ static int set_sta_channel_width_handler(struct packet_wrapper *req, struct pack
     if (tlv) {
         memcpy(param_value, tlv->value, tlv->len);
         indigo_logger(LOG_LEVEL_ERROR, "channel width value: %s", param_value);
+    } else {
+        goto done;
+    }
+
+    if (strcmp(param_value, "auto") == 0) {
+        sta_hw_config.chwidth = CHWIDTH_AUTO;
+        /* clean */
+    } else if (strcmp(param_value, "20") == 0) {
+        sta_hw_config.chwidth = CHWIDTH_20;
+    } else if (strcmp(param_value, "40") == 0) {
+        sta_hw_config.chwidth = CHWIDTH_40;
+    } else if (strcmp(param_value, "80") == 0) {
+        sta_hw_config.chwidth = CHWIDTH_80;
+    } else if (strcmp(param_value, "160") == 0) {
+        sta_hw_config.chwidth = CHWIDTH_160;
+    } else if (strcmp(param_value, "80plus80") == 0) {
+        sta_hw_config.chwidth = CHWIDTH_80PLUS80;
     } else {
         goto done;
     }

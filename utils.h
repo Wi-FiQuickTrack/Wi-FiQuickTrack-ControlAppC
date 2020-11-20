@@ -43,6 +43,32 @@ enum {
     BAND_DUAL = 2
 };
 
+enum {
+    PHYMODE_AUTO = 0,
+    PHYMODE_11B = 1,
+    PHYMODE_11BG = 2,
+    PHYMODE_11BGN = 3,
+    PHYMODE_11A = 4,
+    PHYMODE_11NA = 5,
+    PHYMODE_11AC = 6,
+    PHYMODE_11AXG = 7,
+    PHYMODE_11AXA = 8
+};
+
+enum {
+    CHWIDTH_AUTO = 0,
+    CHWIDTH_20 = 1,
+    CHWIDTH_40 = 2,
+    CHWIDTH_80 = 3,
+    CHWIDTH_80PLUS80 = 4,
+    CHWIDTH_160 = 5
+};
+
+struct sta_platform_config {
+    int phymode;
+    int chwidth;
+};
+
 struct channel_info {
     int channel;
     int freq;
