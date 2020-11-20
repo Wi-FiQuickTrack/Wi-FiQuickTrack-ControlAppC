@@ -223,8 +223,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     sprintf(buffer, "iw dev %s del", get_wireless_interface());
     system(buffer);
 #endif
-    sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
-    system(buffer);
 #endif
 
     clear_interfaces_resource();

@@ -193,8 +193,11 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     char *message = NULL;
 
     memset(buffer, 0, sizeof(buffer));
-
+#ifdef _OPENWRT_
+    system("killall hostapd-wfa 1>/dev/null 2>/dev/null");
+#else
     system("killall hostapd 1>/dev/null 2>/dev/null");
+#endif
     sleep(2);
 
     len = unlink(get_hapd_conf_file());
@@ -203,10 +206,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     }
     sleep(1);
 
-#ifdef _OPENWRT_
-    sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
-    system(buffer);
-#else
+#ifndef _OPENWRT_
     len = system("rfkill unblock wlan");
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to run rfkill unblock wlan");
@@ -344,6 +344,13 @@ static void add_mu_edca_params(char *output) {
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
     int i, ctrl_iface = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
+#ifdef _OPENWRT_
+    char wifi_name[16], band[16], country[16];
+    int enable_n = 0, enable_ac = 0, enable_ax = 0;
+    int channel = 0, ht40 = 0, chwidth = 0;
+
+    memset(country, 0, sizeof(country));
+#endif
 
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
@@ -363,6 +370,45 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
+#ifdef _OPENWRT_
+        if (tlv->id == TLV_HW_MODE) {
+            memset(band, 0, sizeof(band));
+            memcpy(band, tlv->value, tlv->len);
+        }
+
+        if (tlv->id == TLV_IEEE80211_N) {
+            enable_n = atoi(tlv->value);
+        }
+
+        if (tlv->id == TLV_IEEE80211_AC) {
+            enable_ac = atoi(tlv->value);
+        }
+
+        if (tlv->id == TLV_IEEE80211_AX) {
+            enable_ax = atoi(tlv->value);
+        }
+
+        if (tlv->id == TLV_CHANNEL) {
+            channel = atoi(tlv->value);
+        }
+
+        if (tlv->id == TLV_HE_OPER_CHWIDTH || tlv->id == TLV_VHT_OPER_CHWIDTH) {
+            chwidth = atoi(tlv->value);
+        }
+
+        if (tlv->id == TLV_HT_CAPB && strstr(tlv->value, "40")) {
+            ht40 = 1;
+        }
+
+        if (tlv->id == TLV_COUNTRY_CODE) {
+            memcpy(country, tlv->value, tlv->len);
+            continue;
+        }
+
+        if (tlv->id == TLV_HE_MU_EDCA || tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H)
+            continue;
+#endif
+
         memset(buffer, 0, sizeof(buffer));
         memcpy(buffer, tlv->value, tlv->len);
         sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
@@ -379,6 +425,63 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         indigo_logger(LOG_LEVEL_ERROR, "No Remote UDP ctrl interface TLV for TP");
         return 0;
     }
+
+#ifdef _OPENWRT_
+    if (!strncmp(band, "a", 1)) {
+        snprintf(wifi_name, sizeof(wifi_name), "wifi0");
+        if (enable_ax) {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11axa\'", wifi_name);
+        } else if (enable_ac) {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11ac\'", wifi_name);
+        } else if (enable_n) {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11na\'", wifi_name);
+        } else {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11a\'", wifi_name);
+        }
+        system(buffer);
+
+        if (enable_n) {
+            if (chwidth == 2) {
+                snprintf(buffer, sizeof(buffer), "uci set wireless.%s.htmode=\'HT160\'", wifi_name);
+            } else if (chwidth == 0){
+                if (ht40)
+                    snprintf(buffer, sizeof(buffer), "uci set wireless.%s.htmode=\'HT40\'", wifi_name);
+                else
+                    snprintf(buffer, sizeof(buffer), "uci set wireless.%s.htmode=\'HT20\'", wifi_name);
+            } else {
+                snprintf(buffer, sizeof(buffer), "uci set wireless.%s.htmode=\'HT80\'", wifi_name);
+            }
+            system(buffer);
+        }
+    } else if (!strncmp(band, "b", 1)) {
+        snprintf(wifi_name, sizeof(wifi_name), "wifi1");
+        snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11b\'", wifi_name);
+        system(buffer);
+    } else if (!strncmp(band, "g", 1)) {
+        snprintf(wifi_name, sizeof(wifi_name), "wifi1");
+        if (enable_ax) {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11axg\'", wifi_name);
+        } else if (enable_n) {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11ng\'", wifi_name);
+        } else {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11g\'", wifi_name);
+        }
+        system(buffer);
+
+        if (enable_n) {
+            snprintf(buffer, sizeof(buffer), "uci set wireless.%s.htmode=\'HT20\'", wifi_name);
+            system(buffer);
+        }
+    }
+    if (strlen(country) > 0) {
+        snprintf(buffer, sizeof(buffer), "uci set wireless.%s.country=\'%s\'", wifi_name, country);
+        system(buffer);
+    }
+    snprintf(buffer, sizeof(buffer), "uci set wireless.%s.channel=\'%d\'", wifi_name, channel);
+    system(buffer);
+
+    system("uci commit");
+#endif
 
     return strlen(output);
 }
@@ -429,17 +532,23 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         sprintf(g_ctrl_iface, "%s", get_hapd_global_ctrl_path());
     }
 #ifdef _OPENWRT_
+    // Apply radio configurations via native hostpad
+    system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
+    sleep(1);
+    system("wifi down");
+    sleep(2);
+    system("wifi up");
+    sleep(3);
+    system("killall hostapd");
+    sleep(2);
+
 #ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
     system(buffer);
     sleep(1);
 #endif
 
-    sprintf(buffer, "iwpriv %s countryie 0", get_wireless_interface());
-    system(buffer);
-    sleep(1);
-
-    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
+    sprintf(buffer, "hostapd-wfa -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
 #else
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
