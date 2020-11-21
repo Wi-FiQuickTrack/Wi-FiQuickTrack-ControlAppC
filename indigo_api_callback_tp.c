@@ -1344,12 +1344,9 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 }
 
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[256], response[1024];
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
-    size_t resp_len;
-    char *parameter[] = {"pidof", "wpa_supplicant", NULL};
+    char buffer[256];
+    int len, status = TLV_VALUE_STATUS_NOT_OK;
 
 #ifdef _OPENWRT_
 #else
@@ -1376,21 +1373,14 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 #endif
     indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
     len = system(buffer);
-    sleep(1);
 
-    len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
-    if (len) {
-        message = TLV_VALUE_WPA_S_START_UP_OK;
-        status = TLV_VALUE_STATUS_OK;
-    }
+    message = TLV_VALUE_WPA_S_START_UP_OK;
+    status = TLV_VALUE_STATUS_OK;
 
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
     return 0;
 }
 
