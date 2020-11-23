@@ -347,6 +347,7 @@ int send_broadcast_arp(char *target_ip, int *send_count, int rate) {
     snprintf(buffer, sizeof(buffer), "arping -I %s %s -c %d -b | grep broadcast", get_wireless_interface(), target_ip, *send_count);
 #else
     snprintf(buffer, sizeof(buffer), "arping -i %s %s -c %d -W %d | grep packet", get_wireless_interface(), target_ip, *send_count, rate);
+#endif
     fp = popen(buffer, "r");
     if (fp == NULL)
         return 0;
