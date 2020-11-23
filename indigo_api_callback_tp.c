@@ -706,6 +706,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     } else {
         goto done;
     }
+    memset(dut_port, 0, sizeof(dut_port));
     tlv = find_wrapper_tlv_by_id(req, TLV_DUT_UDP_PORT);
     if (tlv) {
         memcpy(dut_port, tlv->value, tlv->len);
@@ -713,6 +714,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
         goto done;
     }
 
+    memset(rate, 0, sizeof(rate));
     tlv = find_wrapper_tlv_by_id(req, TLV_UDP_PACKET_RATE);
     if (tlv) {
         memcpy(rate, tlv->value, tlv->len);
@@ -720,6 +722,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
         snprintf(rate, sizeof(rate), "1");
     }
 
+    memset(pkt_count, 0, sizeof(pkt_count));
     tlv = find_wrapper_tlv_by_id(req, TLV_PACKET_COUNT);
     if (tlv) {
         memcpy(pkt_count, tlv->value, tlv->len);
@@ -727,6 +730,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
         snprintf(pkt_count, sizeof(pkt_count), "10");
     }
 
+    memset(pkt_size, 0, sizeof(pkt_size));
     tlv = find_wrapper_tlv_by_id(req, TLV_UDP_PACKET_SIZE);
     if (tlv) {
         memcpy(pkt_size, tlv->value, tlv->len);
@@ -736,7 +740,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
 
     /* Start loopback */
     snprintf(recv_count, sizeof(recv_count), "0");
-    recvd = send_loopback_data(dut_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atoi(rate));
+    recvd = send_loopback_data(dut_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atof(rate));
     if (recvd > 0) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_SEND_LOOPBACK_DATA_OK;

@@ -100,7 +100,7 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);
 int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout);
 int loopback_client_stop();
 int loopback_client_status();
-int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, int rate);
+int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, double rate);
 int send_broadcast_arp(char *target_ip, int *send_count, int rate);
 
 int is_bridge_created();

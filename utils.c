@@ -275,7 +275,7 @@ int loopback_client_status() {
     return !!loopback_socket;
 }
 
-int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, int rate) {
+int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, double rate) {
     int s = 0, i = 0;
     struct sockaddr_in addr;
     int pkt_sent = 0, pkt_rcv = 0;
@@ -310,7 +310,10 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
     for (i = 0; (i < packet_size) && (i < sizeof(message)); i++)
         message[i] = 0x0A;
 
-    for (pkt_sent = 0; pkt_sent < packet_count; pkt_sent++) {
+    indigo_logger(LOG_LEVEL_INFO, "packet_count %d rate %lf\n",
+                  packet_count, rate);
+
+    for (pkt_sent = 1; pkt_sent <= packet_count; pkt_sent++) {
         memset(&server_reply, 0, sizeof(server_reply));
 
         send_len = send(s, message, strlen(message), 0);
@@ -329,7 +332,7 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
             continue;
         }
         pkt_rcv++;
-        sleep(rate);
+        usleep(rate*1000000);
 
         indigo_logger(LOG_LEVEL_INFO, "Receive echo %d bytes data", recv_len);
     }
