@@ -1279,12 +1279,14 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
         }        
     }
 
-    if (ieee80211w_configured == 0 && transition_mode_enabled) {
-        strcat(buffer, "ieee80211w=1\n");
-    } else if (ieee80211w_configured == 0 && sae_only) {
-        strcat(buffer, "ieee80211w=2\n");
-    } else if (owe_configured) {
-        strcat(buffer, "ieee80211w=2\n");
+    if (ieee80211w_configured == 0) {
+        if (transition_mode_enabled) {
+            strcat(buffer, "ieee80211w=1\n");
+        } else if (sae_only) {
+            strcat(buffer, "ieee80211w=2\n");
+        } else if (owe_configured) {
+            strcat(buffer, "ieee80211w=2\n");
+        }
     }
 
     /* TODO: merge another file */
