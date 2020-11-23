@@ -348,6 +348,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     char wifi_name[16], band[16], country[16];
     int enable_n = 0, enable_ac = 0, enable_ax = 0;
     int channel = 0, ht40 = 0, chwidth = 0;
+    char value[16];
 
     memset(country, 0, sizeof(country));
 #endif
@@ -377,23 +378,33 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         if (tlv->id == TLV_IEEE80211_N) {
-            enable_n = atoi(tlv->value);
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            enable_n = atoi(value);
         }
 
         if (tlv->id == TLV_IEEE80211_AC) {
-            enable_ac = atoi(tlv->value);
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            enable_ac = atoi(value);
         }
 
         if (tlv->id == TLV_IEEE80211_AX) {
-            enable_ax = atoi(tlv->value);
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            enable_ax = atoi(value);
         }
 
         if (tlv->id == TLV_CHANNEL) {
-            channel = atoi(tlv->value);
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            channel = atoi(value);
         }
 
         if (tlv->id == TLV_HE_OPER_CHWIDTH || tlv->id == TLV_VHT_OPER_CHWIDTH) {
-            chwidth = atoi(tlv->value);
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            chwidth = atoi(value);
         }
 
         if (tlv->id == TLV_HT_CAPB && strstr(tlv->value, "40")) {
@@ -757,6 +768,7 @@ static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper
     }
 
     /* TLV: TLV_ARP_FRAME_COUNT */
+    memset(arp_count, 0, sizeof(arp_count));
     tlv = find_wrapper_tlv_by_id(req, TLV_ARP_FRAME_COUNT);
     if (tlv) {
         memcpy(arp_count, tlv->value, tlv->len);
@@ -766,6 +778,7 @@ static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper
     send = atoi(arp_count);
 
     /* TLV_ARP_TRANSMISSION_RATE */
+    memset(rate, 0, sizeof(rate));
     tlv = find_wrapper_tlv_by_id(req, TLV_ARP_TRANSMISSION_RATE);
     if (tlv) {
         memcpy(rate, tlv->value, tlv->len);

@@ -323,7 +323,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
     int i;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
-    char band[64];
+    char band[64], value[16];
 #ifdef _OPENWRT_
     int ht40 = 0;
     char country[16], wifi_name[16];
@@ -375,16 +375,22 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         if (tlv->id == TLV_CHANNEL) {
-            channel = atoi(tlv->value);
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            channel = atoi(value);
         }
 
         if (tlv->id == TLV_HE_OPER_CHWIDTH) {
-            chwidth = atoi(tlv->value);
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            chwidth = atoi(value);
             chwidthset = 1;
         }
 
         if (tlv->id == TLV_VHT_OPER_CHWIDTH) {
-            chwidth = atoi(tlv->value);
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            chwidth = atoi(value);
             vht_chwidthset = 1;
         }
 
