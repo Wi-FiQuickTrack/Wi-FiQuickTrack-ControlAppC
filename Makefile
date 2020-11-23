@@ -19,7 +19,7 @@ endif
 ifeq ($(ROLE),dut)
 OBJS += indigo_api_callback_dut.o
 else
-OBJS += indigo_api_callback_tp.o
+OBJS += indigo_api_callback_tp.o vendor_specific.o
 CFLAGS += -DCONFIG_CTRL_IFACE_UDP
 endif
 

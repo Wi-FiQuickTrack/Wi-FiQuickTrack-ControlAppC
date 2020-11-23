@@ -44,4 +44,6 @@
 
 #define BRIDGE_WLANS                                "br-wlans"
 
+int set_channel_width(int chwidth);
+
 #endif
