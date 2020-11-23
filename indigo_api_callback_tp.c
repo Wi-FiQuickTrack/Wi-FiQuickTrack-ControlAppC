@@ -1247,13 +1247,15 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     append_wpas_network_default_config(wrapper);
 #endif /* _RESERVED_ */
 
+    //printf("wrapper->tlv_num %d\n", wrapper->tlv_num);
     for (i = 0; i < wrapper->tlv_num; i++) {
         cfg = find_hostapd_config(wrapper->tlv[i]->id);
+        //printf("id %d cfg->config_name %s\n", wrapper->tlv[i]->id, cfg->config_name);
         if (cfg && find_wpas_global_config_name(wrapper->tlv[i]->id) == NULL) {
             memset(value, 0, sizeof(value));
             memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
 
-            if (wrapper->tlv[i]->id == TLV_IEEE80211_W) {
+            if ((wrapper->tlv[i]->id == TLV_IEEE80211_W) || (wrapper->tlv[i]->id == TLV_STA_IEEE80211_W)) {
                 ieee80211w_configured = 1;
             }
 
