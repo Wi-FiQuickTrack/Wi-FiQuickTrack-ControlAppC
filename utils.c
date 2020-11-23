@@ -343,12 +343,26 @@ int send_broadcast_arp(char *target_ip, int *send_count, int rate) {
     FILE *fp;
     int recv = 0;
 
+#ifdef _OPENWRT_
+    snprintf(buffer, sizeof(buffer), "arping -I %s %s -c %d -b | grep broadcast", get_wireless_interface(), target_ip, *send_count);
+#else
     snprintf(buffer, sizeof(buffer), "arping -i %s %s -c %d -W %d | grep packet", get_wireless_interface(), target_ip, *send_count, rate);
+#endif
     fp = popen(buffer, "r");
     if (fp == NULL)
         return 0;
+#ifdef _OPENWRT_
+    //Format: Sent 3 probe(s) (3 broadcast(s))
+    fgets(buffer, sizeof(buffer), fp);
+    sscanf(buffer, "%*s %d", send_count);
+    //Format: Received 0 reply (0 request(s), 0 broadcast(s))
+    fgets(buffer, sizeof(buffer), fp);
+    sscanf(buffer, "%*s %d", &recv);
+#else
     //arping output format: 1 packets transmitted, 1 packets received,   0% unanswered (0 extra)
     fscanf(fp, "%d %*s %*s %d", &recv , send_count);
+#endif
+    indigo_logger(LOG_LEVEL_INFO, "ARP TEST - send: %d recv: %d", *send_count, recv );
     pclose(fp);
 
     return recv;
