@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <signal.h>
 
 #include "vendor_specific.h"
 #include "eloop.h"
@@ -196,6 +197,7 @@ int main(int argc, char* argv[]) {
     set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);
     set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT);
     set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);
+    signal(SIGCLD, SIG_IGN);
 
     if (parse_parameters(argc, argv)) {
         return 0;
