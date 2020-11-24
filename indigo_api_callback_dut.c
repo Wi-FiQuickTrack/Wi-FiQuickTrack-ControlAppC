@@ -572,9 +572,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = "DUT configured as AP : Configuration file created";
-    int bss_identifier = 0;
+    int bss_identifier = 0, channel;
     struct interface_info* wlan;
-    char bss_identifier_str[16];
+    char bss_identifier_str[16], channel_str[8];
    struct bss_identifier_info bss_info;
 
     memset(buffer, 0, sizeof(buffer));
@@ -612,6 +612,14 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                wlan ? wlan->hapd_conf_file: "n/a"
                );
     } else {
+        tlv = find_wrapper_tlv_by_id(req, TLV_CHANNEL);
+        if (tlv)
+        {
+            memset(channel_str, 0, sizeof(channel_str));
+            memcpy(channel_str, tlv->value, tlv->len);
+            channel = atoi(channel_str);
+            set_default_wireless_interface_info(channel);
+        }
         sprintf(ifname, "%s", get_wireless_interface());
         len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
         if (len) {

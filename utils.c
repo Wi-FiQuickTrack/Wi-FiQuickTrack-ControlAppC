@@ -51,6 +51,7 @@ int syslog_level = LOG_LEVEL_INFO;
 int interface_count = 0;
 struct interface_info interfaces[8];
 int bss_id[3] = {0, 0, 0}; // 2.4G, 5G, Dual Band
+struct interface_info* default_interface;
 
 void debug_print_timestamp(void) {
     time_t rawtime;
@@ -666,7 +667,29 @@ int parse_wireless_interface_info(char *info) {
 }
 
 char* get_default_wireless_interface_info() {
-    return interfaces[0].ifname;
+    if (default_interface) {
+        return default_interface->ifname;
+    }
+    else
+        return interfaces[0].ifname;
+}
+
+void set_default_wireless_interface_info(int channel) {
+    int i, band;
+
+    if (channel < 15)
+        band = BAND_24GHZ;
+    else
+        band = BAND_5GHZ;
+    //TODO : 6GHz
+
+    for (i = 0; i < interface_count; i++) {
+        if (interfaces[i].band == BAND_DUAL || interfaces[i].band == band) {
+            default_interface = &interfaces[i];
+            indigo_logger(LOG_LEVEL_DEBUG, "Set default_interface %s", default_interface->ifname);
+            break;
+        }
+    }
 }
 
 struct interface_info* get_wireless_interface_info_by_band(int band) {
