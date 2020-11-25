@@ -393,6 +393,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             memset(value, 0, sizeof(value));
             memcpy(value, tlv->value, tlv->len);
             enable_ax = atoi(value);
+            continue;
         }
 
         if (tlv->id == TLV_CHANNEL) {
@@ -416,7 +417,8 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
-        if (tlv->id == TLV_HE_MU_EDCA || tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H)
+        if (tlv->id == TLV_HE_MU_EDCA || tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H ||
+            tlv->id == TLV_HE_OPER_CHWIDTH || tlv->id == TLV_HE_OPER_CENTR_FREQ)
             continue;
 #endif
 
