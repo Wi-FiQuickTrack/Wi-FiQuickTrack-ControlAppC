@@ -33,6 +33,10 @@
 
 struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO};
 
+#ifdef _OPENWRT_
+int rrm = 0;
+#endif
+
 void register_apis() {
     /* Basic */
     register_api(API_GET_IP_ADDR, NULL, get_ip_addr_handler);
@@ -518,6 +522,11 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         sprintf(ifname, "%s", get_wireless_interface());
     }
 
+#ifdef _OPENWRT_
+    tlv = find_wrapper_tlv_by_id(req, TLV_MBO);
+    rrm = tlv ? 1 : 0;
+#endif
+
     len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
     if (len) {
         write_file(get_hapd_conf_file(), buffer, len);
@@ -562,7 +571,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system(buffer);
     sleep(1);
 #endif
-
     sprintf(buffer, "hostapd-wfa -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
 #else
@@ -571,6 +579,12 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #endif
     len = system(buffer);
     sleep(1);
+
+#ifdef _OPENWRT_
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "iwpriv %s rrm %d", get_wireless_interface(), rrm);
+    system(buffer);
+#endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
