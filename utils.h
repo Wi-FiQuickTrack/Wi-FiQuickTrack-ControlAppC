@@ -23,7 +23,7 @@
 #ifndef _INDIGO_UTILS_
 #define _INDIGO_UTILS_  1
 
-#define S_BUFFER_LEN              256
+#define S_BUFFER_LEN              512
 #define BUFFER_LEN                1536
 #define L_BUFFER_LEN              8192
 
@@ -74,6 +74,7 @@ struct channel_info {
     int freq;
 };
 
+#define UNUSED_IDENTIFIER -1
 struct interface_info {
     int identifier; // valid only for multiple VAPs case
     int band;
@@ -113,7 +114,7 @@ int add_wireless_interface(char *ifname);
 int delete_wireless_interface(char *ifname);
 
 
-char* get_hapd_ctrl_path_by_id(int identifier);
+char* get_hapd_ctrl_path_by_id(int identifier, int band);
 char* get_hapd_ctrl_path();
 int set_hapd_ctrl_path(char* path);
 char* get_hapd_global_ctrl_path();
@@ -134,8 +135,6 @@ int get_service_port();
 int set_service_port(int port);
 char* get_default_wireless_interface_info();
 struct interface_info* get_wireless_interface_info_by_band(int band);
-struct interface_info* get_avail_wireless_interface(int band);
-void set_wireless_interface_resource(struct interface_info* wlan, int identifier);
 void clear_interfaces_resource();
 char* get_all_hapd_conf_files();
 
@@ -145,8 +144,10 @@ int get_key_value(char *value, char *buffer, char *token);
 int verify_band_from_freq(int freq, int band);
 
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
+struct interface_info* assign_wireless_interface_info(int band, int identifier);
 struct interface_info* get_wireless_interface_info(int band, int identifier);
 int add_all_wireless_interface_to_bridge(char *br);
 void set_default_wireless_interface_info(int channel);
+int show_wireless_interface_info();
 
 #endif

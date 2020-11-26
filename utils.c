@@ -50,7 +50,6 @@ int syslog_level = LOG_LEVEL_INFO;
 /* multiple VAPs */
 int interface_count = 0;
 struct interface_info interfaces[8];
-int bss_id[3] = {0, 0, 0}; // 2.4G, 5G, Dual Band
 struct interface_info* default_interface;
 
 void debug_print_timestamp(void) {
@@ -290,7 +289,7 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
         return -1;
     }
 
-    struct timeval timeout = {3, 0}; //3s
+    struct timeval timeout = {1, 0}; //1s
     setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 
@@ -497,8 +496,10 @@ int add_all_wireless_interface_to_bridge(char *br) {
     int i;
 
     for (i = 0; i < interface_count; i++) {
-        control_interface(interfaces[i].ifname, "up");
-        add_interface_to_bridge(br, interfaces[i].ifname);
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
+            control_interface(interfaces[i].ifname, "up");
+            add_interface_to_bridge(br, interfaces[i].ifname);
+        }
     }
 
     return 0;
@@ -515,6 +516,23 @@ char wpas_ctrl_path[64] = WPAS_CTRL_PATH_DEFAULT;
 char wpas_full_ctrl_path[128];
 char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
 char wpas_conf_file[64] = WPAS_CONF_FILE_DEFAULT;
+
+struct interface_info* assign_wireless_interface_info(int band, int identifier) {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == band) && 
+             (interfaces[i].identifier == UNUSED_IDENTIFIER)) {
+            interfaces[i].identifier = identifier;
+            memset(interfaces[i].hapd_conf_file, 0, sizeof(interfaces[i].hapd_conf_file));
+            snprintf(interfaces[i].hapd_conf_file, sizeof(interfaces[i].hapd_conf_file),
+                     "%s/hostapd_%s.conf", HAPD_CONF_FILE_DEFAULT_PATH, interfaces[i].ifname);
+            return &interfaces[i];
+        }
+    }
+
+    return NULL;
+}
 
 struct interface_info* get_wireless_interface_info(int band, int identifier) {
     int i;
@@ -541,15 +559,17 @@ char* get_wireless_interface_name_by_id(int identifier) {
     return NULL;
 }
 
-char* get_hapd_ctrl_path_by_id(int identifier) {
+char* get_hapd_ctrl_path_by_id(int identifier, int band) {
     memset(hapd_full_ctrl_path, 0, sizeof(hapd_full_ctrl_path));
-    if (identifier >= 0) {
-        sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, get_wireless_interface_name_by_id(identifier));
+    struct interface_info* wlan = NULL;
+    wlan = get_wireless_interface_info(band, identifier);
+    if (identifier >= 0 && wlan) {
+        sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, wlan->ifname);
     }
     else {
         sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, get_default_wireless_interface_info());
     }
-    printf("hapd_full_ctrl_path: %s\n", hapd_full_ctrl_path);
+    printf("hapd_full_ctrl_path: %s, wlan %p\n", hapd_full_ctrl_path, wlan);
     return hapd_full_ctrl_path;
 }
 
@@ -619,7 +639,7 @@ int set_wpas_conf_file(char* path) {
 int add_wireless_interface_info(int band, int bssid, char *name) {
     interfaces[interface_count].band = band;
     interfaces[interface_count].bssid = -1;
-    interfaces[interface_count].identifier = ++bss_id[band];
+    interfaces[interface_count].identifier = UNUSED_IDENTIFIER;
     strcpy(interfaces[interface_count++].ifname, name);
     return 0;
 }
@@ -704,17 +724,6 @@ struct interface_info* get_wireless_interface_info_by_band(int band) {
     return NULL;
 }
 
-struct interface_info* get_avail_wireless_interface(int band) {
-    int i;
-
-    for (i = 0; i < interface_count; i++) {
-        if ((interfaces[i].identifier == -1) && (interfaces[i].band == BAND_DUAL || interfaces[i].band == band)) {
-            return &interfaces[i];
-        }
-    }
-
-    return NULL;
-}
 
 /* Parse BSS IDENTIFIER TLV */
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
@@ -725,18 +734,11 @@ void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
     return;
 }
 
-void set_wireless_interface_resource(struct interface_info* wlan, int identifier) {
-    //wlan->identifier = identifier;
-    memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
-    snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
-    show_wireless_interface_info();
-}
-
 void clear_interfaces_resource() {
     int i, err = 0;
     for (i = 0; i < interface_count; i++)
     {
-        //interfaces[i].identifier = -1;
+        interfaces[i].identifier = UNUSED_IDENTIFIER;
         err = unlink(interfaces[i].hapd_conf_file);
         if (err)
         {
@@ -753,7 +755,7 @@ char* get_all_hapd_conf_files() {
 
     memset(conf_files, 0, sizeof(conf_files));
     for (i = 0; i < interface_count; i++) {
-        if (interfaces[i].identifier != -1) {
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
             valid_id_cnt++;
             strncat(conf_files, interfaces[i].hapd_conf_file, strlen(interfaces[i].hapd_conf_file));
             strcat(conf_files, " ");
