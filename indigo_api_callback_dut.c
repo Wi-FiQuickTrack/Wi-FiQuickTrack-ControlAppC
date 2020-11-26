@@ -654,7 +654,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char *message = TLV_VALUE_HOSTAPD_START_OK;
     char buffer[S_BUFFER_LEN];
     int len;
-    char *parameter[] = {"pidof", "hostapd", NULL};
 
     memset(buffer, 0, sizeof(buffer));
 #ifdef _OPENWRT_
@@ -682,17 +681,11 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(),
         hostapd_bss_cfg ? get_all_hapd_conf_files() : get_hapd_conf_file());
 #endif
-    system(buffer);
-    sleep(3);
-
-    memset(buffer, 0, sizeof(buffer));
-    len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
-    if (len == 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to find hostapd PID on ap start up");
-    }
+    len = system(buffer);
+    sleep(1);
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, len != 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
 
     return 0;
