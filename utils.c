@@ -290,7 +290,7 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
         return -1;
     }
 
-    struct timeval timeout = {0, 500000}; //0.5s
+    struct timeval timeout = {3, 0}; //3s
     setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 
@@ -728,14 +728,7 @@ void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
 void set_wireless_interface_resource(struct interface_info* wlan, int identifier) {
     //wlan->identifier = identifier;
     memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
-    if (wlan->band == BAND_24GHZ)
-        snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-24G-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
-    else if (wlan->band == BAND_5GHZ)
-        snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-5G-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
-    else if (wlan->band == BAND_6GHZ)
-        snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-6G-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
-    else if (wlan->band == BAND_DUAL)
-        snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-any-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
+    snprintf(wlan->hapd_conf_file, sizeof(wlan->hapd_conf_file), "%s/hostapd-%d.conf", HAPD_CONF_FILE_DEFAULT_PATH, identifier);
     show_wireless_interface_info();
 }
 

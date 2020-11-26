@@ -40,8 +40,7 @@ enum {
 enum {
     BAND_24GHZ = 0,
     BAND_5GHZ = 1,
-    BAND_6GHZ = 2,
-    BAND_DUAL = 3
+    BAND_DUAL = 2
 };
 
 enum {
