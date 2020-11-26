@@ -429,7 +429,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
         if (tlv->id == TLV_CONTROL_INTERFACE) {
             ctrl_iface = 1;
-            set_hapd_ctrl_path(tlv->value);
+            memset(buffer, 0, sizeof(buffer));
+            memcpy(buffer, tlv->value, tlv->len);
+            set_hapd_ctrl_path(buffer);
         }
         if (tlv->id == TLV_HE_MU_EDCA)
             add_mu_edca_params(output);
@@ -1243,7 +1245,9 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 
     tlv = find_wrapper_tlv_by_id(wrapper, TLV_CONTROL_INTERFACE);
     if (tlv) {
-        set_wpas_ctrl_path(tlv->value);
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        set_wpas_ctrl_path(value);
     } else {
         return 0;
     }
