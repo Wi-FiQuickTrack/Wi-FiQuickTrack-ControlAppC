@@ -756,7 +756,7 @@ char* get_all_hapd_conf_files() {
         if (interfaces[i].identifier != -1) {
             valid_id_cnt++;
             strncat(conf_files, interfaces[i].hapd_conf_file, strlen(interfaces[i].hapd_conf_file));
-            strncat(conf_files, " ", 1);
+            strcat(conf_files, " ");
         }
     }
     if (valid_id_cnt)
