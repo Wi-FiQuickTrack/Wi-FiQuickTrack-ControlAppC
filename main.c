@@ -164,8 +164,7 @@ static void usage() {
 
 /* Parse the commandline parameters */
 static int parse_parameters(int argc, char *argv[]) {
-    int c, interface_specified = 0;
-    char buf[64];
+    int c;
 
     while ((c = getopt(argc, argv, "i:hp:dc")) != -1) {
         switch (c) {
@@ -180,16 +179,11 @@ static int parse_parameters(int argc, char *argv[]) {
             return 1;
         case 'i':
             set_wireless_interface(optarg);
-            interface_specified = 1;
             break;
         case 'p':
             set_service_port(atoi(optarg));
             break;
         }
-    }
-    if (interface_specified == 0){
-        snprintf(buf, sizeof(buf), "%s", DEFAULT_APP_INTERFACES_PARAMS);
-        set_wireless_interface(buf);
     }
     return 0;
 }
@@ -203,11 +197,7 @@ int main(int argc, char* argv[]) {
     set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);
     set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT);
     set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);
-#ifdef _OPENWRT_
-    signal(SIGCHLD, SIG_IGN);
-#else
     signal(SIGCLD, SIG_IGN);
-#endif
 
     if (parse_parameters(argc, argv)) {
         return 0;

@@ -44,15 +44,6 @@
 
 #define BRIDGE_WLANS                                "br-wlans"
 
-#ifdef _OPENWRT_
-// 2(2.4G): first interface ath1, second interface ath11
-// 5(5G): first interface ath0, second interface ath01
-#define DEFAULT_APP_INTERFACES_PARAMS               "2:ath1,2:ath11,5:ath0,5:ath01"
-#else
-// d(2.4G or 5G):Single band can work on 2G or 5G: first interface wlan0, second interface wlan1
-#define DEFAULT_APP_INTERFACES_PARAMS               "d:wlan0,d:wlan1"
-#endif /* _OPENWRT_ */
-
 int set_channel_width(int chwidth);
 
 #endif
