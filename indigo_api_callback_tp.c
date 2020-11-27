@@ -151,7 +151,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (atoi(role) == DUT_TYPE_STAUT) {
-        system("killall wpa_supplicant");
+        system("killall wpa_supplicant >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
@@ -163,7 +163,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
     } else if (atoi(role) == DUT_TYPE_APUT) {
-        system("killall hostapd");
+        system("killall hostapd >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
@@ -572,7 +572,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sleep(2);
     system("wifi up");
     sleep(3);
-    system("killall hostapd");
+    system("killall hostapd >/dev/null 2>/dev/null");
     sleep(2);
 
 #ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
@@ -1406,7 +1406,7 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     sleep(1);
 #endif
 
-    system("killall wpa_supplicant");
+    system("killall wpa_supplicant >/dev/null 2>/dev/null");
     sleep(3);
 
     /* Start WPA supplicant */
@@ -1732,7 +1732,7 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     sleep(1);
 #endif
 
-    system("killall wpa_supplicant");
+    system("killall wpa_supplicant >/dev/null 2>/dev/null");
     sleep(3);
 
     tlv = find_wrapper_tlv_by_id(req, TLV_CONTROL_INTERFACE);

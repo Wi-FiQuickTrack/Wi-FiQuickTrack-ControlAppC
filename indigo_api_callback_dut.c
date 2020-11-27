@@ -144,7 +144,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (atoi(role) == DUT_TYPE_STAUT) {
-        system("killall wpa_supplicant");
+        system("killall wpa_supplicant >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
@@ -156,7 +156,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
     } else if (atoi(role) == DUT_TYPE_APUT) {
-        system("killall hostapd");
+        system("killall hostapd >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
@@ -330,7 +330,7 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 #endif /* _RESERVED_ */
 
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
-    int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups;
+    int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups = 0;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
     int i, enable_ac = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
@@ -682,7 +682,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sleep(2);
     system("wifi up");
     sleep(3);
-    system("killall hostapd");
+    system("killall hostapd >/dev/null 2>/dev/null");
     sleep(2);
 
 #ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
@@ -1590,7 +1590,7 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     sleep(1);
 #endif
 
-    system("killall wpa_supplicant");
+    system("killall wpa_supplicant >/dev/null 2>/dev/null");
     sleep(3);
 
     /* Start WPA supplicant */
