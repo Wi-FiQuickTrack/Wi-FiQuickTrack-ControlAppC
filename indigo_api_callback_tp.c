@@ -175,6 +175,15 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
     }
+
+#ifdef _OPENWRT_
+    /* Reset the country code */
+    snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi0.country");
+    system(buffer);
+
+    snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi1.country");
+    system(buffer);
+#endif
     sleep(1);
 
     status = TLV_VALUE_STATUS_OK;

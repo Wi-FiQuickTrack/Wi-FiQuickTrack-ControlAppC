@@ -171,6 +171,16 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
             reset_bridge(BRIDGE_WLANS);
         clear_interfaces_resource();
     }
+
+#ifdef _OPENWRT_
+    /* Reset the country code */
+    snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi0.country");
+    system(buffer);
+
+    snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi1.country");
+    system(buffer);
+#endif
+
     sleep(1);
 
     status = TLV_VALUE_STATUS_OK;
