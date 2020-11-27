@@ -135,6 +135,32 @@ void indigo_logger(int level, const char *fmt, ...) {
 
 /* System */
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
+#ifdef _OPENWRT_
+    char cmd_buffer[S_BUFFER_LEN];
+    char *result;
+    int i = 0, result_len = 0;
+
+    memset(cmd_buffer, 0, sizeof(cmd_buffer));
+
+    sprintf(cmd_buffer, "%s ", cmd);
+    while(parameter[i] != NULL) {
+        strcat(cmd_buffer, parameter[i]);
+        strcat(cmd_buffer, " ");
+        i++;
+    }
+    strcat(cmd_buffer, " >/tmp/result.txt");
+    system(cmd_buffer);
+    result = read_file("/tmp/result.txt");
+    result_len = strlen(result);
+    if (result_len >= buffer_size) {
+        result_len = buffer_size - 1;
+    }
+    if (result) {
+        memcpy(buffer, result, result_len);
+        free(result);
+    }
+    return result_len;
+#else
     int pipefds[2], len;
     pid_t pid;
 
@@ -163,6 +189,7 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
         close(pipefds[0]);
     }
     return len;
+#endif
 }
 
 char* read_file(char *fn) {
