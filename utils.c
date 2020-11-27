@@ -739,6 +739,10 @@ void set_default_wireless_interface_info(int channel) {
     }
 }
 
+void reset_default_wireless_interface_info() {
+    default_interface = NULL;    
+}
+
 struct interface_info* get_wireless_interface_info_by_band(int band) {
     int i;
 
@@ -765,13 +769,15 @@ void clear_interfaces_resource() {
     int i, err = 0;
     for (i = 0; i < interface_count; i++)
     {
-        interfaces[i].identifier = UNUSED_IDENTIFIER;
-        err = unlink(interfaces[i].hapd_conf_file);
-        if (err)
-        {
-            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove %s", interfaces[i].hapd_conf_file);
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
+            interfaces[i].identifier = UNUSED_IDENTIFIER;
+            err = unlink(interfaces[i].hapd_conf_file);
+            if (err) {
+                indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove %s", interfaces[i].hapd_conf_file);
+            }
         }
     }
+    reset_default_wireless_interface_info();
 
     return ;
 }
