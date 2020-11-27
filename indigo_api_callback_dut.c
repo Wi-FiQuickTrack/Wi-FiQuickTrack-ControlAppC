@@ -167,8 +167,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
-        if (is_bridge_created())
-            reset_bridge(BRIDGE_WLANS);
+        reset_bridge(BRIDGE_WLANS);
         clear_interfaces_resource();
     }
 
