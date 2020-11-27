@@ -23,6 +23,8 @@
 #ifndef _INDIGO_UTILS_
 #define _INDIGO_UTILS_  1
 
+#include <stdbool.h>
+
 #define S_BUFFER_LEN              512
 #define BUFFER_LEN                1536
 #define L_BUFFER_LEN              8192
@@ -67,6 +69,8 @@ enum {
 struct sta_platform_config {
     int phymode;
     int chwidth;
+    bool phymode_isset;
+    bool chwidth_isset;
 };
 
 struct channel_info {

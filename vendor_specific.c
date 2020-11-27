@@ -98,17 +98,29 @@ static int set_he_channel_width(int chwidth) {
     rename(tmp_path, path);
 
     /* reload the driver */
-    sleep(3);
-    system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi");
+    reload_driver();
     return 0;
 }
 
 int set_channel_width(int chwidth) {
     int ret = -1;
-    if (sta_hw_config.phymode == PHYMODE_11AXA || 
+    if (sta_hw_config.chwidth_isset && 
+        (sta_hw_config.phymode == PHYMODE_11AXA || 
             sta_hw_config.phymode == PHYMODE_11AXG || 
-            sta_hw_config.phymode == PHYMODE_AUTO) {
+            sta_hw_config.phymode == PHYMODE_AUTO)) {
         ret = set_he_channel_width(sta_hw_config.chwidth);
     }
+    sta_hw_config.chwidth_isset = false;
+
     return ret;
+}
+
+void reload_driver() {
+    system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi");
+    sleep(3);
+}
+
+void disable_11ax() {
+    system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
+    sleep(3);
 }

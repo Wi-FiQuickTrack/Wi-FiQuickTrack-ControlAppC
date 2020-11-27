@@ -45,5 +45,7 @@
 #define BRIDGE_WLANS                                "br-wlans"
 
 int set_channel_width(int chwidth);
+void reload_driver();
+void disable_11ax();
 
 #endif

@@ -31,7 +31,7 @@
 #include "wpa_ctrl.h"
 #include "indigo_api_callback.h"
 
-struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO};
+struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO, false, false};
 
 #ifdef _OPENWRT_
 int rrm = 0;
@@ -1351,21 +1351,26 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             appended_supplicant_conf_str += each_supplicant_conf + "=" + wpa_supplicant_dict[each_supplicant_conf] + "\n"
         wps_config = appended_supplicant_conf_str.rstrip()
     */
-
-    if (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11AC) {
-        system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
+    if (!sta_hw_config.phymode_isset) {
+        /* skip */
+    } else if (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11AC) {
+        disable_11ax();
     } else if (sta_hw_config.phymode == PHYMODE_11BG || sta_hw_config.phymode == PHYMODE_11A) {
         strcat(buffer, "disable_ht=1\n");
-        system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
+        disable_11ax();
     } else if (sta_hw_config.phymode == PHYMODE_11NA) {
         strcat(buffer, "disable_vht=1\n");
-        system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
+        disable_11ax();
     } else if (sta_hw_config.phymode == PHYMODE_11AXG || sta_hw_config.phymode == PHYMODE_11AXA) {
-        system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi");
+        reload_driver();
     }
+    /* reset the flag for phymode */
+    sta_hw_config.phymode_isset = false;
 
-    if (sta_hw_config.chwidth == CHWIDTH_20) {
+    if (sta_hw_config.chwidth_isset && (sta_hw_config.chwidth == CHWIDTH_20 &&
+        (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11NA))) {
         strcat(buffer, "disable_ht40=1\n");
+        sta_hw_config.chwidth_isset = false;
     }
 
     strcat(buffer, "}\n");
@@ -1800,9 +1805,12 @@ static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wr
         goto done;
     }
 
+    sta_hw_config.phymode_isset = true;
+
     if (strcmp(param_value, "auto") == 0) {
         sta_hw_config.phymode = PHYMODE_AUTO;
-        system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi");
+        reload_driver();
+        sta_hw_config.phymode_isset = false;
     } else if (strcmp(param_value, "11bgn") == 0) {
         sta_hw_config.phymode = PHYMODE_11BGN;
     } else if (strcmp(param_value, "11bg") == 0) {
@@ -1851,6 +1859,8 @@ static int set_sta_channel_width_handler(struct packet_wrapper *req, struct pack
     } else {
         goto done;
     }
+
+    sta_hw_config.chwidth_isset = true;
 
     if (strcmp(param_value, "auto") == 0) {
         sta_hw_config.chwidth = CHWIDTH_AUTO;
