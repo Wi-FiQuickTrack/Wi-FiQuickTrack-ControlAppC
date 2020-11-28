@@ -135,7 +135,8 @@ void indigo_logger(int level, const char *fmt, ...) {
 
 /* System */
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
-#ifdef _OPENWRT_
+#if 0
+//#ifdef _OPENWRT_
     char cmd_buffer[S_BUFFER_LEN];
     char *result;
     int i = 0, result_len = 0;
@@ -714,6 +715,12 @@ int parse_wireless_interface_info(char *info) {
 }
 
 char* get_default_wireless_interface_info() {
+    int i;
+    for (i = 0; i < interface_count; i++) {
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
+            return interfaces[i].ifname;
+        }
+    }
     if (default_interface) {
         return default_interface->ifname;
     }
@@ -721,14 +728,8 @@ char* get_default_wireless_interface_info() {
         return interfaces[0].ifname;
 }
 
-void set_default_wireless_interface_info(int channel) {
-    int i, band;
-
-    if (channel < 15)
-        band = BAND_24GHZ;
-    else
-        band = BAND_5GHZ;
-    //TODO : 6GHz
+void set_default_wireless_interface_info(int band) {
+    int i;
 
     for (i = 0; i < interface_count; i++) {
         if (interfaces[i].band == BAND_DUAL || interfaces[i].band == band) {

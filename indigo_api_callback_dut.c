@@ -78,7 +78,6 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 
 int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
 int wpas_debug_level = DEBUG_LEVEL_DISABLE;
-int hostapd_bss_cfg = 0;
 
 static int get_debug_level(int value) {
     if (value == 0) {
@@ -598,9 +597,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = "DUT configured as AP : Configuration file created";
-    int bss_identifier = 0, channel;
-    struct interface_info* wlan;
-    char bss_identifier_str[16], channel_str[8];
+    int bss_identifier = 0, band;
+    struct interface_info* wlan = NULL;
+    char bss_identifier_str[16], hw_mode_str[8];
    struct bss_identifier_info bss_info;
 
     memset(buffer, 0, sizeof(buffer));
@@ -608,6 +607,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     memset(ifname, 0, sizeof(ifname));
     memset(&bss_info, 0, sizeof(bss_info));
     if (tlv) {
+        /* Multiple wlans configure must carry TLV_BSS_IDENTIFIER */
         memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
         memcpy(bss_identifier_str, tlv->value, tlv->len);
         bss_identifier = atoi(bss_identifier_str);
@@ -617,11 +617,6 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
             wlan = assign_wireless_interface_info(bss_info.band, bss_info.identifier);
         }
         if (wlan) {
-            len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan->ifname);
-            if (len) {
-                write_file(wlan->hapd_conf_file, buffer, len);
-                hostapd_bss_cfg = 1;
-            }
 #ifdef _OPENWRT_
             if (bss_info.mbssid_enable) {
                 system("uci set wireless.qcawifi=qcawifi");
@@ -640,19 +635,30 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                wlan ? wlan->hapd_conf_file: "n/a"
                );
     } else {
-        tlv = find_wrapper_tlv_by_id(req, TLV_CHANNEL);
+        /* Single wlan case */
+        tlv = find_wrapper_tlv_by_id(req, TLV_HW_MODE);
         if (tlv)
         {
-            memset(channel_str, 0, sizeof(channel_str));
-            memcpy(channel_str, tlv->value, tlv->len);
-            channel = atoi(channel_str);
-            set_default_wireless_interface_info(channel);
+            memset(hw_mode_str, 0, sizeof(hw_mode_str));
+            memcpy(hw_mode_str, tlv->value, tlv->len);
+            if (!strncmp(hw_mode_str, "a", 1)) {
+                band = BAND_5GHZ;
+            } else {
+                band = BAND_24GHZ;
+            }
+            /* Single wlan use ID 1 */
+            wlan = assign_wireless_interface_info(band, 1);
         }
-        sprintf(ifname, "%s", get_wireless_interface());
-        len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
-        if (len) {
-            write_file(get_hapd_conf_file(), buffer, len);
-            hostapd_bss_cfg = 0;
+    }
+    if (wlan) {
+        printf("ifname %s hostapd conf file %s\n", 
+               wlan ? wlan->ifname : "n/a",
+               wlan ? wlan->hapd_conf_file: "n/a"
+               );
+        len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan->ifname);
+        if (len)
+        {
+            write_file(wlan->hapd_conf_file, buffer, len);
         }
     }
     show_wireless_interface_info();
@@ -692,11 +698,11 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), 
-        hostapd_bss_cfg ? get_all_hapd_conf_files() : get_hapd_conf_file());
+        get_all_hapd_conf_files());
 #else
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(),
-        hostapd_bss_cfg ? get_all_hapd_conf_files() : get_hapd_conf_file());
+        get_all_hapd_conf_files());
 #endif
     len = system(buffer);
     sleep(1);
