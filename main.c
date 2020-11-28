@@ -197,11 +197,6 @@ int main(int argc, char* argv[]) {
     set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);
     set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT);
     set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);
-#ifdef _OPENWRT_
-//    signal(SIGCHLD, SIG_IGN);
-#else
-    signal(SIGCLD, SIG_IGN);
-#endif
 
     if (parse_parameters(argc, argv)) {
         return 0;
