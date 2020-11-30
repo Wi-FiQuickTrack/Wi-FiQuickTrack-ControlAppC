@@ -153,5 +153,6 @@ struct interface_info* get_wireless_interface_info(int band, int identifier);
 int add_all_wireless_interface_to_bridge(char *br);
 void set_default_wireless_interface_info(int channel);
 int show_wireless_interface_info();
+void iterate_all_wlan_interfaces(void (*callback_fn)(void *));
 
 #endif

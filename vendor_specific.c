@@ -43,6 +43,7 @@ struct he_chwidth_config he_chwidth_config_list[] = {
     { CHWIDTH_160, "0c3fc200fd09800ecffe00" }
 };
 
+#ifdef _TEST_PLATFORM_
 extern struct sta_platform_config sta_hw_config;
 
 static int set_he_channel_width(int chwidth) {
@@ -123,4 +124,53 @@ void reload_driver() {
 void disable_11ax() {
     system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
     sleep(3);
+}
+#endif /* _TEST_PLATFORM_ */
+
+#ifdef _OPENWRT_
+void openwrt_apply_radio_config(void) {
+    char buffer[S_BUFFER_LEN];
+    // Apply radio configurations
+    system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
+    sleep(1);
+    system("wifi down");
+    sleep(2);
+    system("wifi up");
+    sleep(3);
+    system("killall hostapd >/dev/null 2>/dev/null");
+    sleep(2);
+
+#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
+    sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
+    system(buffer);
+    sleep(1);
+#endif
+
+}
+#endif
+
+/* Called by configure_ap_handler() */
+void configure_ap_enable_mbssid() {
+#ifdef _OPENWRT_
+    system("uci set wireless.qcawifi=qcawifi");
+    system("uci set wireless.qcawifi.mbss_ie_enable=1");
+    system("uci commit");
+#endif
+}
+
+/* void (*callback_fn)(void *), callback of active wlans iterator
+ *
+ * Called by start_ap_handler() after invoking hostapd
+ */
+void start_ap_set_wlan_params(void *if_info) {
+    char buffer[S_BUFFER_LEN];
+    struct interface_info *wlan = (struct interface_info *) if_info;
+
+    memset(buffer, 0, sizeof(buffer));
+#ifdef _OPENWRT_
+    /* Workaround: openwrt has IOT issue with intel AX210 AX mode */
+    sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", wlan->ifname);
+    system(buffer);
+#endif
+    printf("set_wlan_params: %s\n", buffer);
 }

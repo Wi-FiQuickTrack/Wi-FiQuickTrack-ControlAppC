@@ -44,8 +44,17 @@
 
 #define BRIDGE_WLANS                                "br-wlans"
 
+#ifdef _TEST_PLATFORM_
 int set_channel_width(int chwidth);
 void reload_driver();
 void disable_11ax();
+#endif
+
+#ifdef _OPENWRT_
+void openwrt_apply_radio_config(void);
+#endif
+
+void configure_ap_enable_mbssid();
+void start_ap_set_wlan_params(void *if_info);
 
 #endif

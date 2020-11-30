@@ -616,23 +616,15 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         if (NULL == wlan) {
             wlan = assign_wireless_interface_info(bss_info.band, bss_info.identifier);
         }
-        if (wlan) {
-#ifdef _OPENWRT_
-            if (bss_info.mbssid_enable) {
-                system("uci set wireless.qcawifi=qcawifi");
-                system("uci set wireless.qcawifi.mbss_ie_enable=1");
-                system("uci commit");
-            }
-#endif
+        if (wlan && bss_info.mbssid_enable) {
+            configure_ap_enable_mbssid();
         }
-        printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d ifname %s hapd_conf_file %s\n", 
+        printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
                bss_identifier,
                bss_info.band,
                bss_info.mbssid_enable,
                bss_info.transmitter,
-               bss_info.identifier,
-               wlan ? wlan->ifname : "n/a",
-               wlan ? wlan->hapd_conf_file: "n/a"
+               bss_info.identifier
                );
     } else {
         /* Single wlan case */
@@ -678,34 +670,18 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     int len;
     int status = TLV_VALUE_STATUS_OK;
 
-    memset(buffer, 0, sizeof(buffer));
 #ifdef _OPENWRT_
-    // Apply radio configurations
-    system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
-    sleep(1);
-    system("wifi down");
-    sleep(2);
-    system("wifi up");
-    sleep(3);
-    system("killall hostapd >/dev/null 2>/dev/null");
-    sleep(2);
-
-#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
-    sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
-    system(buffer);
-    sleep(1);
+    openwrt_apply_radio_config();
 #endif
 
+    memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), 
         get_all_hapd_conf_files());
-#else
-    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(),
-        get_all_hapd_conf_files());
-#endif
     len = system(buffer);
     sleep(1);
+
+    iterate_all_wlan_interfaces(start_ap_set_wlan_params);
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);

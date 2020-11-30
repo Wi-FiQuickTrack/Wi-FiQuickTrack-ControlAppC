@@ -593,6 +593,9 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "iwpriv %s rrm %d", get_wireless_interface(), rrm);
     system(buffer);
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", get_wireless_interface());
+    system(buffer);
 #endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);

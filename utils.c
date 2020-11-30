@@ -757,6 +757,18 @@ void clear_interfaces_resource() {
     return ;
 }
 
+void iterate_all_wlan_interfaces(void (*callback_fn)(void *)) {
+    int i;
+    for (i = 0; i < interface_count; i++)
+    {
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
+            callback_fn((void *)&interfaces[i]);
+        }
+    }
+
+    return ;
+}
+
 char* get_all_hapd_conf_files() {
     int i, valid_id_cnt = 0;
     static char conf_files[128];
