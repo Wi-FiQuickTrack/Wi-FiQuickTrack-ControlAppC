@@ -1163,7 +1163,7 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
     struct wpa_ctrl *w = NULL;
     char request[4096];
     char response[4096];
-    char buffer[512];
+    char buffer[1024];
 
     char bssid[256];
     char disassoc_imminent[256];
@@ -1243,7 +1243,7 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
     /* if bss_term_bit && bss_term_tsf && bss_term_duration, then bss_term={bss_term_tsf},{bss_term_duration} */
     if (strlen(bss_term_bit) && strlen(bss_term_tsf) && strlen(bss_term_duration) ) {
         memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, " mbo=0:%s:0", reassoc_retry_delay);
+        sprintf(buffer, " bss_term=%s,%s", bss_term_tsf, bss_term_duration);
         strcat(request, buffer);
     }
 
