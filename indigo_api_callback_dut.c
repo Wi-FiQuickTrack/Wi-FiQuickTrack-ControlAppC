@@ -1172,6 +1172,7 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
     char bssid[256];
     char disassoc_imminent[256];
     char disassoc_timer[256];
+    char candidate_list[256];
     char reassoc_retry_delay[256];
     char bss_term_bit[256];
     char bss_term_tsf[256];
@@ -1180,6 +1181,7 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
     memset(bssid, 0, sizeof(bssid));
     memset(disassoc_imminent, 0, sizeof(disassoc_imminent));
     memset(disassoc_timer, 0, sizeof(disassoc_timer));
+    memset(candidate_list, 0, sizeof(candidate_list));
     memset(reassoc_retry_delay, 0, sizeof(reassoc_retry_delay));
     memset(bss_term_bit, 0, sizeof(bss_term_bit));
     memset(bss_term_tsf, 0, sizeof(bss_term_tsf));
@@ -1206,7 +1208,11 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
     if (tlv) {
         memcpy(reassoc_retry_delay, tlv->value, tlv->len);
     }
-    /* TODO: CANDIDATE_LIST */
+    /* CANDIDATE_LIST              pref=1 */
+    tlv = find_wrapper_tlv_by_id(req, TLV_CANDIDATE_LIST);
+    if (tlv) {
+        memcpy(candidate_list, tlv->value, tlv->len);
+    }
     /* BSS_TERMINATION              bss_term_bit */
     tlv = find_wrapper_tlv_by_id(req, TLV_BSS_TERMINATION);
     if (tlv) {
@@ -1250,6 +1256,13 @@ static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper
         sprintf(buffer, " bss_term=%s,%s", bss_term_tsf, bss_term_duration);
         strcat(request, buffer);
     }
+    /* candidate_list */
+    if (strlen(candidate_list) && atoi(candidate_list) == 1) {
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, " pref=1");
+        strcat(request, buffer);
+    }
+    indigo_logger(LOG_LEVEL_DEBUG, "cmd:%s", request);
 
     /* Open hostapd UDS socket */
     w = wpa_ctrl_open(get_hapd_ctrl_path());
