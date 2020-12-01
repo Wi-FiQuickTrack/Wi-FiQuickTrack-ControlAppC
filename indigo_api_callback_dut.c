@@ -411,10 +411,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         if (tlv->id == TLV_IEEE80211_AX && strstr(tlv->value, "1")) {
-            enable_ax = 1;
 #ifdef _OPENWRT_
             continue;
 #endif
+            enable_ax = 1;
         }
 
         if (tlv->id == TLV_HE_MU_EDCA) {
@@ -672,6 +672,8 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
 #ifdef _OPENWRT_
     openwrt_apply_radio_config();
+    // DFS wait again if set wlan params after hostapd starts
+    iterate_all_wlan_interfaces(start_ap_set_wlan_params);
 #endif
 
     memset(buffer, 0, sizeof(buffer));
@@ -681,7 +683,9 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     len = system(buffer);
     sleep(1);
 
+#ifndef _OPENWRT_
     iterate_all_wlan_interfaces(start_ap_set_wlan_params);
+#endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -1311,9 +1315,9 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
         indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_FREQUENCY");
     }
 
-    /* Assemble hostapd command for BSS_TM_REQ */
+    /* Assemble hostapd command for channel switch */
     memset(request, 0, sizeof(request));
-    sprintf(request, "CHAN_SWITCH %s %s", channel, frequency);
+    sprintf(request, "CHAN_SWITCH 10 %s", frequency);
 
     /* Open hostapd UDS socket */
     w = wpa_ctrl_open(get_hapd_ctrl_path());

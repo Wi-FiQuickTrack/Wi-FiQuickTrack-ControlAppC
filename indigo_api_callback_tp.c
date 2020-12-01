@@ -575,6 +575,15 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system("killall hostapd >/dev/null 2>/dev/null");
     sleep(2);
 
+    // Apply runtime configuratoins before hostapd starts.
+    // DFS wait again if apply this after hostapd starts.
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "iwpriv %s rrm %d", get_wireless_interface(), rrm);
+    system(buffer);
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", get_wireless_interface());
+    system(buffer);
+
 #ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
     system(buffer);
@@ -588,15 +597,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #endif
     len = system(buffer);
     sleep(1);
-
-#ifdef _OPENWRT_
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "iwpriv %s rrm %d", get_wireless_interface(), rrm);
-    system(buffer);
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", get_wireless_interface());
-    system(buffer);
-#endif
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
