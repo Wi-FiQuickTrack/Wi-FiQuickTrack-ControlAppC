@@ -894,3 +894,31 @@ int get_key_value(char *value, char *buffer, char *token) {
 
     return 0;
 }
+
+/*
+ *       These were generated with: openssl x509 -outform der -in $pemname | openssl dgst -sha256
+ *       "rsa_server1_w1_fi.pem": "a7407d995678712bb7adb4e7a75e89674aba363dea0b8308c63b006329b0de2d",
+ *       "rsa_server1ALT_w1_fi.pem": "79a9d7273368bee41566f79ae9fc84119f7c963cf8cfac5984e2e0adaeafb112",
+ *       "rsa_server2_w1_fi.pem": "8d0e00b924e30f4595ae7f5ef9f1346e2c3f343dfb1caf1429b3bb6b32a1bf03",
+ *       "rsa_server4_w1_fi.pem": "2703264d2d06727be661752ff5b57e85f842dc74e18aaa03316e7b2d08db6260",
+ */
+void get_server_cert_hash(char *pem_file, char *buffer) {
+#define NUM_ITEMS 4
+
+    char file[NUM_ITEMS][32] = {
+        "rsa_server1_w1_fi.pem",
+        "rsa_server1ALT_w1_fi.pem",
+        "rsa_server2_w1_fi.pem",
+        "rsa_server4_w1_fi.pem"};
+    char hash[NUM_ITEMS][128] = {"a7407d995678712bb7adb4e7a75e89674aba363dea0b8308c63b006329b0de2d",
+                                 "79a9d7273368bee41566f79ae9fc84119f7c963cf8cfac5984e2e0adaeafb112",
+                                 "8d0e00b924e30f4595ae7f5ef9f1346e2c3f343dfb1caf1429b3bb6b32a1bf03",
+                                 "2703264d2d06727be661752ff5b57e85f842dc74e18aaa03316e7b2d08db6260"};
+    int i = 0;
+
+    for(i = 0; i< NUM_ITEMS; i++) {
+        if (strcmp(file[i], pem_file) == 0) {
+            sprintf(buffer, "hash://server/sha256/%s", hash[i]);
+        }
+    }
+}

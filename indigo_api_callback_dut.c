@@ -1456,7 +1456,7 @@ static void append_wpas_network_default_config(struct packet_wrapper *wrapper) {
 
 static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
     int i, j;
-    char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
+    char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN], buf[S_BUFFER_LEN];
     int ieee80211w_configured = 0;
     int transition_mode_enabled = 0;
     int owe_configured = 0;
@@ -1488,11 +1488,9 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             memset(value, 0, sizeof(value));
             memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
 
-            if (wrapper->tlv[i]->id == TLV_IEEE80211_W) {
+            if ((wrapper->tlv[i]->id == TLV_IEEE80211_W) || (wrapper->tlv[i]->id == TLV_STA_IEEE80211_W)) {
                 ieee80211w_configured = 1;
-            }
-
-            if (wrapper->tlv[i]->id == TLV_KEY_MGMT) {
+            } else if (wrapper->tlv[i]->id == TLV_KEY_MGMT) {
                 if (strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
                     transition_mode_enabled = 1;
                 }
@@ -1503,6 +1501,12 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
                 if (strstr(value, "OWE")) {
                     owe_configured = 1;
                 }
+            } else if ((wrapper->tlv[i]->id == TLV_CA_CERT) && strcmp("DEFAULT", value) == 0) {
+                sprintf(value, "/etc/ssl/certs/ca-certificates.crt");
+            } else if (wrapper->tlv[i]->id == TLV_SERVER_CERT) {
+                memset(buf, 0, sizeof(buf));
+                get_server_cert_hash(value, buf);
+                memcpy(value, buf, sizeof(buf));
             }
 
             if (cfg->quoted) {
@@ -1515,12 +1519,14 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
         }        
     }
 
-    if (ieee80211w_configured == 0 && transition_mode_enabled) {
-        strcat(buffer, "ieee80211w=1\n");
-    } else if (ieee80211w_configured == 0 && sae_only) {
-        strcat(buffer, "ieee80211w=2\n");
-    } else if (owe_configured) {
-        strcat(buffer, "ieee80211w=2\n");
+    if (ieee80211w_configured == 0) {
+        if (transition_mode_enabled) {
+            strcat(buffer, "ieee80211w=1\n");
+        } else if (sae_only) {
+            strcat(buffer, "ieee80211w=2\n");
+        } else if (owe_configured) {
+            strcat(buffer, "ieee80211w=2\n");
+        }
     }
 
     /* TODO: merge another file */

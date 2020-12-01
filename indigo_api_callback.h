@@ -111,6 +111,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_IDENTITY, "identity", 1 },
     { TLV_PASSWORD, "password", 1 },
     { TLV_CA_CERT, "ca_cert", 1 },
+    { TLV_SERVER_CERT, "ca_cert", 1 },
     { TLV_PRIVATE_KEY, "private_key", 1 },
     { TLV_CLIENT_CERT, "client_cert", 1 },
     { TLV_DOMAIN_MATCH, "domain_match", 1 },
