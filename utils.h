@@ -138,7 +138,6 @@ int set_wireless_interface(char *name);
 int get_service_port();
 int set_service_port(int port);
 char* get_default_wireless_interface_info();
-struct interface_info* get_wireless_interface_info_by_band(int band);
 void clear_interfaces_resource();
 char* get_all_hapd_conf_files();
 

@@ -718,19 +718,6 @@ void reset_default_wireless_interface_info() {
     default_interface = NULL;    
 }
 
-struct interface_info* get_wireless_interface_info_by_band(int band) {
-    int i;
-
-    for (i = 0; i < interface_count; i++) {
-        if (interfaces[i].band == BAND_DUAL || interfaces[i].band == band) {
-            return &interfaces[i];
-        }
-    }
-
-    return NULL;
-}
-
-
 /* Parse BSS IDENTIFIER TLV */
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
     bss->band = bss_identifier & 0x07;
