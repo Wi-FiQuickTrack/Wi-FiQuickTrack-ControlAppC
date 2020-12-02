@@ -167,6 +167,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
+        /* reset interfaces info and remove hostapd conf */
         clear_interfaces_resource();
     }
 

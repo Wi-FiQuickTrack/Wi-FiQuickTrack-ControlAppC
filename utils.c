@@ -727,7 +727,6 @@ void clear_interfaces_resource() {
             }
         }
     }
-    reset_default_wireless_interface_info();
 
     return ;
 }
