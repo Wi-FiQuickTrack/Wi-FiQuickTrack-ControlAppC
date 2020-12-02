@@ -600,7 +600,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     int bss_identifier = 0, band;
     struct interface_info* wlan = NULL;
     char bss_identifier_str[16], hw_mode_str[8];
-   struct bss_identifier_info bss_info;
+    struct bss_identifier_info bss_info;
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);

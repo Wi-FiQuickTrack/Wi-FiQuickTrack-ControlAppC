@@ -517,25 +517,33 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len;
+    int band, len;
+    char hw_mode_str[8];
     char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
-    struct tlv_hdr *tlv;
     char *message = "DUT configured as AP : Configuration file created";
+    struct tlv_hdr *tlv;
+    struct interface_info* wlan = NULL;
 
-    memset(buffer, 0, sizeof(buffer));
-    tlv = find_wrapper_tlv_by_id(req, TLV_INTERFACE_NAME);
-    memset(ifname, 0, sizeof(ifname));
+    /* Single wlan case */
+    tlv = find_wrapper_tlv_by_id(req, TLV_HW_MODE);
     if (tlv) {
-        memcpy(ifname, tlv->value, tlv->len);
-    } else {
-        sprintf(ifname, "%s", get_wireless_interface());
+        memset(hw_mode_str, 0, sizeof(hw_mode_str));
+        memcpy(hw_mode_str, tlv->value, tlv->len);
+        if (!strncmp(hw_mode_str, "a", 1)) {
+            band = BAND_5GHZ;
+        } else {
+            band = BAND_24GHZ;
+        }
+        set_default_wireless_interface_info(band);
     }
+    strcpy(ifname, get_default_wireless_interface_info());
 
 #ifdef _OPENWRT_
+    /* Handle the platform dependency */
     tlv = find_wrapper_tlv_by_id(req, TLV_MBO);
     rrm = tlv ? 1 : 0;
 #endif
-
+    /* Generate the hostapd configuration and write to configuration */
     len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
     if (len) {
         write_file(get_hapd_conf_file(), buffer, len);
