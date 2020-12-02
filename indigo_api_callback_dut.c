@@ -204,12 +204,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     system("killall hostapd 1>/dev/null 2>/dev/null");
     sleep(2);
 
-    len = unlink(get_hapd_conf_file());
-    if (len) {
-        indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
-    }
-    sleep(1);
-
 #ifdef _OPENWRT_
 #else
     len = system("rfkill unblock wlan");
@@ -233,6 +227,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 #endif
 #endif
 
+    /* reset interfaces info and remove hostapd conf */
     clear_interfaces_resource();
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
