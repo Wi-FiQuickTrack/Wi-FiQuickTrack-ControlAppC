@@ -175,15 +175,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
     }
-
-#ifdef _OPENWRT_
-    /* Reset the country code */
-    snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi0.country");
-    system(buffer);
-
-    snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi1.country");
-    system(buffer);
-#endif
     sleep(1);
 
     status = TLV_VALUE_STATUS_OK;
@@ -204,6 +195,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     char buffer[S_BUFFER_LEN];
     char *parameter[] = {"pidof", "hostapd", NULL};
     char *message = NULL;
+    int reset = 0;
 
     memset(buffer, 0, sizeof(buffer));
 #ifdef _OPENWRT_
@@ -216,6 +208,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     len = unlink(get_hapd_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
+        reset = 1;
     }
     sleep(1);
 
@@ -240,6 +233,20 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     system(buffer);
 #endif
 #endif
+
+    if (reset) {
+#ifdef _OPENWRT_
+        /* Reset uci configurations */
+        snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi0.country");
+        system(buffer);
+
+        snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi1.country");
+        system(buffer);
+
+        system("uci delete wireless.@wifi-iface[0].own_ie_override");
+        system("uci delete wireless.@wifi-iface[1].own_ie_override");
+#endif
+    }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -361,9 +368,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     char wifi_name[16], band[16], country[16];
     int enable_n = 0, enable_ac = 0, enable_ax = 0;
     int channel = 0, ht40 = 0, chwidth = 0;
-    char value[16];
+    char value[16], ie_override[256];
+    int wlan_id = 0;
 
     memset(country, 0, sizeof(country));
+    memset(ie_override, 0, sizeof(ie_override));
 #endif
 
     struct tlv_to_config_name* cfg = NULL;
@@ -433,6 +442,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_HE_MU_EDCA || tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H ||
             tlv->id == TLV_HE_OPER_CHWIDTH || tlv->id == TLV_HE_OPER_CENTR_FREQ)
             continue;
+
+        if (tlv->id == TLV_IE_OVERRIDE) {
+            memcpy(ie_override, tlv->value, tlv->len);
+        }
 #endif
 
         memset(buffer, 0, sizeof(buffer));
@@ -457,6 +470,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 #ifdef _OPENWRT_
     if (!strncmp(band, "a", 1)) {
         snprintf(wifi_name, sizeof(wifi_name), "wifi0");
+        wlan_id = 0;
         if (enable_ax) {
             snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11axa\'", wifi_name);
         } else if (enable_ac) {
@@ -483,10 +497,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
     } else if (!strncmp(band, "b", 1)) {
         snprintf(wifi_name, sizeof(wifi_name), "wifi1");
+        wlan_id = 1;
         snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11b\'", wifi_name);
         system(buffer);
     } else if (!strncmp(band, "g", 1)) {
         snprintf(wifi_name, sizeof(wifi_name), "wifi1");
+        wlan_id = 1;
         if (enable_ax) {
             snprintf(buffer, sizeof(buffer), "uci set wireless.%s.hwmode=\'11axg\'", wifi_name);
         } else if (enable_n) {
@@ -507,6 +523,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     }
     snprintf(buffer, sizeof(buffer), "uci set wireless.%s.channel=\'%d\'", wifi_name, channel);
     system(buffer);
+    if (strlen(ie_override) > 0) {
+        sprintf(buffer, "uci set wireless.@wifi-iface[%d].own_ie_override=%s", wlan_id, ie_override);
+        system(buffer);
+    }
 
     system("uci commit");
 #endif
@@ -586,10 +606,16 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     // Apply runtime configuratoins before hostapd starts.
     // DFS wait again if apply this after hostapd starts.
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "iwpriv %s rrm %d", get_wireless_interface(), rrm);
+    sprintf(buffer, "cfg80211tool %s rrm %d", get_wireless_interface(), rrm);
     system(buffer);
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", get_wireless_interface());
+    system(buffer);
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "cfg80211tool %s he_ul_mimo 0", get_wireless_interface());
+    system(buffer);
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "cfg80211tool %s twt_responder 0", get_wireless_interface());
     system(buffer);
 
 #ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
