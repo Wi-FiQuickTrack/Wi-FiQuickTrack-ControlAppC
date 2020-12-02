@@ -549,18 +549,6 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
     return NULL;
 }
 
-char* get_wireless_interface_name_by_id(int identifier) {
-    int i;
-
-    for (i = 0; i < interface_count; i++) {
-        if (identifier >= 0 && interfaces[i].identifier == identifier) {
-            return interfaces[i].ifname;
-        }
-    }
-
-    return NULL;
-}
-
 char* get_hapd_ctrl_path_by_id(int identifier, int band) {
     memset(hapd_full_ctrl_path, 0, sizeof(hapd_full_ctrl_path));
     struct interface_info* wlan = NULL;
