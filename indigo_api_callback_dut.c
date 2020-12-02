@@ -166,7 +166,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
-        reset_bridge(BRIDGE_WLANS);
         clear_interfaces_resource();
     }
 
@@ -687,6 +686,8 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     iterate_all_wlan_interfaces(start_ap_set_wlan_params);
 #endif
 
+    add_all_wireless_interface_to_bridge(BRIDGE_WLANS);
+
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
@@ -804,7 +805,7 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
         goto response;
     }
    
-    char *parameter[] = {"ifconfig", get_wireless_interface(), "up", buffer, "netmask", "255.255.255.0", NULL };
+    char *parameter[] = {"ifconfig", BRIDGE_WLANS, "up", buffer, "netmask", "255.255.255.0", NULL };
 
     len = pipe_command(buffer, sizeof(buffer), "/sbin/ifconfig", parameter);
     if (len) {
