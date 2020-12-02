@@ -118,7 +118,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_RESET_NOT_OK;
     char buffer[TLV_VALUE_SIZE];
-    char role[TLV_VALUE_SIZE], log_level[TLV_VALUE_SIZE], clear[TLV_VALUE_SIZE];
+    char role[TLV_VALUE_SIZE], log_level[TLV_VALUE_SIZE], clear[TLV_VALUE_SIZE], band[S_BUFFER_LEN];
     struct tlv_hdr *tlv = NULL;
 
     /* TLV: ROLE */
@@ -141,6 +141,12 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     if (tlv) {
         memcpy(clear, tlv->value, tlv->len);
     }
+    /* TLV: TLV_BAND */
+    memset(band, 0, sizeof(band));
+    tlv = find_wrapper_tlv_by_id(req, TLV_BAND);
+    if (tlv) {
+        memcpy(band, tlv->value, tlv->len);
+    }
 
     if (atoi(role) == DUT_TYPE_STAUT) {
         system("killall wpa_supplicant >/dev/null 2>/dev/null");
@@ -148,25 +154,26 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "cp -rf sta_reset_config.conf %s", get_wpas_conf_file());
-        system(buffer);
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
+        
     } else if (atoi(role) == DUT_TYPE_APUT) {
         system("killall hostapd >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
         system(buffer);
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "cp -rf ap_reset_config.conf %s", get_hapd_conf_file());
-        system(buffer);
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
         clear_interfaces_resource();
+    }
+
+    if (strcmp(band, TLV_BAND_24GHZ) == 0) {
+        set_default_wireless_interface_info(BAND_24GHZ);
+    } else if (strcmp(band, TLV_BAND_5GHZ) == 0) {
+        set_default_wireless_interface_info(BAND_5GHZ);
     }
 
 #ifdef _OPENWRT_

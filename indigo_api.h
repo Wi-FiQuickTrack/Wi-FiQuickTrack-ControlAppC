@@ -258,6 +258,9 @@ struct indigo_api {
 #define DUT_TYPE_STAUT                          0x01
 #define DUT_TYPE_APUT                           0x02
 
+#define TLV_BAND_24GHZ                          "2.4GHz"
+#define TLV_BAND_5GHZ                           "5GHz"
+
 #define TLV_VALUE_APP_VERSION                   "v1.0"
 #define TLV_VALUE_OK                            "OK"
 #define TLV_VALUE_NOT_OK                        "Failed"
