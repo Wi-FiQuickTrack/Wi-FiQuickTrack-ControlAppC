@@ -78,7 +78,6 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 
 int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
 int wpas_debug_level = DEBUG_LEVEL_DISABLE;
-int dut_type = -1;
 
 static int get_debug_level(int value) {
     if (value == 0) {
@@ -150,7 +149,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (atoi(role) == DUT_TYPE_STAUT) {
-        dut_type = DUT_TYPE_STAUT;
         system("killall wpa_supplicant >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
@@ -161,16 +159,15 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         }
         
     } else if (atoi(role) == DUT_TYPE_APUT) {
-        dut_type = DUT_TYPE_APUT;
         system("killall hostapd >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
-        sprintf(buffer, "ifconfig %s 0.0.0.0", BRIDGE_WLANS);
         system(buffer);
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
+        reset_bridge(BRIDGE_WLANS);
         /* reset interfaces info and remove hostapd conf */
         clear_interfaces_resource();
     }
@@ -693,7 +690,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     iterate_all_wlan_interfaces(start_ap_set_wlan_params);
 #endif
 
-    add_all_wireless_interface_to_bridge(BRIDGE_WLANS);
+    bridge_init(BRIDGE_WLANS);
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -754,9 +751,9 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
         goto response;
     }
    
-    char *parameter[] = {"ifconfig", BRIDGE_WLANS, "up", buffer, "netmask", "255.255.255.0", NULL };
-    if (dut_type == DUT_TYPE_STAUT)
-        parameter[1] = get_wireless_interface();
+    char *parameter[] = {"ifconfig", get_wireless_interface(), "up", buffer, "netmask", "255.255.255.0", NULL };
+    if (is_bridge_created())
+        parameter[1] = BRIDGE_WLANS;
 
     len = pipe_command(buffer, sizeof(buffer), "/sbin/ifconfig", parameter);
     if (len) {

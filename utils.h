@@ -116,6 +116,7 @@ int control_interface(char *ifname, char *op);
 int set_interface_ip(char *ifname, char *ip);
 int add_wireless_interface(char *ifname);
 int delete_wireless_interface(char *ifname);
+void bridge_init(char *br);
 
 
 char* get_hapd_ctrl_path_by_id(int identifier, int band);

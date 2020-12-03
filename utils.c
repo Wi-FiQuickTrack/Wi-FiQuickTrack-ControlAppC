@@ -50,6 +50,7 @@ int syslog_level = LOG_LEVEL_INFO;
 
 /* multiple VAPs */
 int interface_count = 0;
+int configured_interface_count = 0;
 struct interface_info interfaces[8];
 struct interface_info* default_interface;
 
@@ -413,6 +414,14 @@ int is_bridge_created() {
     return bridge_created;
 }
 
+void bridge_init(char *br) {
+    /* Create bridge for multiple VAPs */
+    if (configured_interface_count >= 2) {
+        create_bridge(br);
+        add_all_wireless_interface_to_bridge(br);
+    }
+}
+
 int create_bridge(char *br) {
     char cmd[S_BUFFER_LEN];
 
@@ -525,6 +534,7 @@ struct interface_info* assign_wireless_interface_info(int band, int identifier) 
     for (i = 0; i < interface_count; i++) {
         if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == band) && 
              (interfaces[i].identifier == UNUSED_IDENTIFIER)) {
+            configured_interface_count++;
             interfaces[i].identifier = identifier;
             memset(interfaces[i].hapd_conf_file, 0, sizeof(interfaces[i].hapd_conf_file));
             snprintf(interfaces[i].hapd_conf_file, sizeof(interfaces[i].hapd_conf_file),
@@ -727,6 +737,7 @@ void clear_interfaces_resource() {
             }
         }
     }
+    configured_interface_count = 0;
 
     return ;
 }

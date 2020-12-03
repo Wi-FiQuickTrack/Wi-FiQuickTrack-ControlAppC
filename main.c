@@ -211,11 +211,6 @@ int main(int argc, char* argv[]) {
     /* Register the callback */
     register_apis();
 
-    #ifdef _DUT_
-    /* Create new bridge for wireless interfaces */
-    create_bridge(BRIDGE_WLANS);
-    #endif
-
     /* Start eloop */
     eloop_init(NULL);
 
