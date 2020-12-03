@@ -237,14 +237,14 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     if (reset) {
 #ifdef _OPENWRT_
         /* Reset uci configurations */
-        snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi0.country");
+        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
         system(buffer);
 
-        snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi1.country");
+        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
         system(buffer);
 
-        system("uci delete wireless.@wifi-iface[0].own_ie_override");
-        system("uci delete wireless.@wifi-iface[1].own_ie_override");
+        system("uci -q delete wireless.@wifi-iface[0].own_ie_override");
+        system("uci -q delete wireless.@wifi-iface[1].own_ie_override");
 #endif
     }
 

@@ -180,10 +180,10 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
 
 #ifdef _OPENWRT_
     /* Reset the country code */
-    snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi0.country");
+    snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
     system(buffer);
 
-    snprintf(buffer, sizeof(buffer), "uci delete wireless.wifi1.country");
+    snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
     system(buffer);
 #endif
 

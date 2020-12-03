@@ -133,9 +133,9 @@ void openwrt_apply_radio_config(void) {
     // Apply radio configurations
     system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
     sleep(1);
-    system("wifi down");
+    system("wifi down >/dev/null 2>/dev/null");
     sleep(2);
-    system("wifi up");
+    system("wifi up >/dev/null 2>/dev/null");
     sleep(3);
     system("killall hostapd >/dev/null 2>/dev/null");
     sleep(2);
