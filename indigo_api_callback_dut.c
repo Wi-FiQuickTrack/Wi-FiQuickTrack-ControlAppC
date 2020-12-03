@@ -78,6 +78,7 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 
 int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
 int wpas_debug_level = DEBUG_LEVEL_DISABLE;
+int dut_type = -1;
 
 static int get_debug_level(int value) {
     if (value == 0) {
@@ -149,6 +150,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (atoi(role) == DUT_TYPE_STAUT) {
+        dut_type = DUT_TYPE_STAUT;
         system("killall wpa_supplicant >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
@@ -159,10 +161,12 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         }
         
     } else if (atoi(role) == DUT_TYPE_APUT) {
+        dut_type = DUT_TYPE_APUT;
         system("killall hostapd >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
+        sprintf(buffer, "ifconfig %s 0.0.0.0", BRIDGE_WLANS);
         system(buffer);
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
@@ -751,6 +755,8 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     }
    
     char *parameter[] = {"ifconfig", BRIDGE_WLANS, "up", buffer, "netmask", "255.255.255.0", NULL };
+    if (dut_type == DUT_TYPE_STAUT)
+        parameter[1] = get_wireless_interface();
 
     len = pipe_command(buffer, sizeof(buffer), "/sbin/ifconfig", parameter);
     if (len) {
