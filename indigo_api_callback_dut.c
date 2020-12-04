@@ -337,9 +337,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     char band[64], value[16];
 #ifdef _OPENWRT_
-    int ht40 = 0;
     char country[16], wifi_name[16];
 
+    /* QCA OPENWRT doesn't apply 11ax, mu_edca, country, 11d, 11h in hostapd */
     memset(country, 0, sizeof(country));
 #endif
 
@@ -414,10 +414,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         if (tlv->id == TLV_IEEE80211_AX && strstr(tlv->value, "1")) {
+            enable_ax = 1;
 #ifdef _OPENWRT_
             continue;
 #endif
-            enable_ax = 1;
         }
 
         if (tlv->id == TLV_HE_MU_EDCA) {
@@ -432,10 +432,6 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
 #ifdef _OPENWRT_
-        if (tlv->id == TLV_HT_CAPB && strstr(tlv->value, "40")) {
-            ht40 = 1;
-        }
-
         if (tlv->id == TLV_COUNTRY_CODE) {
             memcpy(country, tlv->value, tlv->len);
             continue;
@@ -513,25 +509,32 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "sae_groups=15 16 17 18 19 20 21\n");
     }
 
-    // Channel width configuration for ieee80211ax
-    // Default: 20MHz in 2.4G(No configuration required) 80MHz in 5G
-    if (strstr(band, "a") && (chwidth > 0)) {
-        int center_freq = get_center_freq_index(channel, chwidth);
-        if (enable_ac) {
-            if (vht_chwidthset == 0) {
-                sprintf(buffer, "vht_oper_chwidth=%d\n", chwidth);
+    // Channel width configuration
+    // Default: 20MHz in 2.4G(No configuration required) 80MHz(40MHz for 11N only) in 5G
+    if (enable_ac == 0 && enable_ax == 0)
+        chwidth = 0;
+    if (strstr(band, "a")) {
+        strcat(output, "ht_capab=[HT40-][HT40+]\n");
+        if (chwidth > 0) {
+            int center_freq = get_center_freq_index(channel, chwidth);
+            if (enable_ac) {
+                if (vht_chwidthset == 0) {
+                    sprintf(buffer, "vht_oper_chwidth=%d\n", chwidth);
+                    strcat(output, buffer);
+                }
+                sprintf(buffer, "vht_oper_centr_freq_seg0_idx=%d\n", center_freq);
                 strcat(output, buffer);
             }
-            sprintf(buffer, "vht_oper_centr_freq_seg0_idx=%d\n", center_freq);
-            strcat(output, buffer);
-        }
-        if (enable_ax) {
-            if (chwidthset == 0) {
-                sprintf(buffer, "he_oper_chwidth=%d\n", chwidth);
+            if (enable_ax) {
+#ifndef _OPENWRT_
+                if (chwidthset == 0) {
+                    sprintf(buffer, "he_oper_chwidth=%d\n", chwidth);
+                    strcat(output, buffer);
+                }
+                sprintf(buffer, "he_oper_centr_freq_seg0_idx=%d\n", center_freq);
                 strcat(output, buffer);
+#endif
             }
-            sprintf(buffer, "he_oper_centr_freq_seg0_idx=%d\n", center_freq);
-            strcat(output, buffer);
         }
     }
 
@@ -574,14 +577,13 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     system(buffer);
 
     if (!strncmp(band, "a", 1)) {
-        if (chwidth == 2) {
+        if (channel == 165) { // Force 20M for CH 165
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT20\'");
+        } else if (chwidth == 2) { // 160M test cases only
             snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT160\'");
-        } else if (chwidth == 0){
-            if (ht40)
-                snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT40\'");
-            else
-                snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT20\'");
-        } else {
+        } else if (chwidth == 0) { // 11N only
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT40\'");
+        } else { // 11AC or 11AX
             snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT80\'");
         }
         system(buffer);
