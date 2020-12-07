@@ -172,9 +172,9 @@ void start_ap_set_wlan_params(void *if_info) {
     sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", wlan->ifname);
     system(buffer);
     /* Avoid target assert during channel switch */
-    sprintf(buffer, "cfg80211tool %s he_ul_mimo 0", get_wireless_interface());
+    sprintf(buffer, "cfg80211tool %s he_ul_mimo 0", wlan->ifname);
     system(buffer);
-    sprintf(buffer, "cfg80211tool %s twt_responder 0", get_wireless_interface());
+    sprintf(buffer, "cfg80211tool %s twt_responder 0", wlan->ifname);
     system(buffer);
 #endif
     printf("set_wlan_params: %s\n", buffer);
