@@ -1254,6 +1254,7 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
 
     char channel[64];
     char frequency[64];
+    int freq, center_freq, offset;
 
     memset(channel, 0, sizeof(channel));
     memset(frequency, 0, sizeof(frequency));
@@ -1279,9 +1280,16 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
         indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_FREQUENCY");
     }
 
+    center_freq = 5000 + get_center_freq_index(atoi(channel), 1) * 5;
+    freq = atoi(frequency);
+    if ((center_freq == freq + 30) || (center_freq == freq - 10))
+        offset = 1;
+    else
+        offset = -1;
     /* Assemble hostapd command for channel switch */
     memset(request, 0, sizeof(request));
-    sprintf(request, "CHAN_SWITCH 10 %s", frequency);
+    sprintf(request, "CHAN_SWITCH 10 %s center_freq1=%d sec_channel_offset=%d bandwidth=80 vht", frequency, center_freq, offset);
+    indigo_logger(LOG_LEVEL_INFO, "%s", request);
 
     /* Open hostapd UDS socket */
     w = wpa_ctrl_open(get_hapd_ctrl_path());
