@@ -17,7 +17,7 @@ CFLAGS += -D_OPENWRT_
 endif
 
 ifeq ($(ROLE),dut)
-OBJS += indigo_api_callback_dut.o vendor_specific.o
+OBJS += indigo_api_callback_dut.o vendor_specific_dut.o
 CFLAGS += -D_DUT_
 else
 OBJS += indigo_api_callback_tp.o vendor_specific.o
