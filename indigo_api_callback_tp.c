@@ -580,7 +580,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_HOSTAPD_START_OK;
-    char buffer[S_BUFFER_LEN], g_ctrl_iface[64];
+    char buffer[S_BUFFER_LEN], g_ctrl_iface[64], log_level[TLV_VALUE_SIZE];
     int len;
     struct tlv_hdr *tlv;
 
@@ -591,6 +591,17 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         memcpy(g_ctrl_iface, tlv->value, tlv->len);
     } else {
         sprintf(g_ctrl_iface, "%s", get_hapd_global_ctrl_path());
+    }
+
+    /* TLV: DEBUG_LEVEL */
+    tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
+    memset(log_level, 0, sizeof(log_level));
+    if (tlv) {
+        memcpy(log_level, tlv->value, tlv->len);
+    }
+
+    if (strlen(log_level)) {
+        set_hostapd_debug_level(get_debug_level(atoi(log_level)));
     }
 #ifdef _OPENWRT_
     // Apply radio configurations via native hostpad
@@ -1452,8 +1463,20 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[256];
+    char buffer[256], log_level[TLV_VALUE_SIZE];
     int len, status = TLV_VALUE_STATUS_NOT_OK;
+    struct tlv_hdr *tlv = NULL;
+
+    /* TLV: DEBUG_LEVEL */
+    tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
+    memset(log_level, 0, sizeof(log_level));
+    if (tlv) {
+        memcpy(log_level, tlv->value, tlv->len);
+    }
+
+    if (strlen(log_level)) {
+        set_wpas_debug_level(get_debug_level(atoi(log_level)));
+    }
 
 #ifdef _OPENWRT_
 #else
@@ -1775,7 +1798,7 @@ done:
 static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[256], response[1024];
+    char buffer[256], response[1024], log_level[TLV_VALUE_SIZE];
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
     size_t resp_len;
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
@@ -1800,6 +1823,17 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
         }
     } else {
         return 0;
+    }
+
+    /* TLV: DEBUG_LEVEL */
+    tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
+    memset(log_level, 0, sizeof(log_level));
+    if (tlv) {
+        memcpy(log_level, tlv->value, tlv->len);
+    }
+
+    if (strlen(log_level)) {
+        set_wpas_debug_level(get_debug_level(atoi(log_level)));
     }
 
     /* Start WPA supplicant */
