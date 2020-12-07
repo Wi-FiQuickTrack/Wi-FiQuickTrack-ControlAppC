@@ -20,7 +20,7 @@ ifeq ($(ROLE),dut)
 OBJS += indigo_api_callback_dut.o vendor_specific_dut.o
 CFLAGS += -D_DUT_
 else
-OBJS += indigo_api_callback_tp.o vendor_specific.o
+OBJS += indigo_api_callback_tp.o vendor_specific_tp.o
 CFLAGS += -DCONFIG_CTRL_IFACE_UDP
 CFLAGS += -D_TEST_PLATFORM_
 endif
