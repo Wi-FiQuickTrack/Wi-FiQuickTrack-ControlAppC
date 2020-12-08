@@ -32,6 +32,7 @@
 #ifdef _OPENWRT_
 void openwrt_apply_radio_config(void) {
     char buffer[S_BUFFER_LEN];
+#ifdef _WTS_OPENWRT_
     // Apply radio configurations
     system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
     sleep(1);
@@ -41,6 +42,7 @@ void openwrt_apply_radio_config(void) {
     sleep(3);
     system("killall hostapd >/dev/null 2>/dev/null");
     sleep(2);
+#endif
 
 #ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
     sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());

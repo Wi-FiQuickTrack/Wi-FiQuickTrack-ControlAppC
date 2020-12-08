@@ -604,6 +604,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         set_hostapd_debug_level(get_debug_level(atoi(log_level)));
     }
 #ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     // Apply radio configurations via native hostpad
     system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
     sleep(1);
@@ -613,6 +614,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sleep(3);
     system("killall hostapd >/dev/null 2>/dev/null");
     sleep(2);
+#endif
 
     // Apply runtime configuratoins before hostapd starts.
     // DFS wait again if apply this after hostapd starts.
