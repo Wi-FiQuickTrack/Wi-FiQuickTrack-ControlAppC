@@ -639,7 +639,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sprintf(buffer, "hostapd-wfa -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
 #else
-    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
+    sprintf(buffer, "hostapd -B -t -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
         g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
 #endif
     len = system(buffer);

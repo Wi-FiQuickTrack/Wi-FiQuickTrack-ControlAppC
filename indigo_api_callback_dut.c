@@ -682,7 +682,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #endif
 
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "hostapd -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
+    sprintf(buffer, "hostapd -B -t -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), 
         get_all_hapd_conf_files());
     len = system(buffer);
@@ -1565,10 +1565,10 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     sleep(1);
 #endif
 
-    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #else
-    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #endif
     len = system(buffer);
@@ -1823,7 +1823,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     }
 
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -c %s -i %s", get_wpas_conf_file(), get_wireless_interface());
+    sprintf(buffer, "wpa_supplicant -B -t -c %s -i %s", get_wpas_conf_file(), get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
