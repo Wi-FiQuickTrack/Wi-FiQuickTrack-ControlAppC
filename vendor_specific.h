@@ -44,6 +44,8 @@
 
 #define BRIDGE_WLANS                                "br-wlans"
 
+void vendor_init();
+
 #ifdef _TEST_PLATFORM_
 int set_channel_width(int chwidth);
 void reload_driver();

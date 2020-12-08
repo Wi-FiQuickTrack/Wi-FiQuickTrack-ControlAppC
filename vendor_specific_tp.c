@@ -44,6 +44,42 @@ struct he_chwidth_config he_chwidth_config_list[] = {
 };
 
 #ifdef _TEST_PLATFORM_
+
+/* Be invoked when start controlApp */
+void vendor_init() {
+#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
+    char buffer[BUFFER_LEN];
+    char mac_addr[S_BUFFER_LEN];
+    
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "iw phy phy1 interface add ath1 type managed");
+    system(buffer);
+    sprintf(buffer, "iw phy phy1 interface add ath11 type managed");
+    system(buffer);
+    sprintf(buffer, "iw phy phy0 interface add ath0 type managed");
+    system(buffer);
+    sprintf(buffer, "iw phy phy0 interface add ath01 type managed");
+    system(buffer);
+
+    memset(mac_addr, 0, sizeof(mac_addr));
+    get_mac_address(mac_addr, sizeof(mac_addr), "ath1");
+    sprintf(buffer, "ifconfig ath11 down");
+    system(buffer);
+    mac_addr[16] += 1;
+    sprintf(buffer, "ifconfig ath11 hw ether %s", mac_addr);
+    system(buffer);
+
+    memset(mac_addr, 0, sizeof(mac_addr));
+    get_mac_address(mac_addr, sizeof(mac_addr), "ath0");
+    sprintf(buffer, "ifconfig ath01 down");
+    system(buffer);
+    mac_addr[16] += 1;
+    sprintf(buffer, "ifconfig ath01 hw ether %s", mac_addr);
+    system(buffer);
+    sleep(1);
+#endif
+}
+
 extern struct sta_platform_config sta_hw_config;
 
 static int set_he_channel_width(int chwidth) {

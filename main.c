@@ -211,6 +211,8 @@ int main(int argc, char* argv[]) {
     /* Register the callback */
     register_apis();
 
+    vendor_init();
+
     /* Start eloop */
     eloop_init(NULL);
 
