@@ -36,13 +36,13 @@ void vendor_init() {
     char mac_addr[S_BUFFER_LEN];
     
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "iw phy phy1 interface add ath1 type managed");
+    sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");
     system(buffer);
-    sprintf(buffer, "iw phy phy1 interface add ath11 type managed");
+    sprintf(buffer, "iw phy phy1 interface add ath11 type managed >/dev/null 2>/dev/null");
     system(buffer);
-    sprintf(buffer, "iw phy phy0 interface add ath0 type managed");
+    sprintf(buffer, "iw phy phy0 interface add ath0 type managed >/dev/null 2>/dev/null");
     system(buffer);
-    sprintf(buffer, "iw phy phy0 interface add ath01 type managed");
+    sprintf(buffer, "iw phy phy0 interface add ath01 type managed >/dev/null 2>/dev/null");
     system(buffer);
 
     memset(mac_addr, 0, sizeof(mac_addr));
