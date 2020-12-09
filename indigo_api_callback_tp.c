@@ -612,7 +612,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sleep(3);
     system("killall hostapd >/dev/null 2>/dev/null");
     sleep(2);
-#endif
 
     // Apply runtime configuratoins before hostapd starts.
     // DFS wait again if apply this after hostapd starts.
@@ -633,6 +632,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "cfg80211tool %s twt_responder 0", get_wireless_interface());
     system(buffer);
+#endif
 
     sprintf(buffer, "hostapd-wfa -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
