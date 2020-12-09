@@ -227,13 +227,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         message = TLV_VALUE_HOSTAPD_STOP_OK;
     }
 
-#ifdef _OPENWRT_
-#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
-    sprintf(buffer, "iw dev %s del", get_wireless_interface());
-    system(buffer);
-#endif
-#endif
-
     if (reset) {
 #ifdef _WTS_OPENWRT_
         /* Reset uci configurations */
@@ -641,11 +634,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sprintf(buffer, "cfg80211tool %s twt_responder 0", get_wireless_interface());
     system(buffer);
 
-#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
-    sprintf(buffer, "iw phy phy1 interface add %s type managed", get_wireless_interface());
-    system(buffer);
-    sleep(1);
-#endif
     sprintf(buffer, "hostapd-wfa -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
 #else
@@ -1276,13 +1264,6 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         message = TLV_VALUE_WPA_S_STOP_OK;
     }
 
-#ifdef _OPENWRT_
-#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
-    sprintf(buffer, "iw dev %s del", get_wireless_interface());
-    system(buffer);
-#endif
-#endif
-
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
@@ -1502,11 +1483,6 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
 #ifdef _OPENWRT_
-#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
-    sprintf(buffer, "iw phy phy1 interface add %s type station", get_wireless_interface());
-    system(buffer);
-    sleep(1);
-#endif
     sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #else
@@ -1851,11 +1827,6 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
 #ifdef _OPENWRT_
-#ifdef _OPENWRT_WLAN_INTERFACE_CONTROL_
-    sprintf(buffer, "iw phy phy1 interface add %s type station", get_wireless_interface());
-    system(buffer);
-    sleep(1);
-#endif
     sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #else
