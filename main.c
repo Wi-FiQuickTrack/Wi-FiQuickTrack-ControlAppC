@@ -189,6 +189,13 @@ static int parse_parameters(int argc, char *argv[]) {
 }
 
 int main(int argc, char* argv[]) {
+    /* Welcome message */
+#ifdef _DUT_
+    printf("Welcome to use Indigo Control App DUT version.\n");
+#else
+    printf("Welcome to use Indigo Control App Platform version.\n");
+#endif
+
     /* Initiate the application */
     set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);
     set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);
