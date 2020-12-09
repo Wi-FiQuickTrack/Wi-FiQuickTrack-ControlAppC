@@ -626,6 +626,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "cfg80211tool %s rrm %d", get_wireless_interface(), rrm);
     system(buffer);
+    // Workaround for data IOT issue
     if (he_mu_edca == 0) {
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", get_wireless_interface());
@@ -633,7 +634,8 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "cfg80211tool %s he_ul_mimo 0", get_wireless_interface());
         system(buffer);
-    }
+    } else // Reset to Disable
+        he_mu_edca = 0;
     // Avoid target assert during channel switch
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "cfg80211tool %s twt_responder 0", get_wireless_interface());
