@@ -34,7 +34,7 @@
 struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO, false, false};
 
 #ifdef _OPENWRT_
-int rrm = 0;
+int rrm = 0, he_mu_edca = 0;
 #endif
 
 void register_apis() {
@@ -439,7 +439,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
-        if (tlv->id == TLV_HE_MU_EDCA || tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H ||
+        if (tlv->id == TLV_HE_MU_EDCA) {
+            he_mu_edca = 1;
+            continue;
+        }
+
+        if (tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H ||
             tlv->id == TLV_HE_OPER_CHWIDTH || tlv->id == TLV_HE_OPER_CENTR_FREQ)
             continue;
 
@@ -621,12 +626,15 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "cfg80211tool %s rrm %d", get_wireless_interface(), rrm);
     system(buffer);
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", get_wireless_interface());
-    system(buffer);
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "cfg80211tool %s he_ul_mimo 0", get_wireless_interface());
-    system(buffer);
+    if (he_mu_edca == 0) {
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", get_wireless_interface());
+        system(buffer);
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "cfg80211tool %s he_ul_mimo 0", get_wireless_interface());
+        system(buffer);
+    }
+    // Avoid target assert during channel switch
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "cfg80211tool %s twt_responder 0", get_wireless_interface());
     system(buffer);
