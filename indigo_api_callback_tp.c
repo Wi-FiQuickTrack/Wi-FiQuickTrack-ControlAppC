@@ -33,7 +33,7 @@
 
 struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO, false, false};
 
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
 int rrm = 0, he_mu_edca = 0;
 #endif
 
@@ -198,7 +198,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     int reset = 0;
 
     memset(buffer, 0, sizeof(buffer));
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     system("killall hostapd-wfa 1>/dev/null 2>/dev/null");
 #else
     system("killall hostapd 1>/dev/null 2>/dev/null");
@@ -235,7 +235,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 #endif
 
     if (reset) {
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
         /* Reset uci configurations */
         snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
         system(buffer);
@@ -364,7 +364,7 @@ static void add_mu_edca_params(char *output) {
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
     int i, ctrl_iface = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     char wifi_name[16], band[16], country[16];
     int enable_n = 0, enable_ac = 0, enable_ax = 0;
     int channel = 0, ht40 = 0, chwidth = 0;
@@ -393,7 +393,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
         if (tlv->id == TLV_HW_MODE) {
             memset(band, 0, sizeof(band));
             memcpy(band, tlv->value, tlv->len);
@@ -472,7 +472,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         return 0;
     }
 
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     if (!strncmp(band, "a", 1)) {
         snprintf(wifi_name, sizeof(wifi_name), "wifi0");
         wlan_id = 0;
@@ -563,7 +563,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     }
     strcpy(ifname, get_default_wireless_interface_info());
 
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     /* Handle the platform dependency */
     tlv = find_wrapper_tlv_by_id(req, TLV_MBO);
     rrm = tlv ? 1 : 0;

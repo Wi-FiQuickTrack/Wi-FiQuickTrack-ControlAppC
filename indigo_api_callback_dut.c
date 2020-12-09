@@ -178,7 +178,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         set_default_wireless_interface_info(BAND_5GHZ);
     }
 
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     /* Reset the country code */
     snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
     system(buffer);
@@ -336,7 +336,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int i, enable_ac = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     char band[64], value[16];
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     char country[16], wifi_name[16];
 
     /* QCA OPENWRT doesn't apply 11ax, mu_edca, country, 11d, 11h in hostapd */
@@ -397,7 +397,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             memcpy(value, tlv->value, tlv->len);
             chwidth = atoi(value);
             chwidthset = 1;
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
             continue;
 #endif
         }
@@ -415,13 +415,13 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
         if (tlv->id == TLV_IEEE80211_AX && strstr(tlv->value, "1")) {
             enable_ax = 1;
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
             continue;
 #endif
         }
 
         if (tlv->id == TLV_HE_MU_EDCA) {
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
             continue;
 #endif
             enable_muedca = 1;
@@ -431,7 +431,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             has_sae_groups = 1;
         }
 
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
         if (tlv->id == TLV_COUNTRY_CODE) {
             memcpy(country, tlv->value, tlv->len);
             continue;
@@ -526,7 +526,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                 strcat(output, buffer);
             }
             if (enable_ax) {
-#ifndef _OPENWRT_
+#ifndef _WTS_OPENWRT_
                 if (chwidthset == 0) {
                     sprintf(buffer, "he_oper_chwidth=%d\n", chwidth);
                     strcat(output, buffer);
@@ -561,7 +561,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "he_mu_edca_ac_vo_timer=255\n");
     }
 
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     if (!strncmp(band, "a", 1)) {
         snprintf(wifi_name, sizeof(wifi_name), "wifi0");
     } else {
@@ -675,7 +675,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     int len;
     int status = TLV_VALUE_STATUS_OK;
 
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     openwrt_apply_radio_config();
     // DFS wait again if set wlan params after hostapd starts
     iterate_all_wlan_interfaces(start_ap_set_wlan_params);
@@ -688,7 +688,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     len = system(buffer);
     sleep(1);
 
-#ifndef _OPENWRT_
+#ifndef _WTS_OPENWRT_
     iterate_all_wlan_interfaces(start_ap_set_wlan_params);
 #endif
 
