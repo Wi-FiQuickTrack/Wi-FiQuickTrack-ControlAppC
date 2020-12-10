@@ -234,6 +234,9 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     }
 
     if (reset) {
+        /* clean the log */
+        system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
+
 #ifdef _WTS_OPENWRT_
         /* Reset uci configurations */
         snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
@@ -607,9 +610,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     if (strlen(log_level)) {
         set_hostapd_debug_level(get_debug_level(atoi(log_level)));
     }
-
-    /* clean the log */
-    system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
 
 #ifdef _OPENWRT_
 #ifdef _WTS_OPENWRT_
@@ -1249,6 +1249,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char buffer[S_BUFFER_LEN];
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
     char *message = NULL;
+    int reset = 0;
 
     system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
     sleep(2);
@@ -1256,8 +1257,14 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     len = unlink(get_wpas_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
+        reset = 1;
     }
     sleep(1);
+
+    if (reset) {
+        /* clean the log */
+        system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
+    }
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
@@ -1480,9 +1487,6 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     if (strlen(log_level)) {
         set_wpas_debug_level(get_debug_level(atoi(log_level)));
     }
-
-    /* clean the log */
-    system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
 
 #ifdef _OPENWRT_
 #else
