@@ -198,7 +198,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     int reset = 0;
 
     memset(buffer, 0, sizeof(buffer));
-#ifdef _WTS_OPENWRT_
+#ifdef _OPENWRT_
     system("killall hostapd-wfa 1>/dev/null 2>/dev/null");
 #else
     system("killall hostapd 1>/dev/null 2>/dev/null");
