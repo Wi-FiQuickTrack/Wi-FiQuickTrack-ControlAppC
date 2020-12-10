@@ -607,6 +607,10 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     if (strlen(log_level)) {
         set_hostapd_debug_level(get_debug_level(atoi(log_level)));
     }
+
+    /* clean the log */
+    system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
+
 #ifdef _OPENWRT_
 #ifdef _WTS_OPENWRT_
     // Apply radio configurations via native hostpad
@@ -1476,6 +1480,9 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     if (strlen(log_level)) {
         set_wpas_debug_level(get_debug_level(atoi(log_level)));
     }
+
+    /* clean the log */
+    system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
 
 #ifdef _OPENWRT_
 #else
