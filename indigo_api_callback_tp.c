@@ -643,8 +643,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sprintf(buffer, "cfg80211tool %s twt_responder 0", get_wireless_interface());
     system(buffer);
 #endif
-
-    sprintf(buffer, "hostapd-wfa -B -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
+    sprintf(buffer, "hostapd-wfa -B -t -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
         g_ctrl_iface, get_hostapd_debug_arguments(), get_hapd_conf_file());
 #else
     sprintf(buffer, "hostapd -B -t -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
@@ -1500,10 +1499,10 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
 #ifdef _OPENWRT_
-    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #else
-    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #endif
     indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
@@ -1844,10 +1843,10 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
 #ifdef _OPENWRT_
-    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #else
-    sprintf(buffer, "wpa_supplicant -B -c %s %s -i %s -f /var/log/supplicant.log", 
+    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
 #endif
     len = system(buffer);
