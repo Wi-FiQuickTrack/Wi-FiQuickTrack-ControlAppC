@@ -149,6 +149,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (atoi(role) == DUT_TYPE_STAUT) {
+        /* stop the wpa_supplicant and release IP address */
         system("killall wpa_supplicant >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
@@ -157,8 +158,10 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
-        
+        /* clean the log */
+        system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");        
     } else if (atoi(role) == DUT_TYPE_APUT) {
+        /* stop the hostapd and release IP address */
         system("killall hostapd >/dev/null 2>/dev/null");
         sleep(1);
         memset(buffer, 0, sizeof(buffer));
@@ -170,6 +173,8 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         reset_bridge(BRIDGE_WLANS);
         /* reset interfaces info and remove hostapd conf */
         clear_interfaces_resource();
+        /* clean the log */
+        system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
     }
 
     if (strcmp(band, TLV_BAND_24GHZ) == 0) {
