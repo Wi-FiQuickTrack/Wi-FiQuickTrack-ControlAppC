@@ -29,21 +29,13 @@
 #include "vendor_specific.h"
 #include "utils.h"
 
-struct he_chwidth_config {
-    int chwidth;
-    char config[32];
-};
-
-struct he_chwidth_config he_chwidth_config_list[] = {
-    { CHWIDTH_AUTO, "" },
-    { CHWIDTH_20, "003fc200fd09800ecffe00" },
-    { CHWIDTH_40, "043fc200fd09800ecffe00" },
-    { CHWIDTH_80, "043fc200fd09800ecffe00" },
-    { CHWIDTH_80PLUS80, "1c3fc200fd09800ecffe00" },
-    { CHWIDTH_160, "0c3fc200fd09800ecffe00" }
-};
-
 #ifdef _TEST_PLATFORM_
+extern struct sta_platform_config sta_hw_config;
+const struct sta_driver_ops *sta_drv_ops  = NULL;
+
+/**
+ * Generic platform dependent API implementation 
+ */
 
 /* Be invoked when start controlApp */
 void vendor_init() {
@@ -95,19 +87,74 @@ void vendor_init() {
     sprintf(buffer, "ifconfig ath01 hw ether %s", mac_addr);
     system(buffer);
     sleep(1);
+#else
+    sta_drv_ops = &sta_driver_platform1_ops;
 #endif
 }
 
-extern struct sta_platform_config sta_hw_config;
+int set_channel_width() {
+    int ret = -1;
+
+    if (!sta_hw_config.chwidth_isset) {
+        return 0;
+    } else {
+        if (sta_drv_ops && sta_drv_ops->set_channel_width != NULL) {
+            ret = sta_drv_ops->set_channel_width();
+        }
+    }
+
+    sta_hw_config.chwidth_isset = false;
+    return ret;
+}
+
+void set_phy_mode() {
+    if (!sta_hw_config.phymode_isset) {
+        return;
+    } else {
+        if (sta_drv_ops && sta_drv_ops->set_phy_mode != NULL) {
+            sta_drv_ops->set_phy_mode();
+        }        
+    }
+
+    /* reset the flag for phymode */
+    sta_hw_config.phymode_isset = false;
+}
+
+/**
+ * Platform-dependent implementation for STA platform 1 
+ */
+
+struct he_chwidth_config {
+    int chwidth;
+    char config[32];
+};
+
+struct he_chwidth_config he_chwidth_config_list[] = {
+    { CHWIDTH_AUTO, "" },
+    { CHWIDTH_20, "003fc200fd09800ecffe00" },
+    { CHWIDTH_40, "043fc200fd09800ecffe00" },
+    { CHWIDTH_80, "043fc200fd09800ecffe00" },
+    { CHWIDTH_80PLUS80, "1c3fc200fd09800ecffe00" },
+    { CHWIDTH_160, "0c3fc200fd09800ecffe00" }
+};
+
+static void disable_11ax() {
+    system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
+    sleep(3);
+}
+
+static void reload_driver() {
+    system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi");
+    sleep(3);
+}
 
 static int set_he_channel_width(int chwidth) {
-#define BUFFER_SIZE 512
     FILE *f_ptr, *f_tmp_ptr;
     char *path = "/lib/firmware/iwl-dbg-cfg.ini";
     char *tmp_path = "/lib/firmware/iwl-dbg-cfg-tmp.ini";
     char *he_ie_str = "he_phy_cap=";
     int is_found = 0;
-    char buffer[BUFFER_SIZE];
+    char buffer[S_BUFFER_LEN];
 
     f_ptr  = fopen(path, "r");
     f_tmp_ptr = fopen(tmp_path, "w");    
@@ -118,7 +165,7 @@ static int set_he_channel_width(int chwidth) {
     }
 
     memset(buffer, 0, sizeof(buffer));
-    while ((fgets(buffer, BUFFER_SIZE, f_ptr)) != NULL) {
+    while ((fgets(buffer, S_BUFFER_LEN, f_ptr)) != NULL) {
         if (strstr(buffer, he_ie_str) != NULL) {
             is_found = 1;
             if (chwidth == CHWIDTH_AUTO) {
@@ -157,26 +204,39 @@ static int set_he_channel_width(int chwidth) {
     return 0;
 }
 
-int set_channel_width(int chwidth) {
-    int ret = -1;
-    if (sta_hw_config.chwidth_isset && 
-        (sta_hw_config.phymode == PHYMODE_11AXA || 
+static int set_channel_width_platform1() {
+    int ret = 0;
+    if ((sta_hw_config.phymode == PHYMODE_11AXA || 
             sta_hw_config.phymode == PHYMODE_11AXG || 
             sta_hw_config.phymode == PHYMODE_AUTO)) {
         ret = set_he_channel_width(sta_hw_config.chwidth);
+    } else if ((sta_hw_config.chwidth == CHWIDTH_20 &&
+        (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11NA))) {
+        ret = insert_wpa_network_config("disable_ht40=1\n");
     }
-    sta_hw_config.chwidth_isset = false;
 
     return ret;
 }
 
-void reload_driver() {
-    system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi");
-    sleep(3);
+static void set_phy_mode_platform1() {
+    if (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11AC) {
+        disable_11ax();
+    } else if (sta_hw_config.phymode == PHYMODE_11BG || sta_hw_config.phymode == PHYMODE_11A) {
+        insert_wpa_network_config("disable_ht=1\n");
+        disable_11ax();
+    } else if (sta_hw_config.phymode == PHYMODE_11NA) {
+        insert_wpa_network_config("disable_vht=1\n");
+        disable_11ax();
+    } else if (sta_hw_config.phymode == PHYMODE_11AXG || 
+        sta_hw_config.phymode == PHYMODE_11AXA || sta_hw_config.phymode == PHYMODE_AUTO) {
+        reload_driver();
+    }
 }
 
-void disable_11ax() {
-    system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
-    sleep(3);
-}
+const struct sta_driver_ops sta_driver_platform1_ops = {
+	.name			        = "platform1",
+	.set_channel_width      = set_channel_width_platform1,
+	.set_phy_mode           = set_phy_mode_platform1,    
+};
+
 #endif /* _TEST_PLATFORM_ */

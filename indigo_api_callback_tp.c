@@ -1421,27 +1421,6 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             appended_supplicant_conf_str += each_supplicant_conf + "=" + wpa_supplicant_dict[each_supplicant_conf] + "\n"
         wps_config = appended_supplicant_conf_str.rstrip()
     */
-    if (!sta_hw_config.phymode_isset) {
-        /* skip */
-    } else if (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11AC) {
-        disable_11ax();
-    } else if (sta_hw_config.phymode == PHYMODE_11BG || sta_hw_config.phymode == PHYMODE_11A) {
-        strcat(buffer, "disable_ht=1\n");
-        disable_11ax();
-    } else if (sta_hw_config.phymode == PHYMODE_11NA) {
-        strcat(buffer, "disable_vht=1\n");
-        disable_11ax();
-    } else if (sta_hw_config.phymode == PHYMODE_11AXG || sta_hw_config.phymode == PHYMODE_11AXA) {
-        reload_driver();
-    }
-    /* reset the flag for phymode */
-    sta_hw_config.phymode_isset = false;
-
-    if (sta_hw_config.chwidth_isset && (sta_hw_config.chwidth == CHWIDTH_20 &&
-        (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11NA))) {
-        strcat(buffer, "disable_ht40=1\n");
-        sta_hw_config.chwidth_isset = false;
-    }
 
     strcat(buffer, "}\n");
 
@@ -1461,7 +1440,8 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     }
 
     /* platform dependent commands */
-    set_channel_width(sta_hw_config.chwidth);
+    set_channel_width();
+    set_phy_mode();
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len > 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -1892,8 +1872,7 @@ static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wr
 
     if (strcmp(param_value, "auto") == 0) {
         sta_hw_config.phymode = PHYMODE_AUTO;
-        reload_driver();
-        sta_hw_config.phymode_isset = false;
+        set_phy_mode();
     } else if (strcmp(param_value, "11bgn") == 0) {
         sta_hw_config.phymode = PHYMODE_11BGN;
     } else if (strcmp(param_value, "11bg") == 0) {
@@ -1947,7 +1926,7 @@ static int set_sta_channel_width_handler(struct packet_wrapper *req, struct pack
 
     if (strcmp(param_value, "auto") == 0) {
         sta_hw_config.chwidth = CHWIDTH_AUTO;
-        set_channel_width(sta_hw_config.chwidth);
+        set_channel_width();
     } else if (strcmp(param_value, "20") == 0) {
         sta_hw_config.chwidth = CHWIDTH_20;
     } else if (strcmp(param_value, "40") == 0) {

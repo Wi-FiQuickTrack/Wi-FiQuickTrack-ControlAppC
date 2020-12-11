@@ -47,9 +47,24 @@
 void vendor_init();
 
 #ifdef _TEST_PLATFORM_
-int set_channel_width(int chwidth);
-void reload_driver();
-void disable_11ax();
+
+/**
+ * struct sta_driver_ops - Driver interface API wrapper definition
+ *
+ * This structure defines the API that each driver interface needs to implement
+ * for indigo c control application. 
+ */
+struct sta_driver_ops {
+	const char *name;
+    int (*set_channel_width)(void);
+    void (*set_phy_mode)(void);
+};
+
+extern const struct sta_driver_ops sta_driver_platform1_ops;
+
+/* Generic platform dependent APIs */
+int set_channel_width();
+void set_phy_mode();
 #endif
 
 #ifdef _OPENWRT_

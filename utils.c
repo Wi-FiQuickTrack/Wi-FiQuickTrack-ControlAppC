@@ -907,3 +907,38 @@ void get_server_cert_hash(char *pem_file, char *buffer) {
         }
     }
 }
+
+int insert_wpa_network_config(char *config) {
+    FILE *f_ptr, *f_tmp_ptr;
+    char *path = get_wpas_conf_file();
+    char *tmp_path = "/tmp/wpa_supplicant_tmp1.conf";
+    char *target_str = "}"; /* get the last line in network profile */
+    char buffer[S_BUFFER_LEN];
+
+    f_ptr = fopen(path, "r");
+    f_tmp_ptr = fopen(tmp_path, "w");    
+
+    if (f_ptr == NULL || f_tmp_ptr == NULL) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open the files");
+        return -1;
+    }
+
+    memset(buffer, 0, sizeof(buffer));
+    while ((fgets(buffer, S_BUFFER_LEN, f_ptr)) != NULL) {
+        if (strstr(buffer, target_str) != NULL) {
+            indigo_logger(LOG_LEVEL_DEBUG, 
+                "insert config: %s into the wpa_supplicant conf.", config);
+            fputs(config, f_tmp_ptr);
+        }
+
+        fputs(buffer, f_tmp_ptr);
+    }
+
+    fclose(f_ptr);
+    fclose(f_tmp_ptr);
+
+    /* replace original file with new file */
+    remove(path);
+    rename(tmp_path, path);
+    return 0;
+}
