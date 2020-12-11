@@ -51,6 +51,12 @@ void vendor_init() {
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
     
+    /* Vendor: add codes to let ControlApp have full control of hostapd */
+    /* Avoid hostapd being invoked by procd */
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "/etc/init.d/wpad stop");
+    system(buffer);
+
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");
     system(buffer);
