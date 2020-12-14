@@ -725,8 +725,8 @@ void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
     return;
 }
 
-void clear_interfaces_resource() {
-    int i, err = 0;
+int clear_interfaces_resource() {
+    int i, err = 0, ret = 0;
     for (i = 0; i < interface_count; i++)
     {
         if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
@@ -734,12 +734,13 @@ void clear_interfaces_resource() {
             err = unlink(interfaces[i].hapd_conf_file);
             if (err) {
                 indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove %s", interfaces[i].hapd_conf_file);
+                ret = 1;
             }
         }
     }
     configured_interface_count = 0;
 
-    return ;
+    return ret;
 }
 
 void iterate_all_wlan_interfaces(void (*callback_fn)(void *)) {

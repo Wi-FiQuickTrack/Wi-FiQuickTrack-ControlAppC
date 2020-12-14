@@ -157,9 +157,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         system(buffer);
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
-        }
-        /* clean the log */
-        system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");        
+        }     
     } else if (atoi(role) == DUT_TYPE_APUT) {
         /* stop the hostapd and release IP address */
         system("killall hostapd >/dev/null 2>/dev/null");
@@ -173,8 +171,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         reset_bridge(BRIDGE_WLANS);
         /* reset interfaces info and remove hostapd conf */
         clear_interfaces_resource();
-        /* clean the log */
-        system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
     }
 
     if (strcmp(band, TLV_BAND_24GHZ) == 0) {
@@ -208,7 +204,7 @@ done:
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len;
+    int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN];
     char *parameter[] = {"pidof", "hostapd", NULL};
     char *message = NULL;
@@ -235,7 +231,10 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     }
 
     /* reset interfaces info and remove hostapd conf */
-    clear_interfaces_resource();
+    if (clear_interfaces_resource()) {
+        /* clean the log if hostapd.conf doesn't exist */
+        system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
+    }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -1344,7 +1343,7 @@ done:
 }
 
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len;
+    int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN];
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
     char *message = NULL;
@@ -1355,8 +1354,14 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     len = unlink(get_wpas_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
+        reset = 1;
     }
     sleep(1);
+
+    if (reset) {
+        /* clean the log */
+        system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
+    }
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());

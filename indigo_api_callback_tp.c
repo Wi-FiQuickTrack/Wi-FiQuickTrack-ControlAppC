@@ -163,8 +163,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
-        /* clean the log */
-        system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");    
     } else if (atoi(role) == DUT_TYPE_APUT) {
         /* stop the hostapd and release IP address */
         system("killall hostapd >/dev/null 2>/dev/null");
@@ -178,8 +176,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
-        /* clean the log */
-        system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
     }
     sleep(1);
 
@@ -197,11 +193,10 @@ done:
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len;
+    int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN];
     char *parameter[] = {"pidof", "hostapd", NULL};
     char *message = NULL;
-    int reset = 0;
 
     memset(buffer, 0, sizeof(buffer));
 #ifdef _OPENWRT_
@@ -1244,11 +1239,10 @@ done:
 }
 
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len;
+    int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN];
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
     char *message = NULL;
-    int reset = 0;
 
     system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
     sleep(2);

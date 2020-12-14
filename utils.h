@@ -139,7 +139,7 @@ int set_wireless_interface(char *name);
 int get_service_port();
 int set_service_port(int port);
 char* get_default_wireless_interface_info();
-void clear_interfaces_resource();
+int clear_interfaces_resource();
 char* get_all_hapd_conf_files();
 
 size_t strlcpy(char *dest, const char *src, size_t siz);
