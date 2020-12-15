@@ -67,7 +67,7 @@ void register_apis() {
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_START_UP, NULL, start_up_sta_handler);
-    register_api(API_STA_SET_PHY_NODE, NULL, set_sta_phy_mode_handler);
+    register_api(API_STA_SET_PHY_MODE, NULL, set_sta_phy_mode_handler);
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, set_sta_channel_width_handler);
     register_api(API_STA_POWER_SAVE, NULL, set_sta_power_save_handler);
 }

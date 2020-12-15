@@ -65,7 +65,7 @@ struct indigo_api {
 #define API_STA_SEND_BTM_QUERY                  0x2006
 #define API_STA_SEND_ANQP_QUERY                 0x2007
 #define API_STA_START_UP                        0x2008
-#define API_STA_SET_PHY_NODE                    0x2009
+#define API_STA_SET_PHY_MODE                    0x2009
 #define API_STA_SET_CHANNEL_WIDTH               0x200a
 #define API_STA_POWER_SAVE                      0x200b
 
