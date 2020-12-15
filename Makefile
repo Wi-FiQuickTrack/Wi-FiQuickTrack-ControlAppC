@@ -1,7 +1,7 @@
 # Type is laptop or openwrt
 TYPE = laptop
 # Role is dut or platform
-ROLE = tp
+ROLE = dut
 # Package Version
 VERSION = "1.0.2"
 
