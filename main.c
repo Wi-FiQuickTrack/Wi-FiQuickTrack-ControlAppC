@@ -135,14 +135,14 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
         goto done;
     }
 
-    /* TODO: Optional, use timer to handle the execution */
+    /* Optional, use timer to handle the execution */
     /* Handle & Response. Call API handle(), assemble packet by response wrapper and send back to source address. */
     if (api->handle && api->handle(&req, &resp) == 0) {
         indigo_logger(LOG_LEVEL_INFO, "API %s: Return execution result", api->name);
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
         sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
     } else {
-        indigo_logger(LOG_LEVEL_DEBUG, "API %s (0x%04x): No handle function", req.hdr.type, api ? api->name : "Unknown");
+        indigo_logger(LOG_LEVEL_DEBUG, "API %s (0x%04x): No handle function", api ? api->name : "Unknown", req.hdr.type);
     }
 
 done:
