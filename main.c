@@ -162,11 +162,29 @@ static void usage() {
     printf("  -p = port number of the application\n\n");
 }
 
+static void print_welcome() {
+#ifdef _DUT_
+    printf("Welcome to use Indigo Control App DUT version");
+#else
+    printf("Welcome to use Indigo Control App Platform version");
+#endif
+
+#ifdef _VERSION_
+    printf(" %s.\n", _VERSION_);
+#else
+    printf(".\n");
+#endif
+}
+
 /* Parse the commandline parameters */
 static int parse_parameters(int argc, char *argv[]) {
     int c;
 
+#ifdef _VERSION_
+    while ((c = getopt(argc, argv, "i:hp:dcv")) != -1) {
+#else
     while ((c = getopt(argc, argv, "i:hp:dc")) != -1) {
+#endif
         switch (c) {
         case 'c':
             capture_packet = 1;
@@ -183,6 +201,11 @@ static int parse_parameters(int argc, char *argv[]) {
         case 'p':
             set_service_port(atoi(optarg));
             break;
+#ifdef _VERSION_
+        case 'v':
+            print_welcome();
+            return 1;
+#endif
         }
     }
     return 0;
@@ -190,11 +213,6 @@ static int parse_parameters(int argc, char *argv[]) {
 
 int main(int argc, char* argv[]) {
     /* Welcome message */
-#ifdef _DUT_
-    printf("Welcome to use Indigo Control App DUT version.\n");
-#else
-    printf("Welcome to use Indigo Control App Platform version.\n");
-#endif
 
     /* Initiate the application */
     set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);

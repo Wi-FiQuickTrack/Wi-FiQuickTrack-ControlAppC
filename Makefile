@@ -1,7 +1,9 @@
 # Type is laptop or openwrt
 TYPE = laptop
 # Role is dut or platform
-ROLE = dut
+ROLE = tp
+# Package Version
+VERSION = "1.0.2"
 
 OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o
 CFLAGS += -g
@@ -21,6 +23,7 @@ CFLAGS += -D_OPENWRT_
 CFLAGS += -D_WTS_OPENWRT_
 endif
 
+# Define the app is for DUT or platform
 ifeq ($(ROLE),dut)
 OBJS += indigo_api_callback_dut.o vendor_specific_dut.o
 CFLAGS += -D_DUT_
@@ -28,6 +31,11 @@ else
 OBJS += indigo_api_callback_tp.o vendor_specific_tp.o
 CFLAGS += -DCONFIG_CTRL_IFACE_UDP
 CFLAGS += -D_TEST_PLATFORM_
+endif
+
+# Define the package version
+ifneq ($(VERSION),)
+CFLAGS += -D_VERSION_='$(VERSION)'
 endif
 
 all: app
