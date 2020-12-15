@@ -366,7 +366,7 @@ int send_broadcast_arp(char *target_ip, int *send_count, int rate) {
     sscanf(buffer, "%*s %d", &recv);
 #else
     //arping output format: 1 packets transmitted, 1 packets received,   0% unanswered (0 extra)
-    fscanf(fp, "%d %*s %*s %d", &recv , send_count);
+    fscanf(fp, "%d %*s %*s %d", send_count, &recv);
 #endif
     indigo_logger(LOG_LEVEL_INFO, "ARP TEST - send: %d recv: %d", *send_count, recv );
     pclose(fp);
