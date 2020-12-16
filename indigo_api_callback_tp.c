@@ -1161,7 +1161,7 @@ done:
 static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[256], response[1024], log_level[TLV_VALUE_SIZE];
+    char buffer[256], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
     size_t resp_len;
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
@@ -1178,9 +1178,11 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
 
     tlv = find_wrapper_tlv_by_id(req, TLV_CONTROL_INTERFACE);
     if (tlv) {
-        set_wpas_ctrl_path(tlv->value);
         memset(buffer, 0, sizeof(buffer));
-        len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", tlv->value);
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        set_wpas_ctrl_path(value);
+        len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", value);
         if (len) {
             write_file(get_wpas_conf_file(), buffer, len);
         }
