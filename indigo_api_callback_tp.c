@@ -54,7 +54,6 @@ void register_apis() {
     register_api(API_AP_CONFIGURE, NULL, configure_ap_handler);
     register_api(API_AP_TRIGGER_CHANSWITCH, NULL, trigger_ap_channel_switch);
     register_api(API_AP_SEND_DISCONNECT, NULL, send_ap_disconnect_handler);
-    register_api(API_AP_SET_PARAM , NULL, set_ap_parameter_handler);
     register_api(API_AP_SEND_BTM_REQ, NULL, send_ap_btm_handler);
     register_api(API_AP_SEND_ARP_TEST, NULL, send_ap_arp_handler);
     /* STA */
@@ -941,66 +940,6 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
     }
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_HOSTAPD_STOP_OK;
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
-    return 0;
-}
-
-static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK;
-    size_t resp_len;
-    char *message = NULL;
-    char buffer[8192];
-    char response[1024];
-    char param_name[32];
-    char param_value[256];
-    struct tlv_hdr *tlv = NULL;
-    struct wpa_ctrl *w = NULL;
-
-    /* Open hostapd UDS socket */
-    w = wpa_ctrl_open(get_hapd_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to hostapd");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_HOSTAPD_CTRL_NOT_OK;
-        goto done;
-    }
-
-    /* ControlApp on DUT */
-    /* TLV: MBO_ASSOC_DISALLOW or GAS_COMEBACK_DELAY */
-    memset(param_value, 0, sizeof(param_value));
-    tlv = find_wrapper_tlv_by_id(req, TLV_MBO_ASSOC_DISALLOW);
-    if (!tlv) {
-        find_wrapper_tlv_by_id(req, TLV_GAS_COMEBACK_DELAY);
-    }
-    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
-        strcpy(param_name, find_hostapd_config_name(tlv->id));
-        memcpy(param_value, tlv->value, tlv->len);
-    } else {
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_INSUFFICIENT_TLV;
-        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_MBO_ASSOC_DISALLOW or TLV_GAS_COMEBACK_DELAY");
-        goto done;
-    }
-    /* Assemble hostapd command */
-    memset(buffer, 0, sizeof(buffer));
-    snprintf(buffer, sizeof(buffer), "SET %s %s", param_name, param_value);
-    /* Send command to hostapd UDS socket */
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        message = TLV_VALUE_HOSTAPD_RESP_NOT_OK;
-        goto done;
-    }
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_OK;
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);

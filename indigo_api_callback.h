@@ -143,7 +143,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
