@@ -28,10 +28,12 @@
 #include "indigo_api.h"
 #include "utils.h"
 
+/* Structure to initiate the API list and handlers */
 struct indigo_api indigo_api_list[] = {
+    /* Common */
     { API_CMD_RESPONSE, "CMD_RESPONSE", NULL, NULL },
     { API_CMD_ACK, "CMD_ACK", NULL, NULL },
-
+    /* AP specific */
     { API_AP_START_UP, "AP_START_UP", NULL, NULL },
     { API_AP_STOP, "AP_STOP", NULL, NULL },
     { API_AP_CONFIGURE, "AP_CONFIGURE", NULL, NULL },
@@ -40,7 +42,7 @@ struct indigo_api indigo_api_list[] = {
     { API_AP_SET_PARAM, "API_AP_SET_PARAM", NULL, NULL },
     { API_AP_SEND_BTM_REQ, "API_AP_SEND_BTM_REQ", NULL, NULL },
     { API_AP_SEND_ARP_TEST, "API_AP_SEND_ARP_TEST", NULL, NULL },
-
+    /* Station specific */
     { API_STA_START_UP, "STA_START_UP", NULL, NULL },
     { API_STA_ASSOCIATE, "STA_ASSOCIATE", NULL, NULL },
     { API_STA_CONFIGURE, "STA_CONFIGURE", NULL, NULL },
@@ -53,7 +55,7 @@ struct indigo_api indigo_api_list[] = {
     { API_STA_SET_PHY_MODE, "STA_SET_PHY_MODE", NULL, NULL },
     { API_STA_SET_CHANNEL_WIDTH, "STA_SET_CHANNEL_WIDTH", NULL, NULL },
     { API_STA_POWER_SAVE, "STA_POWER_SAVE", NULL, NULL },
-
+    /* Network operation. E.g., get/set IP address, get MAC address, send the UDP data and reset */
     { API_GET_IP_ADDR, "GET_IP_ADDR", NULL, NULL },
     { API_GET_MAC_ADDR, "GET_MAC_ADDR", NULL, NULL },
     { API_GET_CONTROL_APP_VERSION, "GET_CONTROL_APP_VERSION", NULL, NULL },
@@ -65,6 +67,7 @@ struct indigo_api indigo_api_list[] = {
     { API_INDIGO_SEND_LOOP_BACK_DATA, "INDIGO_SEND_LOOP_BACK_DATA", NULL, NULL },
 };
 
+/* Structure to declare the TLV list */
 struct indigo_tlv indigo_tlv_list[] = {
     { TLV_SSID, "SSID" },
     { TLV_CHANNEL, "CHANNEL" },
@@ -233,6 +236,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_CONTROL_APP_VERSION, "CONTROL_APP_VERSION" },
 };
 
+/* Find the type of the API stucture by the ID from the list */
 char* get_api_type_by_id(int id) {
     int i = 0;
     for (i = 0; i < sizeof(indigo_api_list)/sizeof(struct indigo_api); i++) {
@@ -243,6 +247,7 @@ char* get_api_type_by_id(int id) {
     return "Unknown";
 }
 
+/* Find the API stucture by the ID from the list */
 struct indigo_api* get_api_by_id(int id) {
     int i = 0;
     for (i = 0; i < sizeof(indigo_api_list)/sizeof(struct indigo_api); i++) {
@@ -253,6 +258,7 @@ struct indigo_api* get_api_by_id(int id) {
     return NULL;
 }
 
+/* Find the TLV by the ID from the list */
 struct indigo_tlv* get_tlv_by_id(int id) {
     int i = 0;
 
@@ -264,9 +270,10 @@ struct indigo_tlv* get_tlv_by_id(int id) {
     return NULL;
 }
 
-
-// Other file
+/* The generic function generates the ACK/NACK response */
+/* seq:    integer which should match the sequence of the request */
 /* status: 0 - ACK, 1 - NACK */
+/* reason: string for the reason code */
 void fill_wrapper_ack(struct packet_wrapper *wrapper, int seq, int status, char *reason) {
     wrapper->hdr.version = API_VERSION;
     wrapper->hdr.type = API_CMD_ACK;
@@ -288,6 +295,7 @@ void fill_wrapper_ack(struct packet_wrapper *wrapper, int seq, int status, char 
     memcpy(wrapper->tlv[1]->value, reason, wrapper->tlv[1]->len);
 }
 
+/* Provide the function to register the API handler */
 void register_api(int id, api_callback_func verify, api_callback_func handle) {
     struct indigo_api *api;
     api = get_api_by_id(id);
@@ -299,6 +307,7 @@ void register_api(int id, api_callback_func verify, api_callback_func handle) {
     }
 }
 
+/* Fill the message header structure to the wrapper */
 void fill_wrapper_message_hdr(struct packet_wrapper *wrapper, int msg_type, int seq) {
     wrapper->hdr.version = API_VERSION;
     wrapper->hdr.type = msg_type;
@@ -307,6 +316,7 @@ void fill_wrapper_message_hdr(struct packet_wrapper *wrapper, int msg_type, int 
     wrapper->hdr.reserved2 = API_RESERVED_BYTE;
 }
 
+/* Fill the TLV structure to the wrapper (for one byte value) */
 void fill_wrapper_tlv_byte(struct packet_wrapper *wrapper, int id, char value) {
     wrapper->tlv[wrapper->tlv_num] = malloc(sizeof(struct tlv_hdr));
     wrapper->tlv[wrapper->tlv_num]->id = id;
@@ -316,6 +326,7 @@ void fill_wrapper_tlv_byte(struct packet_wrapper *wrapper, int id, char value) {
     wrapper->tlv_num++;
 }
 
+/* Fill the TLV structure to the wrapper (for multiple bytes value) */
 void fill_wrapper_tlv_bytes(struct packet_wrapper *wrapper, int id, int len, char* value) {
     wrapper->tlv[wrapper->tlv_num] = malloc(sizeof(struct tlv_hdr));
     wrapper->tlv[wrapper->tlv_num]->id = id;
