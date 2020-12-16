@@ -61,7 +61,6 @@ void register_apis() {
     register_api(API_STA_DISCONNECT, NULL, stop_sta_handler);
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
     register_api(API_STA_REASSOCIATE, NULL, send_sta_reconnect_handler);
-    register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_START_UP, NULL, start_up_sta_handler);
     register_api(API_STA_SET_PHY_MODE, NULL, set_sta_phy_mode_handler);
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, set_sta_channel_width_handler);
@@ -1360,95 +1359,6 @@ static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_
     }
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_WPA_S_RECONNECT_OK;
-    
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
-    return 0;
-}
-
-static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
-    char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
-    char buffer[1024];
-    char response[1024];
-    char bssid[256];
-    char anqp_info_id[256];
-    struct tlv_hdr *tlv = NULL;
-    struct wpa_ctrl *w = NULL;
-    size_t resp_len;
-
-    /* It may need to check whether to just scan */
-    memset(buffer, 0, sizeof(buffer));
-    len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}", WPAS_CTRL_PATH_DEFAULT);
-    if (len) {
-        write_file(get_wpas_conf_file(), buffer, len);
-    }
-
-    memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -c %s -i %s", get_wpas_conf_file(), get_wireless_interface());
-    len = system(buffer);
-    sleep(2);
-
-    /* Open wpa_supplicant UDS socket */
-    w = wpa_ctrl_open(get_wpas_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
-        goto done;
-    }
-    // SCAN
-    memset(buffer, 0, sizeof(buffer));
-    memset(response, 0, sizeof(response));
-    sprintf(buffer, "SCAN");
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        goto done;
-    }
-    sleep(5);
-
-    /* TLV: BSSID */
-    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
-    if (tlv) {
-        memcpy(bssid, tlv->value, tlv->len);
-    } else {
-        goto done;
-    }
-
-    /* TLV: ANQP_INFO_ID */
-    tlv = find_wrapper_tlv_by_id(req, TLV_ANQP_INFO_ID);
-    if (tlv) {
-        memcpy(anqp_info_id, tlv->value, tlv->len);
-    }
-
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ANQP_GET %s", bssid);
-    if (strcmp(anqp_info_id, "NeighborReportReq") == 0) {
-        strcat(buffer, " 272");
-    } else if (strcmp(anqp_info_id, "QueryListWithCellPref") == 0) {
-        strcat(buffer, " mbo:2");
-    }
-
-    /* Send command to wpa_supplicant UDS socket */
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-    
-    printf("%s -> resp: %s\n", buffer, response);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        goto done;
-    }
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_OK;
     
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
