@@ -227,8 +227,6 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_DUT_UDP_PORT, "DUT_UDP_PORT" },
     { TLV_GLOBAL_CTRL_IFACE, "GLOBAL_CTRL_IFACE" },
     { TLV_OWE_TRANSITION_BSS_IDENTIFIER, "OWE_TRANSITION_BSS_IDENTIFIER" },
-
-    // class IndigoResponseTLV
     { TLV_MESSAGE, "MESSAGE" },
     { TLV_STATUS, "STATUS" },
     { TLV_DUT_WLAN_IP_ADDR, "DUT_WLAN_IP_ADDR" },
@@ -297,7 +295,8 @@ void fill_wrapper_ack(struct packet_wrapper *wrapper, int seq, int status, char 
 
 /* Provide the function to register the API handler */
 void register_api(int id, api_callback_func verify, api_callback_func handle) {
-    struct indigo_api *api;
+    struct indigo_api *api = NULL;
+
     api = get_api_by_id(id);
     if (api) {
         api->verify = verify;
