@@ -61,7 +61,6 @@ void register_apis() {
     register_api(API_STA_DISCONNECT, NULL, stop_sta_handler);
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
     register_api(API_STA_REASSOCIATE, NULL, send_sta_reconnect_handler);
-    register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_START_UP, NULL, start_up_sta_handler);
     register_api(API_STA_SET_PHY_MODE, NULL, set_sta_phy_mode_handler);
@@ -1361,66 +1360,6 @@ static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_
     }
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_WPA_S_RECONNECT_OK;
-    
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
-    return 0;
-}
-
-static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK;
-    size_t resp_len;
-    char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
-    char buffer[1024];
-    char response[1024];
-    char reason_code[256];
-    char candidate_list[256];
-    struct tlv_hdr *tlv = NULL;
-    struct wpa_ctrl *w = NULL;
-
-    /* Open wpa_supplicant UDS socket */
-    w = wpa_ctrl_open(get_wpas_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
-        goto done;
-    }
-    /* TLV: BTMQUERY_REASON_CODE */
-    tlv = find_wrapper_tlv_by_id(req, TLV_BTMQUERY_REASON_CODE);
-    if (tlv) {
-        memcpy(reason_code, tlv->value, tlv->len);
-    } else {
-        goto done;
-    }
-
-    /* TLV: TLV_CANDIDATE_LIST */
-    tlv = find_wrapper_tlv_by_id(req, TLV_CANDIDATE_LIST);
-    if (tlv) {
-        memcpy(candidate_list, tlv->value, tlv->len);
-    }
-
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "WNM_BSS_QUERY %s", reason_code);
-    if (strcmp(candidate_list, "1") == 0) {
-        strcat(buffer, " list");
-    }
-
-    /* Send command to wpa_supplicant UDS socket */
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        goto done;
-    }
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_OK;
     
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
