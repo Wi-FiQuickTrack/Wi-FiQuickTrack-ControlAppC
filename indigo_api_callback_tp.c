@@ -53,7 +53,6 @@ void register_apis() {
     register_api(API_AP_STOP, NULL, stop_ap_handler);
     register_api(API_AP_CONFIGURE, NULL, configure_ap_handler);
     register_api(API_AP_TRIGGER_CHANSWITCH, NULL, trigger_ap_channel_switch);
-    register_api(API_AP_SEND_DISCONNECT, NULL, send_ap_disconnect_handler);
     register_api(API_AP_SEND_ARP_TEST, NULL, send_ap_arp_handler);
     /* STA */
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
@@ -878,70 +877,6 @@ done:
     //fill_wrapper_tlv_byte(resp, TLV_ARP_SENT_NUM, send);
     fill_wrapper_tlv_bytes(resp, TLV_ARP_RECV_NUM, strlen(recv_count), recv_count);
 
-    return 0;
-}
-
-static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
-    char buffer[S_BUFFER_LEN];
-    char response[S_BUFFER_LEN];
-    char address[32];
-    char *parameter[] = {"pidof", "hostapd", NULL};
-    char *message = NULL;
-    struct tlv_hdr *tlv = NULL;
-    struct wpa_ctrl *w = NULL;
-    size_t resp_len;
-
-    /* Check hostapd status. TODO: it may use UDS directly */
-    memset(buffer, 0, sizeof(buffer));
-    len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
-    if (len == 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to find hostapd PID");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_HOSTAPD_NOT_OK;
-        goto done;
-    }
-    /* Open hostapd UDS socket */
-    w = wpa_ctrl_open(get_hapd_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to hostapd");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_HOSTAPD_CTRL_NOT_OK;
-        goto done;
-    }
-    /* ControlApp on DUT */
-    /* TLV: TLV_ADDRESS */
-    memset(address, 0, sizeof(address));
-    tlv = find_wrapper_tlv_by_id(req, TLV_ADDRESS);
-    if (tlv) {
-        memcpy(address, tlv->value, tlv->len);
-    } else {
-        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV:Address");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_INSUFFICIENT_TLV;
-        goto done;
-    }
-    /* Assemble hostapd command */
-    memset(buffer, 0, sizeof(buffer));
-    snprintf(buffer, sizeof(buffer), "DISASSOCIATE %s reason=1", address);
-    /* Send command to hostapd UDS socket */
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        message = TLV_VALUE_HOSTAPD_RESP_NOT_OK;
-        goto done;
-    }
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_HOSTAPD_STOP_OK;
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
     return 0;
 }
 
