@@ -60,7 +60,6 @@ void register_apis() {
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
     register_api(API_STA_DISCONNECT, NULL, stop_sta_handler);
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
-    register_api(API_STA_REASSOCIATE, NULL, send_sta_reconnect_handler);
     register_api(API_STA_START_UP, NULL, start_up_sta_handler);
     register_api(API_STA_SET_PHY_MODE, NULL, set_sta_phy_mode_handler);
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, set_sta_channel_width_handler);
@@ -1321,44 +1320,6 @@ static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet
     }
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_WPA_S_DISCONNECT_OK;
-    
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
-    return 0;
-}
-
-static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    struct wpa_ctrl *w = NULL;
-    char *message = TLV_VALUE_WPA_S_RECONNECT_NOT_OK;
-    char buffer[256], response[1024];
-    int len, status, i;
-    size_t resp_len;
-
-    /* Open WPA supplicant UDS socket */
-    w = wpa_ctrl_open(get_wpas_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_WPA_S_RECONNECT_NOT_OK;
-        goto done;
-    }
-    /* Send command to hostapd UDS socket */
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "RECONNECT");
-    memset(response, 0, sizeof(response));
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        goto done;
-    }
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_WPA_S_RECONNECT_OK;
     
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
