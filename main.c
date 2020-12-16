@@ -38,11 +38,14 @@
 #include "indigo_api.h"
 #include "utils.h"
 
+/* Internal functions */
 static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx);
 static int parse_parameters(int argc, char *argv[]);
 static void usage();
-extern int capture_packet;
-extern int debug_packet;
+
+/* External variables */
+extern int capture_packet; /* debug. Write the received packets to files */
+extern int debug_packet;   /* used by the packet hexstring print */
 
 /* Initiate the service port. */
 static int control_socket_init(int port) {
@@ -162,6 +165,7 @@ static void usage() {
     printf("  -p = port number of the application\n\n");
 }
 
+/* Show the welcome message with role and version */
 static void print_welcome() {
 #ifdef _DUT_
     printf("Welcome to use Indigo Control App DUT version");
@@ -213,6 +217,7 @@ static int parse_parameters(int argc, char *argv[]) {
 
 int main(int argc, char* argv[]) {
     /* Welcome message */
+    print_welcome();
 
     /* Initiate the application */
     set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);
@@ -223,10 +228,12 @@ int main(int argc, char* argv[]) {
     set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT);
     set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);
 
+    /* Parse the application arguments */
     if (parse_parameters(argc, argv)) {
         return 0;
     }
 
+    /* Print the run-time information */
     indigo_logger(LOG_LEVEL_INFO, "Indigo control app running at: %d", get_service_port());
     indigo_logger(LOG_LEVEL_INFO, "Wireless Interface: %s", get_wireless_interface());
     indigo_logger(LOG_LEVEL_INFO, "Hostapd Global Control Interface: %s", get_hapd_global_ctrl_path());
@@ -236,12 +243,13 @@ int main(int argc, char* argv[]) {
     /* Register the callback */
     register_apis();
 
+    /* Intiate the vendor's specific startup commands */
     vendor_init();
 
     /* Start eloop */
     eloop_init(NULL);
 
-    /* bind the service port and register to eloop */
+    /* Bind the service port and register to eloop */
     if (control_socket_init(get_service_port()) == 0) {
         eloop_run();
     } else {
