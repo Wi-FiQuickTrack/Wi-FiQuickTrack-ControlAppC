@@ -54,7 +54,7 @@ struct indigo_api {
 #define API_AP_SEND_DISCONNECT                  0x1004
 #define API_AP_SET_PARAM                        0x1005
 #define API_AP_SEND_BTM_REQ                     0x1006
-#define API_AP_SEND_ARP_TEST                    0x1007
+#define API_AP_SEND_ARP_MSGS                    0x1007
 
 #define API_STA_ASSOCIATE                       0x2000
 #define API_STA_CONFIGURE                       0x2001

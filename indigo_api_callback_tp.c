@@ -52,7 +52,7 @@ void register_apis() {
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
     register_api(API_AP_CONFIGURE, NULL, configure_ap_handler);
-    register_api(API_AP_SEND_ARP_TEST, NULL, send_ap_arp_handler);
+    register_api(API_AP_SEND_ARP_MSGS, NULL, send_ap_arp_handler);
     /* STA */
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
