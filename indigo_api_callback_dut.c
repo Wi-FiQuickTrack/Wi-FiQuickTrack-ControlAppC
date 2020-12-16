@@ -79,6 +79,8 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
 int wpas_debug_level = DEBUG_LEVEL_DISABLE;
 
+static char pac_file_path[S_BUFFER_LEN] = {0};
+
 static int get_debug_level(int value) {
     if (value == 0) {
         return DEBUG_LEVEL_DISABLE;
@@ -157,7 +159,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         system(buffer);
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
-        }     
+        }
     } else if (atoi(role) == DUT_TYPE_APUT) {
         /* stop the hostapd and release IP address */
         system("killall hostapd >/dev/null 2>/dev/null");
@@ -1361,6 +1363,12 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     if (reset) {
         /* clean the log */
         system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
+
+        /* remove pac file if needed */
+        if (strlen(pac_file_path)) {
+            remove_pac_file(pac_file_path);
+            memset(pac_file_path, 0, sizeof(pac_file_path));
+        }        
     }
 
     memset(buffer, 0, sizeof(buffer));
@@ -1471,6 +1479,9 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
                 }
             } else if ((wrapper->tlv[i]->id == TLV_CA_CERT) && strcmp("DEFAULT", value) == 0) {
                 sprintf(value, "/etc/ssl/certs/ca-certificates.crt");
+            } else if ((wrapper->tlv[i]->id == TLV_PAC_FILE)) {
+                memset(pac_file_path, 0, sizeof(pac_file_path));
+                snprintf(pac_file_path, sizeof(pac_file_path), "%s", value);
             } else if (wrapper->tlv[i]->id == TLV_SERVER_CERT) {
                 memset(buf, 0, sizeof(buf));
                 get_server_cert_hash(value, buf);

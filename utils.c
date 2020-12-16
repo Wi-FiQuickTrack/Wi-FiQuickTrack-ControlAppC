@@ -943,3 +943,23 @@ int insert_wpa_network_config(char *config) {
     rename(tmp_path, path);
     return 0;
 }
+
+void remove_pac_file(char *path) {
+    char pac_path[S_BUFFER_LEN];
+
+    memset(pac_path, 0, sizeof(pac_path));
+    if (!strlen(path)) {
+        return;
+    } else if (path[0] != '/') {
+        snprintf(pac_path, sizeof(pac_path), "/%s", path);
+    } else {
+        snprintf(pac_path, sizeof(pac_path), "%s", path);
+    }
+
+    indigo_logger(LOG_LEVEL_INFO, "Remove PAC file: [%s]", pac_path);
+
+    if(access(pac_path, F_OK) == 0) {
+        unlink(pac_path);
+    }
+}
+

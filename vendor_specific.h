@@ -55,7 +55,7 @@ void vendor_init();
  * for indigo c control application. 
  */
 struct sta_driver_ops {
-	const char *name;
+    const char *name;
     int (*set_channel_width)(void);
     void (*set_phy_mode)(void);
 };
