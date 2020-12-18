@@ -1161,7 +1161,7 @@ done:
 static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[256], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
+    char buffer[S_BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
     size_t resp_len;
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
