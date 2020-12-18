@@ -51,7 +51,7 @@ extern int debug_packet;   /* used by the packet hexstring print */
 
 /* Initiate the service port. */
 static int control_socket_init(int port) {
-    int s;
+    int s = -1;
     char cmd[S_BUFFER_LEN];
     struct sockaddr_in addr;
 
@@ -82,7 +82,7 @@ static int control_socket_init(int port) {
         close(s);
         return -1;
     }
-    return 0;
+    return s;
 }
 
 /* Callback function of the Indigo API. */
@@ -230,6 +230,8 @@ static void handle_term(int sig, void *eloop_ctx, void *signal_ctx) {
 }
 
 int main(int argc, char* argv[]) {
+    int service_socket = -1;
+
     /* Welcome message */
     print_welcome();
 
@@ -268,7 +270,8 @@ int main(int argc, char* argv[]) {
     eloop_register_signal(SIGTERM, handle_term, NULL);
 
     /* Bind the service port and register to eloop */
-    if (control_socket_init(get_service_port()) == 0) {
+    service_socket = control_socket_init(get_service_port());
+    if (service_socket >= 0) {
         eloop_run();
     } else {
         indigo_logger(LOG_LEVEL_INFO, "Failed to initiate the UDP socket");
@@ -277,6 +280,10 @@ int main(int argc, char* argv[]) {
     /* Stop eloop */
     eloop_destroy();
     indigo_logger(LOG_LEVEL_INFO, "ControlAppC stops");
+    if (service_socket >= 0) {
+        indigo_logger(LOG_LEVEL_INFO, "Close service port: %d", get_service_port());
+        close(service_socket);
+    }
 
     return 0;
 }
