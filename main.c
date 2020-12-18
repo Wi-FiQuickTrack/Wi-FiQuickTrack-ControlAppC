@@ -226,8 +226,7 @@ static int parse_parameters(int argc, char *argv[]) {
 static void handle_term(int sig, void *eloop_ctx, void *signal_ctx) {
     indigo_logger(LOG_LEVEL_INFO, "Signal %d received - terminating\n", sig);
     eloop_terminate();
-    system("killall hostapd >/dev/null 2>/dev/null");
-    system("killall wpa_supplicant >/dev/null 2>/dev/null");
+    vendor_deinit();
 }
 
 int main(int argc, char* argv[]) {

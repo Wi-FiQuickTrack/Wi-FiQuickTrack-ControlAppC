@@ -45,6 +45,7 @@
 #define BRIDGE_WLANS                                "br-wlans"
 
 void vendor_init();
+void vendor_deinit();
 
 #ifdef _TEST_PLATFORM_
 

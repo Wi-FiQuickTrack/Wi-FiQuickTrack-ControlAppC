@@ -92,6 +92,15 @@ void vendor_init() {
 #endif
 }
 
+/* Be invoked when terminate controlApp */
+void vendor_deinit() {
+    system("killall hostapd >/dev/null 2>/dev/null");
+#ifdef _OPENWRT_
+    system("killall hostapd-wfa >/dev/null 2>/dev/null");
+#endif
+    system("killall wpa_supplicant >/dev/null 2>/dev/null");
+}
+
 int set_channel_width() {
     int ret = -1;
 
