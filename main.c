@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <sys/types.h>
@@ -222,6 +223,13 @@ static int parse_parameters(int argc, char *argv[]) {
     return 0;
 }
 
+static void handle_term(int sig, void *eloop_ctx, void *signal_ctx) {
+    indigo_logger(LOG_LEVEL_INFO, "Signal %d received - terminating\n", sig);
+    eloop_terminate();
+    system("killall hostapd >/dev/null 2>/dev/null");
+    system("killall wpa_supplicant >/dev/null 2>/dev/null");
+}
+
 int main(int argc, char* argv[]) {
     /* Welcome message */
     print_welcome();
@@ -255,6 +263,10 @@ int main(int argc, char* argv[]) {
 
     /* Start eloop */
     eloop_init(NULL);
+
+    /* Register SIGTERM */
+    eloop_register_signal(SIGINT, handle_term, NULL);
+    eloop_register_signal(SIGTERM, handle_term, NULL);
 
     /* Bind the service port and register to eloop */
     if (control_socket_init(get_service_port()) == 0) {
