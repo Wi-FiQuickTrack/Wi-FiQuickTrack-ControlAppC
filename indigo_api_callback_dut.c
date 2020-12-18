@@ -802,9 +802,9 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
 
         goto done;
     } else {
-        /* TLV: TLV_DEVICE_ROLE */
+        /* TLV: TLV_ROLE */
         memset(role, 0, sizeof(role));
-        tlv = find_wrapper_tlv_by_id(req, TLV_DEVICE_ROLE);
+        tlv = find_wrapper_tlv_by_id(req, TLV_ROLE);
         if (tlv) {
             memcpy(role, tlv->value, tlv->len);
         }
