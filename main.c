@@ -68,7 +68,7 @@ static int control_socket_init(int port) {
     if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to bind server socket: %s", strerror(errno));
         if (errno == EADDRINUSE) {
-            sprintf(cmd, "netstat -na | grep %d", port);
+            sprintf(cmd, "netstat -lunatp | grep %d", port);
             system(cmd);
         }
         close(s);
