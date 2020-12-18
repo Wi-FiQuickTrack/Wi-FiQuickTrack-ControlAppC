@@ -1824,7 +1824,8 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     }
 
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -t -c %s -i %s", get_wpas_conf_file(), get_wireless_interface());
+    sprintf(buffer, "wpa_supplicant -B -t -c %s -i %s -f /var/log/supplicant.log", 
+                    get_wpas_conf_file(), get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
@@ -1847,7 +1848,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
         goto done;
     }
-    sleep(5);
+    sleep(10);
 
     /* TLV: BSSID */
     tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
