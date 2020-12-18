@@ -32,6 +32,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <signal.h>
+#include <errno.h>
 
 #include "vendor_specific.h"
 #include "eloop.h"
@@ -50,12 +51,13 @@ extern int debug_packet;   /* used by the packet hexstring print */
 /* Initiate the service port. */
 static int control_socket_init(int port) {
     int s;
+    char cmd[S_BUFFER_LEN];
     struct sockaddr_in addr;
 
     /* Open UDP socket */
     s = socket(PF_INET, SOCK_DGRAM, 0);
     if (s < 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to open server socket");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open server socket: %s", strerror(errno));
         return -1;
     }
 
@@ -64,7 +66,11 @@ static int control_socket_init(int port) {
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to bind server socket");
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to bind server socket: %s", strerror(errno));
+        if (errno == EADDRINUSE) {
+            sprintf(cmd, "netstat -na | grep %d", port);
+            system(cmd);
+        }
         close(s);
         return -1;
     }
@@ -72,6 +78,7 @@ static int control_socket_init(int port) {
     /* Register to eloop and ready for the socket event */
     if (eloop_register_read_sock(s, control_receive_message, NULL, NULL)) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to initiate ControlAppC");
+        close(s);
         return -1;
     }
     return 0;
