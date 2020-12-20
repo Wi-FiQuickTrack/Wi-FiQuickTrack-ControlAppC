@@ -27,6 +27,7 @@
 
 #include "eloop.h"
 
+void vendor_deinit();
 
 struct eloop_sock {
 	int sock;
@@ -211,6 +212,7 @@ static void eloop_handle_alarm(int sig)
 		"is a bug that ends up in a busy loop that "
 		"prevents clean shutdown.\n"
 		"Killing program forcefully.\n");
+	vendor_deinit();
 	exit(1);
 }
 #endif /* CONFIG_NATIVE_WINDOWS */
