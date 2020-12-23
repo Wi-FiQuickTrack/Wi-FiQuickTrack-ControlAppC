@@ -68,7 +68,8 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_CONTROL_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
+    fill_wrapper_tlv_bytes(resp, TLV_TEST_PLATFORM_APP_VERSION, 
+        strlen(TLV_VALUE_TEST_PLATFORM_APP_VERSION), TLV_VALUE_TEST_PLATFORM_APP_VERSION);
     return 0;
 }
 

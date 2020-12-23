@@ -254,6 +254,7 @@ struct indigo_api {
 #define TLV_LOOP_BACK_DATA_RECEIVED             0xa005
 #define TLV_LOOP_BACK_DATA_SENT                 0xa006
 #define TLV_ARP_RECV_NUM                        0xa007
+#define TLV_TEST_PLATFORM_APP_VERSION           0xa008
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
@@ -263,6 +264,7 @@ struct indigo_api {
 #define TLV_BAND_5GHZ                           "5GHz"
 
 #define TLV_VALUE_APP_VERSION                   "v1.0"
+#define TLV_VALUE_TEST_PLATFORM_APP_VERSION     "v1.0"
 #define TLV_VALUE_OK                            "OK"
 #define TLV_VALUE_NOT_OK                        "Failed"
 #define TLV_VALUE_INSUFFICIENT_TLV              "TLV is insufficient to run the command"
