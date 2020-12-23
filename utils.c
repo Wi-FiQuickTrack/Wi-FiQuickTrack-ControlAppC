@@ -378,7 +378,7 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
         memset(loopback.message, 0, sizeof(loopback.message));
         for (i = 0; (i < packet_size) && (i < sizeof(loopback.message)); i++)
             loopback.message[i] = 0x0A;
-        eloop_register_timeout(0, rate*1000000, send_one_loopback_packet, &loopback, NULL);
+        eloop_register_timeout(0, 0, send_one_loopback_packet, &loopback, NULL);
         indigo_logger(LOG_LEVEL_INFO, "Send continuous loopback data to ip %s port %u",
                       target_ip, target_port);
         return 0;
