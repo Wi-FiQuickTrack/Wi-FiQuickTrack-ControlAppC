@@ -45,6 +45,7 @@ void register_apis() {
     register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
     register_api(API_INDIGO_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
     register_api(API_INDIGO_SEND_LOOP_BACK_DATA, NULL, send_loopback_data_handler);
+    register_api(API_INDIGO_STOP_LOOP_BACK_DATA, NULL, stop_loopback_data_handler);
     /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
     register_api(API_DEVICE_RESET, NULL, reset_device_handler);
@@ -218,6 +219,8 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     } else {
         message = TLV_VALUE_HOSTAPD_STOP_OK;
     }
+
+    stop_loopback_data(NULL);
 
     if (reset) {
         /* clean the log */
@@ -759,6 +762,24 @@ static int stop_loop_back_server_handler(struct packet_wrapper *req, struct pack
     return 0;
 }
 
+/* Tool will send this API to stop continuous data */
+static int stop_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    char recv_count[16], send_count[16];
+    int recvd, sent;
+
+    recvd = stop_loopback_data(&sent);
+    indigo_logger(LOG_LEVEL_INFO, "Stop continuous loopdata data, send: %d receive: %d",
+                  sent, recvd);
+    snprintf(recv_count, sizeof(recv_count), "%d", recvd);
+    snprintf(send_count, sizeof(send_count), "%d", sent);
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_LOOP_BACK_STOP_OK), TLV_VALUE_LOOP_BACK_STOP_OK);
+    fill_wrapper_tlv_bytes(resp, TLV_LOOP_BACK_DATA_RECEIVED, strlen(recv_count), recv_count);
+    fill_wrapper_tlv_bytes(resp, TLV_LOOP_BACK_DATA_SENT, strlen(send_count), send_count);
+
+    return 0;
+}
 
 static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
@@ -811,7 +832,8 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     /* Start loopback */
     snprintf(recv_count, sizeof(recv_count), "0");
     recvd = send_loopback_data(dut_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atof(rate));
-    if (recvd > 0) {
+    /* -1 : Continuous data case uses timer and directly reply OK */
+    if (recvd > 0 || atoi(pkt_count) == -1) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_SEND_LOOPBACK_DATA_OK;
         snprintf(recv_count, sizeof(recv_count), "%d", recvd);

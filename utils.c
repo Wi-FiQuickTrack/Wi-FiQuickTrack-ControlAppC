@@ -53,6 +53,7 @@ int interface_count = 0;
 int configured_interface_count = 0;
 struct interface_info interfaces[8];
 struct interface_info* default_interface;
+static struct loopback_info loopback = {};
 
 void debug_print_timestamp(void) {
     time_t rawtime;
@@ -278,12 +279,63 @@ int loopback_client_status() {
     return !!loopback_socket;
 }
 
+void send_one_loopback_packet(void *eloop_ctx, void *sock_ctx) {
+    struct loopback_info *info = (struct loopback_info *) eloop_ctx;
+    char server_reply[1600];
+    ssize_t recv_len = 0, send_len = 0;
+
+    memset(&server_reply, 0, sizeof(server_reply));
+
+    info->pkt_sent++;
+    send_len = send(info->sock, info->message, strlen(info->message), 0);
+    if (send_len < 0)
+    {
+        indigo_logger(LOG_LEVEL_INFO, "Send failed on packet %d", info->pkt_sent);
+        // In case Tool doesn't send stop or doesn't receive stop
+        if (info->pkt_sent < 1000)
+            eloop_register_timeout(0, info->rate*1000000, send_one_loopback_packet, info, NULL);
+        return;
+    }
+    indigo_logger(LOG_LEVEL_INFO, "Packet %d: Send loopback %d bytes data",
+            info->pkt_sent, send_len);
+
+    recv_len = recv(info->sock, server_reply, sizeof(server_reply), 0);
+    if (recv_len < 0)
+    {
+        indigo_logger(LOG_LEVEL_INFO, "recv failed on packet %d", info->pkt_sent);
+        // In case Tool doesn't send stop or doesn't receive stop
+        if (info->pkt_sent < 1000)
+            eloop_register_timeout(0, info->rate*1000000, send_one_loopback_packet, info, NULL);
+        return;
+    }
+    info->pkt_rcv++;
+    indigo_logger(LOG_LEVEL_INFO, "Receive echo %d bytes data", recv_len);
+
+    eloop_register_timeout(0, info->rate*1000000, send_one_loopback_packet, info, NULL);
+}
+
+/* Stop to send continuous loopback data */
+int stop_loopback_data(int *pkt_sent)
+{
+    if (loopback.sock <= 0)
+        return 0;
+
+    eloop_cancel_timeout(send_one_loopback_packet, &loopback, NULL);
+    close(loopback.sock);
+    loopback.sock = 0;
+    if (pkt_sent)
+        *pkt_sent = loopback.pkt_sent;
+
+    return loopback.pkt_rcv;
+}
+
 int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, double rate) {
     int s = 0, i = 0;
     struct sockaddr_in addr;
     int pkt_sent = 0, pkt_rcv = 0;
     char message[1600], server_reply[1600];
     ssize_t recv_len = 0, send_len = 0;
+    struct timeval timeout;
 
     /* Open UDP socket */
     s = socket(PF_INET, SOCK_DGRAM, 0);
@@ -292,7 +344,13 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
         return -1;
     }
 
-    struct timeval timeout = {1, 0}; //1s
+    if (rate < 1) {
+        timeout.tv_sec = 0;
+        timeout.tv_usec = rate*1000000;
+    } else {
+        timeout.tv_sec = 1;
+        timeout.tv_usec = 0;
+    }
     setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 
@@ -309,12 +367,26 @@ int send_loopback_data(char *target_ip, int target_port, int packet_count, int p
         return -1;
     }
 
-    memset(&message, 0, sizeof(message));
-    for (i = 0; (i < packet_size) && (i < sizeof(message)); i++)
-        message[i] = 0x0A;
-
     indigo_logger(LOG_LEVEL_INFO, "packet_count %d rate %lf\n",
                   packet_count, rate);
+
+    /* Continuous data case: reply OK and use eloop timeout to send data */
+    if (packet_count == -1) {
+        loopback.sock = s;
+        loopback.rate = rate;
+        loopback.pkt_sent = loopback.pkt_rcv = 0;
+        memset(loopback.message, 0, sizeof(loopback.message));
+        for (i = 0; (i < packet_size) && (i < sizeof(loopback.message)); i++)
+            loopback.message[i] = 0x0A;
+        eloop_register_timeout(0, rate*1000000, send_one_loopback_packet, &loopback, NULL);
+        indigo_logger(LOG_LEVEL_INFO, "Send continuous loopback data to ip %s port %u",
+                      target_ip, target_port);
+        return 0;
+    }
+
+    memset(message, 0, sizeof(message));
+    for (i = 0; (i < packet_size) && (i < sizeof(message)); i++)
+        message[i] = 0x0A;
 
     for (pkt_sent = 1; pkt_sent <= packet_count; pkt_sent++) {
         memset(&server_reply, 0, sizeof(server_reply));

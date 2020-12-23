@@ -95,6 +95,14 @@ struct bss_identifier_info {
     int transmitter;
 };
 
+struct loopback_info {
+    int sock;
+    double rate;
+    int pkt_sent;
+    int pkt_rcv;
+    char message[1600];
+};
+
 void indigo_logger(int level, const char *fmt, ...);
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 char* read_file(char *fn);
@@ -106,6 +114,7 @@ int loopback_client_start(char *target_ip, int target_port, char *local_ip, int 
 int loopback_client_stop();
 int loopback_client_status();
 int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, double rate);
+int stop_loopback_data(int *pkt_sent);
 int send_broadcast_arp(char *target_ip, int *send_count, int rate);
 
 int is_bridge_created();
