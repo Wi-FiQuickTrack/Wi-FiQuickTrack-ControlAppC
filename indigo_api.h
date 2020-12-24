@@ -243,6 +243,10 @@ struct indigo_api {
 #define TLV_DUT_UDP_PORT                        0x009e
 #define TLV_GLOBAL_CTRL_IFACE                   0x009f
 #define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x00a2
+#define TLV_FREQ_LIST                           0x00a3
+#define TLV_SHORT_SSID                          0x00a4
+#define TLV_HE_BEACON_TX_SU_PPDU                0x00a5
+#define TLV_HE_6G_ONLY                          0x00a6
 
 // class IndigoResponseTLV
 // List of TLV used in the Indigo API response and ACK messages from the DUT

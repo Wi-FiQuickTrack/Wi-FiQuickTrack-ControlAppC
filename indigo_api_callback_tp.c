@@ -1184,8 +1184,8 @@ done:
 static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[S_BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    char buffer[S_BUFFER_LEN], freq_list[512], ssid[512], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i, freq_list_len, ssid_len;
     size_t resp_len;
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
     struct tlv_hdr *tlv = NULL;
@@ -1199,13 +1199,39 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     system("killall wpa_supplicant >/dev/null 2>/dev/null");
     sleep(3);
 
+    tlv = find_wrapper_tlv_by_id(req, TLV_FREQ_LIST);
+    memset(freq_list, 0, sizeof(freq_list));
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        freq_list_len = sprintf(freq_list, "freq_list=%s\n", value);
+    }
+    
+    tlv = find_wrapper_tlv_by_id(req, TLV_SSID);
+    memset(ssid, 0, sizeof(ssid));
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        ssid_len = sprintf(ssid, "network={\nssid=\"%s\"\nscan_ssid=1\nkey_mgmt=NONE\n}\n", value);
+    }
+    
     tlv = find_wrapper_tlv_by_id(req, TLV_CONTROL_INTERFACE);
     if (tlv) {
         memset(buffer, 0, sizeof(buffer));
         memset(value, 0, sizeof(value));
         memcpy(value, tlv->value, tlv->len);
         set_wpas_ctrl_path(value);
-        len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", value);
+        sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", value);
+        
+        if (freq_list_len) {
+            strcat(buffer, freq_list);
+        }
+        
+        if (ssid_len) {
+            strcat(buffer, ssid);
+        }
+        len = strlen(buffer);
+
         if (len) {
             write_file(get_wpas_conf_file(), buffer, len);
         }
