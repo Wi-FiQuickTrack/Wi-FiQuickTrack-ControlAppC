@@ -190,7 +190,7 @@ static void print_welcome() {
 
 /* Parse the commandline parameters */
 static int parse_parameters(int argc, char *argv[]) {
-    int c;
+    int c, ifs_configured = 0;
 
 #ifdef _VERSION_
     while ((c = getopt(argc, argv, "i:hp:dcv")) != -1) {
@@ -209,6 +209,7 @@ static int parse_parameters(int argc, char *argv[]) {
             return 1;
         case 'i':
             set_wireless_interface(optarg);
+            ifs_configured = 1;
             break;
         case 'p':
             set_service_port(atoi(optarg));
@@ -220,6 +221,13 @@ static int parse_parameters(int argc, char *argv[]) {
 #endif
         }
     }
+
+    if (ifs_configured == 0) {
+        usage();
+        printf("\nWe need to specify the interfaces with -i.\n");
+        return 1;
+    }
+
     return 0;
 }
 
