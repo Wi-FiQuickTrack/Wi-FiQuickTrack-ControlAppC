@@ -290,6 +290,24 @@ static int get_center_freq_index(int channel, int width) {
     return 0;
 }
 
+static int is_ht40plus_chan(int chan) {
+    if (chan == 36 || chan == 44 || chan == 52 || chan == 60 ||
+        chan == 100 || chan == 108 || chan == 116 | chan == 124 ||
+        chan == 132 || chan == 140 || chan == 149 || chan == 157)
+        return 1;
+    else
+        return 0;
+}
+
+static int is_ht40minus_chan(int chan) {
+    if (chan == 40 || chan == 48 || chan == 56 || chan == 64 ||
+        chan == 104 || chan == 112 || chan == 120 | chan == 128 ||
+        chan == 136 || chan == 144 || chan == 153 || chan == 161)
+        return 1;
+    else
+        return 0;
+}
+
 #ifdef _RESERVED_
 /* The function is reserved for the defeault hostapd config */
 #define HOSTAPD_DEFAULT_CONFIG_SSID                 "Indigo"
@@ -513,9 +531,16 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     if (enable_ac == 0 && enable_ax == 0)
         chwidth = 0;
     if (strstr(band, "a")) {
-        strcat(output, "ht_capab=[HT40-][HT40+]\n");
         if (chwidth > 0) {
             int center_freq = get_center_freq_index(channel, chwidth);
+#ifndef _WTS_OPENWRT_
+            if (chwidth == 2) {
+                /* 160M: Need to enable 11h for DFS and enable 11d for 11h */
+                strcat(output, "ieee80211d=1\n");
+                strcat(output, "country_code=US\n");
+                strcat(output, "ieee80211h=1\n");
+            }
+#endif
             if (enable_ac) {
                 if (vht_chwidthset == 0) {
                     sprintf(buffer, "vht_oper_chwidth=%d\n", chwidth);
@@ -523,6 +548,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                 }
                 sprintf(buffer, "vht_oper_centr_freq_seg0_idx=%d\n", center_freq);
                 strcat(output, buffer);
+#ifndef _WTS_OPENWRT_
+                if (chwidth == 2) {
+                    strcat(output, "vht_capab=[VHT160]\n");
+                }
+#endif
             }
             if (enable_ax) {
 #ifndef _WTS_OPENWRT_

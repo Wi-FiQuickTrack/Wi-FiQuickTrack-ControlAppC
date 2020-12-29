@@ -103,7 +103,7 @@ struct indigo_api {
 #define TLV_IEEE80211_H                         0x0011
 #define TLV_IEEE80211_W                         0x0012
 #define TLV_VHT_OPER_CHWIDTH                    0x0013
-#define TLV_VHT_OPER_CENTR_REQ                  0x0014
+#define TLV_VHT_CAPB                            0x0014
 #define TLV_IEEE8021_X                          0x0015
 #define TLV_EAP_SERVER                          0x0016
 #define TLV_AUTH_SERVER_ADDR                    0x0017

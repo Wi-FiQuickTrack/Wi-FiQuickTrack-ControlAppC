@@ -56,6 +56,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_IEEE80211_H, "ieee80211h", 0 },
     { TLV_VHT_OPER_CHWIDTH, "vht_oper_chwidth", 0 },
     { TLV_VHT_OPER_CENTR_FREQ, "vht_oper_centr_freq_seg0_idx", 0 },
+    { TLV_VHT_CAPB, "vht_capab", 0 },
     { TLV_IEEE8021_X, "ieee8021x", 0 },
     { TLV_EAP_SERVER, "eap_server", 0 },
     { TLV_EAPOL_KEY_INDEX_WORKAROUND, "eapol_key_index_workaround", 0 },
