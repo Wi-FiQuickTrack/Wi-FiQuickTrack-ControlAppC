@@ -522,7 +522,8 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     // if IndigoRequestTLV.SAE_GROUPS not in tlv_values:
     //     field_name = tlv_hostapd_config_mapper.get(IndigoRequestTLV.SAE_GROUPS)
     //     hostapd_config += "\n" + field_name + "=15 16 17 18 19 20 21"
-    if (!has_sae_groups) {
+    // Append the default SAE groups for SAE and no SAE groups TLV
+    if (has_sae && has_sae_groups == 0) {
         strcat(output, "sae_groups=15 16 17 18 19 20 21\n");
     }
 
