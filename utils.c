@@ -719,7 +719,7 @@ int add_wireless_interface_info(int band, int bssid, char *name) {
 int show_wireless_interface_info() {
     int i;
     char *band;
-    printf("interface_count=%d\n", interface_count);
+    indigo_logger(LOG_LEVEL_INFO, "interface_count=%d", interface_count);
 
     for (i = 0; i < interface_count; i++) {
         if (interfaces[i].band == BAND_24GHZ) {
@@ -730,8 +730,8 @@ int show_wireless_interface_info() {
             band = "Dual";
         }
 
-        printf("Interface Name: %s, Band: %s, BSSID: %d identifier %d\n", 
-            interfaces[i].ifname, band, interfaces[i].bssid, interfaces[i].identifier);
+        indigo_logger(LOG_LEVEL_INFO, "Interface Name: %s, Band: %s, identifier %d", 
+            interfaces[i].ifname, band, interfaces[i].identifier);
     }
     return 0;
 }

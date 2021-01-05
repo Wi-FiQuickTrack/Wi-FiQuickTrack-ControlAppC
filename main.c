@@ -259,10 +259,16 @@ int main(int argc, char* argv[]) {
 
     /* Print the run-time information */
     indigo_logger(LOG_LEVEL_INFO, "Indigo control app running at: %d", get_service_port());
-    indigo_logger(LOG_LEVEL_INFO, "Wireless Interface: %s", get_wireless_interface());
+    indigo_logger(LOG_LEVEL_INFO, "Wireless Interface:" );
+    show_wireless_interface_info();
+    /*
+     * The following information may not help anymore since
+     * - we support multiple vaps
+     * - remote udp port is known only when receive the control interface TLV
     indigo_logger(LOG_LEVEL_INFO, "Hostapd Global Control Interface: %s", get_hapd_global_ctrl_path());
     indigo_logger(LOG_LEVEL_INFO, "Hostapd Control Interface: %s", get_hapd_ctrl_path());
     indigo_logger(LOG_LEVEL_INFO, "WPA Supplicant Control Interface: %s", get_wpas_ctrl_path());
+    */
 
     /* Register the callback */
     register_apis();
