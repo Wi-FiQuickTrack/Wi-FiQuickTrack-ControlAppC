@@ -62,6 +62,7 @@ struct sta_driver_ops {
 };
 
 extern const struct sta_driver_ops sta_driver_platform1_ops;
+extern const struct sta_driver_ops sta_driver_platform2_ops;
 
 /* Generic platform dependent APIs */
 int set_channel_width();

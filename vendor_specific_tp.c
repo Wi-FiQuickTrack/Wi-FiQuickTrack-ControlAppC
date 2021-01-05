@@ -31,11 +31,62 @@
 
 #ifdef _TEST_PLATFORM_
 extern struct sta_platform_config sta_hw_config;
-const struct sta_driver_ops *sta_drv_ops  = NULL;
+const struct sta_driver_ops *sta_drv_ops = NULL;
+
+/* Detect the STA driver from lspci Network Controller description */
+const char *desc_platform1 = "Intel Corporation Device 2725";
+const char *desc_platform2 = "Qualcomm Device 1101";
 
 /**
  * Generic platform dependent API implementation 
  */
+
+/* support multiple STA platforms detection */
+void detect_sta_vendor() {
+    char cmd[S_BUFFER_LEN];
+    char buf[S_BUFFER_LEN];
+    char *strbuf = NULL, *temp = NULL;
+    int len = 0;
+    int size = 1;
+    FILE *fp;
+
+    snprintf(cmd, sizeof(cmd), "lspci |grep \"Network controller\"");
+
+    fp = popen(cmd, "r");
+    if (fp == NULL) {
+        return;
+    }
+
+    while (fgets(buf, sizeof(buf), fp) != NULL) {
+        len = strlen(buf);
+        temp = realloc(strbuf, size + len);
+        if (temp == NULL) {
+            return;
+        } else {
+            strbuf = temp;
+        }
+        strcpy(strbuf + size - 1, buf);
+        size += len;
+    }
+
+    indigo_logger(LOG_LEVEL_INFO, "Device: %s", strbuf);
+
+    if (strstr(strbuf, desc_platform1)) {
+        sta_drv_ops = &sta_driver_platform1_ops;
+        indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 1");
+    } else if (strstr(strbuf, desc_platform2)) {
+        sta_drv_ops = &sta_driver_platform2_ops;
+        indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 2");
+    } else {
+        /* set to platform 1 by default */
+        sta_drv_ops = &sta_driver_platform1_ops;
+        indigo_logger(LOG_LEVEL_INFO, 
+            "Failed to find any supported drivers, hook the default platform handlers");
+    }
+
+    pclose(fp);
+    free(strbuf);
+}
 
 /* Be invoked when start controlApp */
 void vendor_init() {
@@ -88,7 +139,7 @@ void vendor_init() {
     system(buffer);
     sleep(1);
 #else
-    sta_drv_ops = &sta_driver_platform1_ops;
+    detect_sta_vendor();
 #endif
 }
 
@@ -242,10 +293,49 @@ static void set_phy_mode_platform1() {
     }
 }
 
+
+/**
+ * Platform-dependent implementation for STA platform 2
+ */
+
+static int set_channel_width_platform2() {
+    int ret = 0;
+    if ((sta_hw_config.phymode == PHYMODE_11AXA || 
+            sta_hw_config.phymode == PHYMODE_11AXG || 
+            sta_hw_config.phymode == PHYMODE_AUTO)) {
+        /* HE channel width setting */
+    } else if ((sta_hw_config.chwidth == CHWIDTH_20 &&
+        (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11NA))) {
+        ret = insert_wpa_network_config("disable_ht40=1\n");
+    }
+
+    return ret;
+}
+
+static void set_phy_mode_platform2() {
+    if (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11AC) {
+        /* disable HE */
+    } else if (sta_hw_config.phymode == PHYMODE_11BG || sta_hw_config.phymode == PHYMODE_11A) {
+        insert_wpa_network_config("disable_ht=1\n");
+    } else if (sta_hw_config.phymode == PHYMODE_11NA) {
+        insert_wpa_network_config("disable_vht=1\n");
+    } else if (sta_hw_config.phymode == PHYMODE_11AXG || 
+        sta_hw_config.phymode == PHYMODE_11AXA || sta_hw_config.phymode == PHYMODE_AUTO) {
+        /* reset to HE */
+    }
+}
+
 const struct sta_driver_ops sta_driver_platform1_ops = {
 	.name			        = "platform1",
 	.set_channel_width      = set_channel_width_platform1,
 	.set_phy_mode           = set_phy_mode_platform1,    
+};
+
+
+const struct sta_driver_ops sta_driver_platform2_ops = {
+	.name			        = "platform2",
+	.set_channel_width      = set_channel_width_platform2,
+	.set_phy_mode           = set_phy_mode_platform2,
 };
 
 #endif /* _TEST_PLATFORM_ */
