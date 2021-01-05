@@ -532,6 +532,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     if (enable_ac == 0 && enable_ax == 0)
         chwidth = 0;
     if (strstr(band, "a")) {
+        if (is_ht40plus_chan(channel))
+            strcat(output, "ht_capab=[HT40+]\n");
+        else if (is_ht40minus_chan(channel))
+            strcat(output, "ht_capab=[HT40-]\n");
+        else // Ch 165 and avoid hostapd configuration error
+            chwidth = 0;
         if (chwidth > 0) {
             int center_freq = get_center_freq_index(channel, chwidth);
 #ifndef _WTS_OPENWRT_
