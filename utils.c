@@ -482,6 +482,8 @@ int get_mac_address(char *buffer, int size, char *interface) {
 
 int set_mac_address(char *ifname, char *mac) {
     char cmd[S_BUFFER_LEN];
+    /* If the system doesn't support ip command, please use ifconfig. E.g., */
+    /* sprintf(cmd, "ifconfig %s hw ether %s", ifname, mac_addr) */
     sprintf(cmd, "ip link set dev %s address %s", ifname, mac);
     return system(cmd);
 }
@@ -562,7 +564,8 @@ int delete_wireless_interface(char *ifname) {
 
 int control_interface(char *ifname, char *op) {
     char cmd[S_BUFFER_LEN];
-
+    /* If the system doesn't support ip command, please use ifconfig. E.g., */
+    /* sprintf(cmd, "ifconfig %s %s", ifname, op); */
     sprintf(cmd, "ip link set %s %s", ifname, op);
     system(cmd);
  
@@ -571,7 +574,9 @@ int control_interface(char *ifname, char *op) {
 
 int set_interface_ip(char *ifname, char *ip) {
     char cmd[S_BUFFER_LEN];
-
+    /* If the system doesn't support ip command, please use ifconfig. */
+    /* Please also update the caller to use netmask instead of CIDR. E.g., */
+    /* sprintf(cmd, "ifconfig %s %s", ifname, ip); */
     sprintf(cmd, "ip addr add %s dev %s", ip, ifname);
     system(cmd);
  
@@ -580,7 +585,8 @@ int set_interface_ip(char *ifname, char *ip) {
 
 int reset_interface_ip(char *ifname) {
     char cmd[S_BUFFER_LEN];
-
+    /* If the system doesn't support ip command, please use ifconfig. E.g., */
+    /* sprintf(cmd, "ifconfig %s 0.0.0.0", ifname); */
     sprintf(cmd, "ip addr flush dev %s", ifname);
     return system(cmd);
 }
