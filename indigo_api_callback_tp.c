@@ -147,9 +147,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         /* stop the wpa_supplicant and release IP address */
         system("killall wpa_supplicant >/dev/null 2>/dev/null");
         sleep(1);
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
-        system(buffer);
+        reset_interface_ip(get_wireless_interface());
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "cp -rf sta_reset_config.conf %s", get_wpas_conf_file());
         system(buffer);
@@ -160,9 +158,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         /* stop the hostapd and release IP address */
         system("killall hostapd >/dev/null 2>/dev/null");
         sleep(1);
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
-        system(buffer);
+        reset_interface_ip(get_wireless_interface());
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "cp -rf ap_reset_config.conf %s", get_hapd_conf_file());
         system(buffer);
@@ -653,9 +649,10 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 // ACK  :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'} 
 static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len;
+    int len = 0;
     char buffer[64];
-    struct tlv_hdr *tlv;
+    struct tlv_hdr *tlv = NULL;
+    char *ifname = NULL;
     char *message = TLV_VALUE_ASSIGN_STATIC_IP_OK;
 
     memset(buffer, 0, sizeof(buffer));
@@ -666,10 +663,14 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
         message = "Failed.";
         goto response;
     }
-   
-    char *parameter[] = {"ifconfig", get_wireless_interface(), "up", buffer, "netmask", "255.255.255.0", NULL };
 
-    len = pipe_command(buffer, sizeof(buffer), "/sbin/ifconfig", parameter);
+    /* Release IP address from interface */
+    reset_interface_ip(ifname);
+    /* Bring up interface */
+    control_interface(ifname, "up");
+    /* Set IP address with network mask */
+    strcat(buffer, "/24");
+    len = set_interface_ip(get_wireless_interface(), buffer);
     if (len) {
         message = TLV_VALUE_ASSIGN_STATIC_IP_NOT_OK;
     }
@@ -948,9 +949,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
     }
 
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
-    len = system(buffer);
+    len = reset_interface_ip(get_wireless_interface());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to free IP address");
     }

@@ -480,6 +480,12 @@ int get_mac_address(char *buffer, int size, char *interface) {
     return 1;
 }
 
+int set_mac_address(char *ifname, char *mac) {
+    char cmd[S_BUFFER_LEN];
+    sprintf(cmd, "ip link set dev %s address %s", ifname, mac);
+    return system(cmd);
+}
+
 int bridge_created = 0;
 
 int is_bridge_created() {
@@ -502,8 +508,7 @@ int create_bridge(char *br) {
     system(cmd);
 
     /* Bring up bridge */
-    sprintf(cmd, "ifconfig %s up", br);
-    system(cmd);
+    control_interface(br, "up");
 
     bridge_created = 1;
 
@@ -514,8 +519,7 @@ int add_interface_to_bridge(char *br, char *ifname) {
     char cmd[S_BUFFER_LEN];
 
     /* Reset IP address */
-    sprintf(cmd, "ifconfig %s 0.0.0.0", ifname);
-    system(cmd);
+    reset_interface_ip(ifname);
 
     /* Add interface to bridge */
     sprintf(cmd, "brctl addif %s %s", br, ifname);
@@ -529,8 +533,7 @@ int reset_bridge(char *br) {
     char cmd[S_BUFFER_LEN];
 
     /* Bring down bridge */
-    sprintf(cmd, "ifconfig %s down", br);
-    system(cmd);
+    control_interface(br, "down");
     sprintf(cmd, "brctl delbr %s", br);
     system(cmd);
  
@@ -569,10 +572,17 @@ int control_interface(char *ifname, char *op) {
 int set_interface_ip(char *ifname, char *ip) {
     char cmd[S_BUFFER_LEN];
 
-    sprintf(cmd, "ifconfig %s %s", ifname, ip);
+    sprintf(cmd, "ip addr add %s dev %s", ip, ifname);
     system(cmd);
  
     return 0;
+}
+
+int reset_interface_ip(char *ifname) {
+    char cmd[S_BUFFER_LEN];
+
+    sprintf(cmd, "ip addr flush dev %s", ifname);
+    return system(cmd);
 }
 
 int add_all_wireless_interface_to_bridge(char *br) {
