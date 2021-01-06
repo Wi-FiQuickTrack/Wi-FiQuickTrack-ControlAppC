@@ -109,6 +109,7 @@ char* read_file(char *fn);
 int write_file(char *fn, char *buffer, int len);
 
 int get_mac_address(char *buffer, int size, char *interface);
+int set_mac_address(char *ifname, char *mac);
 int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);
 int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout);
 int loopback_client_stop();
@@ -123,6 +124,7 @@ int add_interface_to_bridge(char *br, char *interface);
 int reset_bridge(char *br);
 int control_interface(char *ifname, char *op);
 int set_interface_ip(char *ifname, char *ip);
+int reset_interface_ip(char *ifname);
 int add_wireless_interface(char *ifname);
 int delete_wireless_interface(char *ifname);
 void bridge_init(char *br);

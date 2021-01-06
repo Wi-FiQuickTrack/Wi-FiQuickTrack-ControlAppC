@@ -53,31 +53,23 @@ void vendor_init() {
 
     memset(mac_addr, 0, sizeof(mac_addr));
     get_mac_address(mac_addr, sizeof(mac_addr), "ath1");
-    sprintf(buffer, "ifconfig ath1 down");
-    system(buffer);
+    control_interface("ath1", "down");
     mac_addr[16] = (char)'0';
-    sprintf(buffer, "ifconfig ath1 hw ether %s", mac_addr);
-    system(buffer);
+    set_mac_address("ath1", mac_addr);
 
-    sprintf(buffer, "ifconfig ath11 down");
-    system(buffer);
+    control_interface("ath11", "down");
     mac_addr[16] = (char)'1';
-    sprintf(buffer, "ifconfig ath11 hw ether %s", mac_addr);
-    system(buffer);
+    set_mac_address("ath11", mac_addr);
 
     memset(mac_addr, 0, sizeof(mac_addr));
     get_mac_address(mac_addr, sizeof(mac_addr), "ath0");
-    sprintf(buffer, "ifconfig ath0 down");
-    system(buffer);
+    control_interface("ath0", "down");
     mac_addr[16] = (char)'0';
-    sprintf(buffer, "ifconfig ath0 hw ether %s", mac_addr);
-    system(buffer);
+    set_mac_address("ath0", mac_addr);
 
-    sprintf(buffer, "ifconfig ath01 down");
-    system(buffer);
+    control_interface("ath01", "down");
     mac_addr[16] = (char)'1';
-    sprintf(buffer, "ifconfig ath01 hw ether %s", mac_addr);
-    system(buffer);
+    set_mac_address("ath01", mac_addr);
     sleep(1);
 #endif
 }

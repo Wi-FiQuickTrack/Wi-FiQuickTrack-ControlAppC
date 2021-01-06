@@ -154,9 +154,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         /* stop the wpa_supplicant and release IP address */
         system("killall wpa_supplicant >/dev/null 2>/dev/null");
         sleep(1);
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
-        system(buffer);
+        reset_interface_ip(get_wireless_interface());
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
@@ -164,9 +162,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         /* stop the hostapd and release IP address */
         system("killall hostapd >/dev/null 2>/dev/null");
         sleep(1);
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
-        system(buffer);
+        reset_interface_ip(get_wireless_interface());
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
@@ -775,9 +771,10 @@ static int create_bridge_network_handler(struct packet_wrapper *req, struct pack
 // ACK  :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'} 
 static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len;
+    int len = 0;
     char buffer[64];
-    struct tlv_hdr *tlv;
+    struct tlv_hdr *tlv = NULL;
+    char *ifname = NULL;
     char *message = TLV_VALUE_ASSIGN_STATIC_IP_OK;
 
     memset(buffer, 0, sizeof(buffer));
@@ -789,11 +786,19 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
         goto response;
     }
    
-    char *parameter[] = {"ifconfig", get_wireless_interface(), "up", buffer, "netmask", "255.255.255.0", NULL };
-    if (is_bridge_created())
-        parameter[1] = BRIDGE_WLANS;
+    if (is_bridge_created()) {
+        ifname = BRIDGE_WLANS;
+    } else {
+        ifname = get_wireless_interface();
+    }
 
-    len = pipe_command(buffer, sizeof(buffer), "/sbin/ifconfig", parameter);
+    /* Release IP address from interface */
+    reset_interface_ip(ifname);
+    /* Bring up interface */
+    control_interface(ifname, "up");
+    /* Set IP address with network mask */
+    strcat(buffer, "/24");
+    len = set_interface_ip(ifname, buffer);
     if (len) {
         message = TLV_VALUE_ASSIGN_STATIC_IP_NOT_OK;
     }
@@ -1408,9 +1413,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         }        
     }
 
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ifconfig %s 0.0.0.0", get_wireless_interface());
-    len = system(buffer);
+    len = reset_interface_ip(get_wireless_interface());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to free IP address");
     }
