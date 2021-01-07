@@ -664,6 +664,8 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
         goto response;
     }
 
+    ifname = get_wireless_interface();
+
     /* Release IP address from interface */
     reset_interface_ip(ifname);
     /* Bring up interface */
