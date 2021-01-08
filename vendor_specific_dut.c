@@ -80,9 +80,24 @@ void vendor_deinit() {
     system("killall wpa_supplicant >/dev/null 2>/dev/null");
 }
 
+/* Called by reset_device_hander() */
+void vendor_device_reset() {
+#ifdef _WTS_OPENWRT_
+    char buffer[S_BUFFER_LEN];
+
+    /* Reset the country code */
+    snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
+    system(buffer);
+
+    snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
+    system(buffer);
+#endif
+}
+
 #ifdef _OPENWRT_
 void openwrt_apply_radio_config(void) {
     char buffer[S_BUFFER_LEN];
+
 #ifdef _WTS_OPENWRT_
     // Apply radio configurations
     system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
@@ -99,9 +114,44 @@ void openwrt_apply_radio_config(void) {
 
 /* Called by configure_ap_handler() */
 void configure_ap_enable_mbssid() {
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     system("uci set wireless.qcawifi=qcawifi");
     system("uci set wireless.qcawifi.mbss_ie_enable=1");
+    system("uci commit");
+#endif
+}
+
+void configure_ap_radio_params(char *band, char *country, int channel, int chwidth) {
+#ifdef _WTS_OPENWRT
+char buffer[S_BUFFER_LEN], wifi_name[16];
+
+    if (!strncmp(band, "a", 1)) {
+        snprintf(wifi_name, sizeof(wifi_name), "wifi0");
+    } else {
+        snprintf(wifi_name, sizeof(wifi_name), "wifi1");
+    }
+
+    if (strlen(country) > 0) {
+        snprintf(buffer, sizeof(buffer), "uci set wireless.%s.country=\'%s\'", wifi_name, country);
+        system(buffer);
+    }
+
+    snprintf(buffer, sizeof(buffer), "uci set wireless.%s.channel=\'%d\'", wifi_name, channel);
+    system(buffer);
+
+    if (!strncmp(band, "a", 1)) {
+        if (channel == 165) { // Force 20M for CH 165
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT20\'");
+        } else if (chwidth == 2) { // 160M test cases only
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT160\'");
+        } else if (chwidth == 0) { // 11N only
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT40\'");
+        } else { // 11AC or 11AX
+            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT80\'");
+        }
+        system(buffer);
+    }
+
     system("uci commit");
 #endif
 }
@@ -115,7 +165,7 @@ void start_ap_set_wlan_params(void *if_info) {
     struct interface_info *wlan = (struct interface_info *) if_info;
 
     memset(buffer, 0, sizeof(buffer));
-#ifdef _OPENWRT_
+#ifdef _WTS_OPENWRT_
     /* Workaround: openwrt has IOT issue with intel AX210 AX mode */
     sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", wlan->ifname);
     system(buffer);

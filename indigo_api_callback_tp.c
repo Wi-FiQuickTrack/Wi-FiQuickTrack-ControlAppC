@@ -1162,13 +1162,8 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-#ifdef _OPENWRT_
     sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
-#else
-    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
-        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
-#endif
     indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
     len = system(buffer);
 
@@ -1253,13 +1248,8 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
 
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-#ifdef _OPENWRT_
     sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
-#else
-    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
-        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
-#endif
     len = system(buffer);
     sleep(2);
 

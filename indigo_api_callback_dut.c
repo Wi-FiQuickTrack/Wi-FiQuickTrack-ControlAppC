@@ -177,14 +177,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         set_default_wireless_interface_info(BAND_5GHZ);
     }
 
-#ifdef _WTS_OPENWRT_
-    /* Reset the country code */
-    snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
-    system(buffer);
-
-    snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
-    system(buffer);
-#endif
+    vendor_device_reset();
 
     sleep(1);
 
@@ -349,13 +342,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int i, enable_ac = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     char band[64], value[16];
-#ifdef _WTS_OPENWRT_
-    char country[16], wifi_name[16];
-
-    /* QCA OPENWRT doesn't apply 11ax, mu_edca, country, 11d, 11h in hostapd */
-    memset(country, 0, sizeof(country));
-#endif
-
+    char country[16];
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
 
@@ -366,6 +353,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     append_hostapd_default_config(wrapper);
 #endif
 
+    memset(country, 0, sizeof(country));
+
+    /* QCA WTS image doesn't apply 11ax, mu_edca, country, 11d, 11h in hostapd */
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
         cfg = find_hostapd_config(tlv->id);
@@ -444,12 +434,14 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             has_sae_groups = 1;
         }
 
-#ifdef _WTS_OPENWRT_
         if (tlv->id == TLV_COUNTRY_CODE) {
             memcpy(country, tlv->value, tlv->len);
+#ifdef _WTS_OPENWRT_
             continue;
+#endif
         }
 
+#ifdef _WTS_OPENWRT_
         if (tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H ||
             tlv->id == TLV_HE_OPER_CENTR_FREQ)
             continue;
@@ -593,36 +585,8 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "he_mu_edca_ac_vo_timer=255\n");
     }
 
-#ifdef _WTS_OPENWRT_
-    if (!strncmp(band, "a", 1)) {
-        snprintf(wifi_name, sizeof(wifi_name), "wifi0");
-    } else {
-        snprintf(wifi_name, sizeof(wifi_name), "wifi1");
-    }
-
-    if (strlen(country) > 0) {
-        snprintf(buffer, sizeof(buffer), "uci set wireless.%s.country=\'%s\'", wifi_name, country);
-        system(buffer);
-    }
-
-    snprintf(buffer, sizeof(buffer), "uci set wireless.%s.channel=\'%d\'", wifi_name, channel);
-    system(buffer);
-
-    if (!strncmp(band, "a", 1)) {
-        if (channel == 165) { // Force 20M for CH 165
-            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT20\'");
-        } else if (chwidth == 2) { // 160M test cases only
-            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT160\'");
-        } else if (chwidth == 0) { // 11N only
-            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT40\'");
-        } else { // 11AC or 11AX
-            snprintf(buffer, sizeof(buffer), "uci set wireless.wifi0.htmode=\'HT80\'");
-        }
-        system(buffer);
-    }
-
-    system("uci commit");
-#endif
+    /* vendor specific config, not via hostapd */
+    configure_ap_radio_params(band, country, channel, chwidth);
 
     return strlen(output);
 }
@@ -1605,13 +1569,8 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-#ifdef _OPENWRT_
     sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
         get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
-#else
-    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
-        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
-#endif
     len = system(buffer);
     sleep(2);
 

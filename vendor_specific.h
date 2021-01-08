@@ -46,6 +46,7 @@
 
 void vendor_init();
 void vendor_deinit();
+void vendor_device_reset();
 
 #ifdef _TEST_PLATFORM_
 
@@ -74,6 +75,7 @@ void openwrt_apply_radio_config(void);
 #endif
 
 void configure_ap_enable_mbssid();
+void configure_ap_radio_params(char *band, char *country, int channel, int chwidth);
 void start_ap_set_wlan_params(void *if_info);
 
 #endif
