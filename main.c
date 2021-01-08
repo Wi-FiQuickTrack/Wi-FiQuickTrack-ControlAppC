@@ -216,7 +216,6 @@ static int parse_parameters(int argc, char *argv[]) {
             break;
 #ifdef _VERSION_
         case 'v':
-            print_welcome();
             return 1;
 #endif
         }
