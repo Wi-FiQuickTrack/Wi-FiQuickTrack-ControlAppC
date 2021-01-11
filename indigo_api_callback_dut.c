@@ -339,7 +339,7 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups = 0;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
-    int i, enable_ac = 0;
+    int i, enable_ac = 0, enable_11h = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     char band[64], value[16];
     char country[16];
@@ -441,9 +441,15 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 #endif
         }
 
+	if (tlv->id == TLV_IEEE80211_H) {
 #ifdef _WTS_OPENWRT_
-        if (tlv->id == TLV_IEEE80211_D || tlv->id == TLV_IEEE80211_H ||
-            tlv->id == TLV_HE_OPER_CENTR_FREQ)
+	    continue;
+#endif
+	    enable_11h = 1;
+	}
+
+#ifdef _WTS_OPENWRT_
+        if (tlv->id == TLV_IEEE80211_D || tlv->id == TLV_HE_OPER_CENTR_FREQ)
             continue;
 
 #endif
@@ -584,6 +590,14 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "he_mu_edca_ac_vo_ecwmax=15\n");
         strcat(output, "he_mu_edca_ac_vo_timer=255\n");
     }
+
+#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
+    /* Make sure AP include power constranit element even in non DFS channel */
+    if (enable_11h) {
+        strcat(output, "spectrum_mgmt_required=1\n");
+        strcat(output, "local_pwr_constraint=3\n");
+    }
+#endif
 
     /* vendor specific config, not via hostapd */
     configure_ap_radio_params(band, country, channel, chwidth);
