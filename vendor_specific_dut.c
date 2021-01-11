@@ -115,9 +115,16 @@ void openwrt_apply_radio_config(void) {
 /* Called by configure_ap_handler() */
 void configure_ap_enable_mbssid() {
 #ifdef _WTS_OPENWRT_
+    /*
+     * the following uci commands need to reboot openwrt
+     *    so it can not be configured by controlApp
+     * 
+     * Manually enable MBSSID on OpenWRT when need to test MBSSID
+     * 
     system("uci set wireless.qcawifi=qcawifi");
     system("uci set wireless.qcawifi.mbss_ie_enable=1");
     system("uci commit");
+    */
 #endif
 }
 
