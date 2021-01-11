@@ -38,7 +38,7 @@ void vendor_init() {
     /* Vendor: add codes to let ControlApp have full control of hostapd */
     /* Avoid hostapd being invoked by procd */
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "/etc/init.d/wpad stop");
+    sprintf(buffer, "/etc/init.d/wpad stop >/dev/null 2>/dev/null");
     system(buffer);
 
     memset(buffer, 0, sizeof(buffer));
