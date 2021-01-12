@@ -126,6 +126,9 @@ struct tlv_to_config_name wpas_global_maps[] = {
     { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
     { TLV_SAE_PWE, "sae_pwe", 0 },
     { TLV_CONTROL_INTERFACE, "ctrl_interface", 0 },
+    { TLV_RAND_MAC_ADDR, "mac_addr", 0 },
+    { TLV_PREASSOC_RAND_MAC_ADDR, "preassoc_mac_addr", 0 },
+    { TLV_RAND_ADDR_LIFETIME, "rand_addr_lifetime", 0 },
 };
 
 

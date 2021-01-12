@@ -234,6 +234,9 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_DUT_MAC_ADDR, "DUT_MAC_ADDR" },
     { TLV_CONTROL_APP_VERSION, "CONTROL_APP_VERSION" },
     { TLV_FREQ_LIST, "FREQ_LIST" },
+    { TLV_RAND_MAC_ADDR, "RAND_MAC_ADDR" },
+    { TLV_PREASSOC_RAND_MAC_ADDR, "PREASSOC_RAND_MAC_ADDR" },
+    { TLV_RAND_ADDR_LIFETIME, "RAND_ADDR_LIFETIME" },
 };
 
 /* Find the type of the API stucture by the ID from the list */
