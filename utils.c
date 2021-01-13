@@ -806,10 +806,10 @@ void reset_default_wireless_interface_info() {
 
 /* Parse BSS IDENTIFIER TLV */
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
-    bss->band = bss_identifier & 0x07;
-    bss->mbssid_enable = (bss_identifier & 0x08) >> 3;
-    bss->transmitter = (bss_identifier & 0x10) >> 4;
-    bss->identifier = (bss_identifier & 0xE0) >> 5;
+    bss->band = bss_identifier & 0x0F;
+    bss->identifier = (bss_identifier & 0xF0) >> 4;
+    bss->mbssid_enable = (bss_identifier & 0x100) >> 8;
+    bss->transmitter = (bss_identifier & 0x200) >> 9;
     return;
 }
 
