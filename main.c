@@ -191,6 +191,7 @@ static void print_welcome() {
 /* Parse the commandline parameters */
 static int parse_parameters(int argc, char *argv[]) {
     int c, ifs_configured = 0;
+    char buf[128];
 
 #ifdef _VERSION_
     while ((c = getopt(argc, argv, "i:hp:dcv")) != -1) {
@@ -222,9 +223,14 @@ static int parse_parameters(int argc, char *argv[]) {
     }
 
     if (ifs_configured == 0) {
+#ifdef DEFAULT_APP_INTERFACES_PARAMS
+        snprintf(buf, sizeof(buf), "%s", DEFAULT_APP_INTERFACES_PARAMS);
+        set_wireless_interface(buf);
+#else
         usage();
         printf("\nWe need to specify the interfaces with -i.\n");
         return 1;
+#endif
     }
 
     return 0;

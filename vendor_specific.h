@@ -25,20 +25,27 @@
 
 #define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
+
 #ifdef _OPENWRT_
 #define HAPD_CONF_FILE_DEFAULT                      "/tmp/hostapd.conf"
 #define HAPD_CONF_FILE_DEFAULT_PATH                 "/tmp"
+#define WPAS_CONF_FILE_DEFAULT                      "/tmp/wpa_supplicant.conf"
+// 2(2.4G): first interface ath1, second interface ath11
+// 5(5G): first interface ath0, second interface ath01
+#define DEFAULT_APP_INTERFACES_PARAMS               "2:ath1,2:ath11,5:ath0,5:ath01"
+
 #else
 #define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"
 #define HAPD_CONF_FILE_DEFAULT_PATH                 "/etc/hostapd/"
+#define WPAS_CONF_FILE_DEFAULT                      "/etc/wpa_supplicant/wpa_supplicant.conf"
+// d(2.4G or 5G):Single band can work on 2G or 5G: first interface wlan0, second interface wlan1
+#define DEFAULT_APP_INTERFACES_PARAMS               "d:wlan0,d:wlan1"
+
 #endif /* _OPENWRT_ */
+
 #define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
 #define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
-#ifdef _OPENWRT_
-#define WPAS_CONF_FILE_DEFAULT                      "/tmp/wpa_supplicant.conf"
-#else
-#define WPAS_CONF_FILE_DEFAULT                      "/etc/wpa_supplicant/wpa_supplicant.conf"
-#endif /* _OPENWRT_ */
+
 #define WIRELESS_INTERFACE_DEFAULT                  "wlan0"
 #define SERVICE_PORT_DEFAULT                        9004
 
