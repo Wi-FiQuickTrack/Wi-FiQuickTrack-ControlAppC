@@ -195,7 +195,18 @@ int write_file(char *fn, char *buffer, int len) {
         close(fd);
         return 0;
     }
+    return -1;
+}
 
+int append_file(char *fn, char *buffer, int len) {
+    int fd;
+
+    fd = open(fn, O_CREAT | O_WRONLY | O_APPEND);
+    if (fd > 0) {
+        (void)write(fd, buffer, len);
+        close(fd);
+        return 0;
+    }
     return -1;
 }
 
