@@ -19,6 +19,7 @@ create_source_folder() {
 
 copy_filter_source() {
     cp -rf *.c *.h Makefile ${source_folder}
+    cp -rf patch_nwmgr.sh ${source_folder}
 }
 
 create_control() {
@@ -51,8 +52,10 @@ create_postinst() {
     echo "echo \"Test application version\"" >>"$postinst_file"
     echo "../app_dut -v" >>"$postinst_file"
     echo "../app_tp -v" >>"$postinst_file"
-    echo "echo \"\"" >>"$postinst_file"
     echo "echo \"Complete the installation. If you would like to modify the source code for the platform-specific change, you can go to ${installed_source_folder}\"" >>"$postinst_file"
+    echo "echo \"\"" >>"$postinst_file"
+    echo "echo \"Start to patch NetworkManager to unmanage the wl* interface.\"" >>"$postinst_file"
+    echo "/bin/bash ${installed_source_folder}/patch_nwmgr.sh bkup" >>"$postinst_file"
     chmod 755 "$postinst_file"
 }
 
@@ -64,6 +67,8 @@ create_prerm() {
     echo "cd ${installed_source_folder}" >>"$prerm_file"
     echo "rm -rf /usr/local/bin/${package_name}/app_dut" >>"$prerm_file"
     echo "rm -rf /usr/local/bin/${package_name}/app_tp" >>"$prerm_file"
+
+    echo "/bin/bash ${installed_source_folder}/patch_nwmgr.sh restore" >>"$prerm_file"
     chmod 755 "$prerm_file"
 }
 
