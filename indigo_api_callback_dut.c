@@ -686,7 +686,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan);
         if (len)
         {
-#ifdef HOSTAPD_SUPPORT_MBSSID
+#if HOSTAPD_SUPPORT_MBSSID
             if (bss_info.mbssid_enable && !bss_info.transmitter) {
                 if (band_transmitter[bss_info.band]) {
                     append_file(band_transmitter[bss_info.band]->hapd_conf_file, buffer, len);

@@ -100,7 +100,7 @@ void vendor_device_reset() {
     snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
     system(buffer);
 #endif
-#ifdef HOSTAPD_SUPPORT_MBSSID
+#if HOSTAPD_SUPPORT_MBSSID
     /* interfaces may be destroyed by hostapd after done the MBSSID testing */
     interfaces_init();
 #endif
