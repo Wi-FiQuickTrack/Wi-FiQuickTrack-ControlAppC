@@ -468,7 +468,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             parse_bss_identifier(bss_identifier, &bss_info);
             wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
             if (NULL == wlan) {
-                wlan = assign_wireless_interface_info(bss_info.band, bss_info.identifier);
+                wlan = assign_wireless_interface_info(&bss_info);
             }
             printf("TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
                     bss_identifier,
@@ -629,7 +629,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         parse_bss_identifier(bss_identifier, &bss_info);
         wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
         if (NULL == wlan) {
-            wlan = assign_wireless_interface_info(bss_info.band, bss_info.identifier);
+            wlan = assign_wireless_interface_info(&bss_info);
         }
         if (wlan && bss_info.mbssid_enable) {
             configure_ap_enable_mbssid();
@@ -654,7 +654,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                 band = BAND_24GHZ;
             }
             /* Single wlan use ID 1 */
-            wlan = assign_wireless_interface_info(band, 1);
+            bss_info.band = band;
+            bss_info.identifier = 1;
+            wlan = assign_wireless_interface_info(&bss_info);
         }
     }
     if (wlan) {

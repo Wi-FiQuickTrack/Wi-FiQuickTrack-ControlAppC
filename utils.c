@@ -627,14 +627,14 @@ char wpas_full_ctrl_path[128];
 char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
 char wpas_conf_file[64] = WPAS_CONF_FILE_DEFAULT;
 
-struct interface_info* assign_wireless_interface_info(int band, int identifier) {
+struct interface_info* assign_wireless_interface_info(struct bss_identifier_info *bss) {
     int i;
 
     for (i = 0; i < interface_count; i++) {
-        if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == band) && 
+        if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == bss->band) && 
              (interfaces[i].identifier == UNUSED_IDENTIFIER)) {
             configured_interface_count++;
-            interfaces[i].identifier = identifier;
+            interfaces[i].identifier = bss->identifier;
             memset(interfaces[i].hapd_conf_file, 0, sizeof(interfaces[i].hapd_conf_file));
             snprintf(interfaces[i].hapd_conf_file, sizeof(interfaces[i].hapd_conf_file),
                      "%s/hostapd_%s.conf", HAPD_CONF_FILE_DEFAULT_PATH, interfaces[i].ifname);

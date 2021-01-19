@@ -160,7 +160,7 @@ int get_key_value(char *value, char *buffer, char *token);
 int verify_band_from_freq(int freq, int band);
 
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
-struct interface_info* assign_wireless_interface_info(int band, int identifier);
+struct interface_info* assign_wireless_interface_info(struct bss_identifier_info *bss);
 struct interface_info* get_wireless_interface_info(int band, int identifier);
 int add_all_wireless_interface_to_bridge(char *br);
 void set_default_wireless_interface_info(int channel);
