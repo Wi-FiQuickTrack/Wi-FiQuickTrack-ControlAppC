@@ -635,6 +635,8 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
              (interfaces[i].identifier == UNUSED_IDENTIFIER)) {
             configured_interface_count++;
             interfaces[i].identifier = bss->identifier;
+            interfaces[i].mbssid_enable = bss->mbssid_enable;
+            interfaces[i].transmitter = bss->transmitter;
             memset(interfaces[i].hapd_conf_file, 0, sizeof(interfaces[i].hapd_conf_file));
             snprintf(interfaces[i].hapd_conf_file, sizeof(interfaces[i].hapd_conf_file),
                      "%s/hostapd_%s.conf", HAPD_CONF_FILE_DEFAULT_PATH, interfaces[i].ifname);

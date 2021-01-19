@@ -85,6 +85,8 @@ struct interface_info {
     int bssid;
     char ifname[16];
     char ssid[64];
+    int mbssid_enable;
+    int transmitter;
     char hapd_conf_file[64];
 };
 

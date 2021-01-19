@@ -29,17 +29,10 @@
 #include "vendor_specific.h"
 #include "utils.h"
 
-/* Be invoked when start controlApp */
-void vendor_init() {
+void interfaces_init() {
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
-
-    /* Vendor: add codes to let ControlApp have full control of hostapd */
-    /* Avoid hostapd being invoked by procd */
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "/etc/init.d/wpad stop >/dev/null 2>/dev/null");
-    system(buffer);
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");
@@ -73,6 +66,21 @@ void vendor_init() {
     sleep(1);
 #endif
 }
+/* Be invoked when start controlApp */
+void vendor_init() {
+#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
+    char buffer[BUFFER_LEN];
+    char mac_addr[S_BUFFER_LEN];
+
+    /* Vendor: add codes to let ControlApp have full control of hostapd */
+    /* Avoid hostapd being invoked by procd */
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "/etc/init.d/wpad stop >/dev/null 2>/dev/null");
+    system(buffer);
+
+    interfaces_init();
+#endif
+}
 
 /* Be invoked when terminate controlApp */
 void vendor_deinit() {
@@ -91,6 +99,10 @@ void vendor_device_reset() {
 
     snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
     system(buffer);
+#endif
+#ifdef HOSTAPD_SUPPORT_MBSSID
+    /* interfaces may be destroyed by hostapd after done the MBSSID testing */
+    interfaces_init();
 #endif
 }
 

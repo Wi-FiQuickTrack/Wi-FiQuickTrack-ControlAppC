@@ -51,6 +51,15 @@
 
 #define BRIDGE_WLANS                                "br-wlans"
 
+#ifdef _WTS_OPENWRT_
+#define HOSTAPD_SUPPORT_MBSSID 0
+#else
+/* hostapd support MBSSID with single hostapd conf
+ * hostapd support "multiple_bssid" configuration
+ */
+#define HOSTAPD_SUPPORT_MBSSID 1
+#endif
+
 void vendor_init();
 void vendor_deinit();
 void vendor_device_reset();

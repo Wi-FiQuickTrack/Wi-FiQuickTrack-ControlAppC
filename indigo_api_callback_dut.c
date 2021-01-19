@@ -80,6 +80,7 @@ int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
 int wpas_debug_level = DEBUG_LEVEL_DISABLE;
 
 static char pac_file_path[S_BUFFER_LEN] = {0};
+struct interface_info* band_transmitter[16];
 
 static int get_debug_level(int value) {
     if (value == 0) {
@@ -176,6 +177,8 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     } else if (strcmp(band, TLV_BAND_5GHZ) == 0) {
         set_default_wireless_interface_info(BAND_5GHZ);
     }
+
+    memset(band_transmitter, 0, sizeof(band_transmitter));
 
     vendor_device_reset();
 
@@ -336,7 +339,7 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 }
 #endif /* _RESERVED_ */
 
-static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
+static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, struct interface_info* wlanp) {
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups = 0;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
     int i, enable_ac = 0, enable_11h = 0;
@@ -346,7 +349,14 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
 
-    sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, ifname);
+#if HOSTAPD_SUPPORT_MBSSID
+    if (wlanp->mbssid_enable && !wlanp->transmitter)
+        sprintf(output, "bss=%s\nctrl_interface=%s\n", wlanp->ifname, HAPD_CTRL_PATH_DEFAULT);
+    else
+        sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, wlanp->ifname);
+#else
+    sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, wlanp->ifname);
+#endif
 
 #ifdef _RESERVED_
     /* The function is reserved for the defeault hostapd config */
@@ -508,6 +518,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "sae_require_mfp=1\n");
     }
 
+#if HOSTAPD_SUPPORT_MBSSID
+    if (wlanp->mbssid_enable && wlanp->transmitter) {
+        strcat(output, "multiple_bssid=1\n");
+    }
+#endif
+
     // Note: if any new DUT configuration is added for sae_groups,
     // then the following unconditional sae_groups addition should be
     // changed to become conditional on there being no other sae_groups
@@ -633,6 +649,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         }
         if (wlan && bss_info.mbssid_enable) {
             configure_ap_enable_mbssid();
+            if (bss_info.transmitter) {
+                band_transmitter[bss_info.band] = wlan;
+            }
         }
         printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
                bss_identifier,
@@ -664,10 +683,19 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                wlan ? wlan->ifname : "n/a",
                wlan ? wlan->hapd_conf_file: "n/a"
                );
-        len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan->ifname);
+        len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan);
         if (len)
         {
-            write_file(wlan->hapd_conf_file, buffer, len);
+#ifdef HOSTAPD_SUPPORT_MBSSID
+            if (bss_info.mbssid_enable && !bss_info.transmitter) {
+                if (band_transmitter[bss_info.band]) {
+                    append_file(band_transmitter[bss_info.band]->hapd_conf_file, buffer, len);
+                }
+                memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
+            }
+            else
+#endif
+                write_file(wlan->hapd_conf_file, buffer, len);
         }
     }
     show_wireless_interface_info();
