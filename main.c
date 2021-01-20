@@ -222,6 +222,12 @@ static int parse_parameters(int argc, char *argv[]) {
         }
     }
 
+    if (optind < argc) {
+        printf("\nInvalid option %s\n", argv[optind]);
+        usage();
+        return 1;
+    }
+
     if (ifs_configured == 0) {
 #ifdef DEFAULT_APP_INTERFACES_PARAMS
         snprintf(buf, sizeof(buf), "%s", DEFAULT_APP_INTERFACES_PARAMS);
