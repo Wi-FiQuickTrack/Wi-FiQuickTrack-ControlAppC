@@ -36,7 +36,7 @@
 
 #else
 #define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"
-#define HAPD_CONF_FILE_DEFAULT_PATH                 "/etc/hostapd/"
+#define HAPD_CONF_FILE_DEFAULT_PATH                 "/etc/hostapd"
 #define WPAS_CONF_FILE_DEFAULT                      "/etc/wpa_supplicant/wpa_supplicant.conf"
 // d(2.4G or 5G):Single band can work on 2G or 5G: first interface wlan0, second interface wlan1
 #define DEFAULT_APP_INTERFACES_PARAMS               "d:wlan0,d:wlan1"
