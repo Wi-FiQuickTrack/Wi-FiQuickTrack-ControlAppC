@@ -844,6 +844,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     struct interface_info* wlan = NULL;
     char bss_identifier_str[16];
     struct bss_identifier_info bss_info;
+    char buff[S_BUFFER_LEN];
 
     if (req->tlv_num == 0) {
         get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
@@ -894,7 +895,8 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     if (atoi(role) == DUT_TYPE_STAUT) {
         w = wpa_ctrl_open(get_wpas_ctrl_path());
     } else {
-        w = wpa_ctrl_open(get_hapd_ctrl_path_by_id(bss_info.identifier, bss_info.band));
+        wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
+        w = wpa_ctrl_open(get_hapd_ctrl_path_by_id(wlan));
     }
 
     if (!w) {
@@ -920,8 +922,20 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         get_key_value(connected_ssid, response, "ssid");
         get_key_value(mac_addr, response, "address");
     } else {
+#if HOSTAPD_SUPPORT_MBSSID
+        if(wlan && wlan->mbssid_enable) {
+            sprintf(buff, "ssid[%d]", wlan->hapd_bss_id);
+            get_key_value(connected_ssid, response, buff);
+            sprintf(buff, "bssid[%d]", wlan->hapd_bss_id);
+            get_key_value(mac_addr, response, buff);
+        } else {
+            get_key_value(connected_ssid, response, "ssid[0]");
+            get_key_value(mac_addr, response, "bssid[0]");
+        }
+#else
         get_key_value(connected_ssid, response, "ssid[0]");
         get_key_value(mac_addr, response, "bssid[0]");
+#endif
     }
 
     if (bss_info.identifier >= 0) {

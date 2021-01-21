@@ -52,6 +52,7 @@ int syslog_level = LOG_LEVEL_INFO;
 int interface_count = 0;
 int configured_interface_count = 0;
 struct interface_info interfaces[8];
+int band_mbssid_cnt[16];
 struct interface_info* default_interface;
 static struct loopback_info loopback = {};
 
@@ -637,6 +638,10 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
             interfaces[i].identifier = bss->identifier;
             interfaces[i].mbssid_enable = bss->mbssid_enable;
             interfaces[i].transmitter = bss->transmitter;
+            if (bss->mbssid_enable) {
+                interfaces[i].hapd_bss_id = band_mbssid_cnt[bss->band];
+                band_mbssid_cnt[bss->band]++;
+            }
             memset(interfaces[i].hapd_conf_file, 0, sizeof(interfaces[i].hapd_conf_file));
             snprintf(interfaces[i].hapd_conf_file, sizeof(interfaces[i].hapd_conf_file),
                      "%s/hostapd_%s.conf", HAPD_CONF_FILE_DEFAULT_PATH, interfaces[i].ifname);
@@ -652,7 +657,8 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
 
     for (i = 0; i < interface_count; i++) {
         if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == band) && 
-             (interfaces[i].identifier == identifier)) {
+             ((interfaces[i].identifier != UNUSED_IDENTIFIER) &&
+              (interfaces[i].identifier == identifier))) {
             return &interfaces[i];
         }
     }
@@ -660,11 +666,9 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
     return NULL;
 }
 
-char* get_hapd_ctrl_path_by_id(int identifier, int band) {
+char* get_hapd_ctrl_path_by_id(struct interface_info* wlan) {
     memset(hapd_full_ctrl_path, 0, sizeof(hapd_full_ctrl_path));
-    struct interface_info* wlan = NULL;
-    wlan = get_wireless_interface_info(band, identifier);
-    if (identifier >= 0 && wlan) {
+    if (wlan) {
         sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, wlan->ifname);
     }
     else {
@@ -840,6 +844,7 @@ int clear_interfaces_resource() {
         }
     }
     configured_interface_count = 0;
+    memset(band_mbssid_cnt, 0, sizeof(band_mbssid_cnt));
 
     return ret;
 }

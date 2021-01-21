@@ -87,6 +87,7 @@ struct interface_info {
     char ssid[64];
     int mbssid_enable;
     int transmitter;
+    int hapd_bss_id;
     char hapd_conf_file[64];
 };
 
@@ -133,7 +134,7 @@ int delete_wireless_interface(char *ifname);
 void bridge_init(char *br);
 
 
-char* get_hapd_ctrl_path_by_id(int identifier, int band);
+char* get_hapd_ctrl_path_by_id(struct interface_info* wlan);
 char* get_hapd_ctrl_path();
 int set_hapd_ctrl_path(char* path);
 char* get_hapd_global_ctrl_path();
