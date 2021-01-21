@@ -632,7 +632,7 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
     int i;
 
     for (i = 0; i < interface_count; i++) {
-        if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == bss->band) && 
+        if ((interfaces[i].band == bss->band) && 
              (interfaces[i].identifier == UNUSED_IDENTIFIER)) {
             configured_interface_count++;
             interfaces[i].identifier = bss->identifier;
@@ -656,7 +656,7 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
     int i;
 
     for (i = 0; i < interface_count; i++) {
-        if ((interfaces[i].band == BAND_DUAL || interfaces[i].band == band) && 
+        if ((interfaces[i].band == band) && 
              ((interfaces[i].identifier != UNUSED_IDENTIFIER) &&
               (interfaces[i].identifier == identifier))) {
             return &interfaces[i];
@@ -759,8 +759,6 @@ int show_wireless_interface_info() {
             band = "2.4GHz";
         } else if (interfaces[i].band == BAND_5GHZ) {
             band = "5GHz";
-        } else {
-            band = "Dual";
         }
 
         indigo_logger(LOG_LEVEL_INFO, "Interface Name: %s, Band: %s, identifier %d", 
@@ -780,13 +778,11 @@ int parse_wireless_interface_info(char *info) {
             add_wireless_interface_info(BAND_24GHZ, -1, token+2);
         } else if (strncmp(token, "5:", 2) == 0) {
             add_wireless_interface_info(BAND_5GHZ, -1, token+2);
-        } else if (strncmp(token, "d:", 2) == 0) {
-            add_wireless_interface_info(BAND_DUAL, -1, token+2);
         } else {
             return -1;
         }
         token = strtok(NULL, delimit);
-    }    
+    }
 
     return 0;
 }
@@ -809,7 +805,7 @@ void set_default_wireless_interface_info(int band) {
     int i;
 
     for (i = 0; i < interface_count; i++) {
-        if (interfaces[i].band == BAND_DUAL || interfaces[i].band == band) {
+        if (interfaces[i].band == band) {
             default_interface = &interfaces[i];
             indigo_logger(LOG_LEVEL_DEBUG, "Set default_interface %s", default_interface->ifname);
             break;
@@ -887,10 +883,15 @@ int set_wireless_interface(char *name) {
     memset(interfaces, 0, sizeof(interfaces));
     interface_count = 0;
 
-    if (strstr(name, ":")) {
-        parse_wireless_interface_info(name);
+    if (strstr(name, ":") || strstr(name, ",")) {
+        return parse_wireless_interface_info(name);
     } else {
-        add_wireless_interface_info(BAND_DUAL, -1, name);
+#ifdef _LAPTOP_
+        add_wireless_interface_info(BAND_24GHZ, -1, name);
+        add_wireless_interface_info(BAND_5GHZ, -1, name);
+#else
+        return -1;
+#endif
     }
     return 0;
 }
