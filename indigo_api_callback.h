@@ -59,7 +59,6 @@ struct tlv_to_config_name maps[] = {
     { TLV_VHT_CAPB, "vht_capab", 0 },
     { TLV_IEEE8021_X, "ieee8021x", 0 },
     { TLV_EAP_SERVER, "eap_server", 0 },
-    { TLV_EAPOL_KEY_INDEX_WORKAROUND, "eapol_key_index_workaround", 0 },
     { TLV_AUTH_SERVER_ADDR, "auth_server_addr", 0 },
     { TLV_AUTH_SERVER_PORT, "auth_server_port", 0 },
     { TLV_AUTH_SERVER_SHARED_SECRET, "auth_server_shared_secret", 0 },

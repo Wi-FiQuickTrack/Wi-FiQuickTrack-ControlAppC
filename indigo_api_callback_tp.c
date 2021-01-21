@@ -183,10 +183,19 @@ done:
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
-    char buffer[S_BUFFER_LEN];
+    char buffer[S_BUFFER_LEN], reset_type[16];
     char *parameter[] = {"pidof", "hostapd", NULL};
     char *message = NULL;
+    struct tlv_hdr *tlv = NULL;
 
+    /* TLV: RESET_TYPE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_RESET_TYPE);
+    memset(reset_type, 0, sizeof(reset_type));
+    if (tlv) {
+        memcpy(reset_type, tlv->value, tlv->len);
+        reset = atoi(reset_type);
+        indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
+    }
     memset(buffer, 0, sizeof(buffer));
 #ifdef _OPENWRT_
     system("killall hostapd-wfa 1>/dev/null 2>/dev/null");
@@ -198,7 +207,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     len = unlink(get_hapd_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
-        reset = 1;
     }
     sleep(1);
 
@@ -217,9 +225,14 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         message = TLV_VALUE_HOSTAPD_STOP_OK;
     }
 
+    /* Test case teardown case */
+    if (reset == RESET_TYPE_TEARDOWN) {
+        /* Send hostapd log to Tool */
+    }
+
     stop_loopback_data(NULL);
 
-    if (reset) {
+    if (reset == RESET_TYPE_INIT) {
         /* clean the log */
         system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
 
@@ -889,10 +902,10 @@ static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper
     /* Send broadcast ARP */
     memset(recv_count, 0, sizeof(recv_count));
     recvd = send_broadcast_arp(target_ip, &send, atoi(rate));
-    if (recvd > 0) {
+    snprintf(recv_count, sizeof(recv_count), "%d", recvd);
+    if (send > 0) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_BROADCAST_ARP_TEST_OK;
-	snprintf(recv_count, sizeof(recv_count), "%d", recvd);
     }
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -932,9 +945,19 @@ done:
 
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
-    char buffer[S_BUFFER_LEN];
+    char buffer[S_BUFFER_LEN], reset_type[16];
     char *parameter[] = {"pidof", "wpa_supplicant", NULL};
     char *message = NULL;
+    struct tlv_hdr *tlv = NULL;
+
+    /* TLV: RESET_TYPE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_RESET_TYPE);
+    memset(reset_type, 0, sizeof(reset_type));
+    if (tlv) {
+        memcpy(reset_type, tlv->value, tlv->len);
+        reset = atoi(reset_type);
+        indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
+    }
 
     system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
     sleep(2);
@@ -942,11 +965,15 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     len = unlink(get_wpas_conf_file());
     if (len) {
         indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
-        reset = 1;
     }
     sleep(1);
 
-    if (reset) {
+    /* Test case teardown case */
+    if (reset == RESET_TYPE_TEARDOWN) {
+        /* Send supplicant log to Tool */
+    }
+
+    if (reset == RESET_TYPE_INIT) {
         /* clean the log */
         system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
     }

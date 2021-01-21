@@ -115,7 +115,7 @@ struct indigo_api {
 #define TLV_BSS_IDENTIFIER                      0x001d
 #define TLV_HW_MODE                             0x001e
 #define TLV_VHT_OPER_CENTR_FREQ                 0x001f
-#define TLV_EAPOL_KEY_INDEX_WORKAROUND          0x0020
+#define TLV_RESET_TYPE                          0x0020
 #define TLV_LOGGER_SYSLOG                       0x0021
 #define TLV_LOGGER_SYSLOG_LEVEL                 0x0022
 #define TLV_IE_OVERRIDE                         0x0023
@@ -313,6 +313,9 @@ struct indigo_api {
 #define TLV_VALUE_RESET_NOT_OK                  "Failed to run Device reset"
 #define TLV_VALUE_POWER_SAVE_OK                 "Set power save value successfully"
 #define TLV_VALUE_POWER_SAVE_NOT_OK             "Failed to set power save value"
+
+#define RESET_TYPE_INIT                         0x01
+#define RESET_TYPE_TEARDOWN                     0x02
 
 #define WPA_CTRL_OK                             "OK"
 
