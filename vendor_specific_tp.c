@@ -81,7 +81,7 @@ void detect_sta_vendor() {
         /* set to platform 1 by default */
         sta_drv_ops = &sta_driver_platform1_ops;
         indigo_logger(LOG_LEVEL_INFO, 
-            "Failed to find any supported drivers, hook the default platform handlers");
+            "Unable to find any supported drivers, hook the default platform handlers");
     }
 
     pclose(fp);
