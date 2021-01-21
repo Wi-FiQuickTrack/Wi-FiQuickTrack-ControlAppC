@@ -10,17 +10,21 @@ CFLAGS += -g
 
 ifeq ($(TYPE),laptop)
 CC = gcc
-else
-#CC = /openwrt/QCA_Sniffer_11ax/qsdk/staging_dir/toolchain-arm_cortex-a7_gcc-5.2.0_musl-1.1.16_eabi/bin/arm-openwrt-linux-gcc
-#LD = /openwrt/QCA_Sniffer_11ax/qsdk/staging_dir/toolchain-arm_cortex-a7_gcc-5.2.0_musl-1.1.16_eabi/bin/arm-openwrt-linux-ld
+
+else ifeq ($(TYPE),wts_openwrt)
 CC = /openwrt/QCA_Sniffer_11ax/qsdk/staging_dir/toolchain-aarch64_cortex-a53_gcc-5.2.0_musl-1.1.16/bin/aarch64-openwrt-linux-gcc
 LD = /openwrt/QCA_Sniffer_11ax/qsdk/staging_dir/toolchain-aarch64_cortex-a53_gcc-5.2.0_musl-1.1.16/bin/aarch64-openwrt-linux-ld
 # _OPENWRT_: Use OPENWRT
 CFLAGS += -D_OPENWRT_
-
-# _WTS_OPENWRT_: WTS OPENWRT specific changes.
-# Comment out this if not using the WTS OPENWRT image
+# _WTS_OPENWRT_: WTS OPENWRT specific changes
 CFLAGS += -D_WTS_OPENWRT_
+
+else
+# upstream OPENWRT
+CC = /openwrt/QCA_Sniffer_11ax/qsdk/staging_dir/toolchain-arm_cortex-a7_gcc-5.2.0_musl-1.1.16_eabi/bin/arm-openwrt-linux-gcc
+LD = /openwrt/QCA_Sniffer_11ax/qsdk/staging_dir/toolchain-arm_cortex-a7_gcc-5.2.0_musl-1.1.16_eabi/bin/arm-openwrt-linux-ld
+# _OPENWRT_: Use OPENWRT
+CFLAGS += -D_OPENWRT_
 endif
 
 # Define the app is for DUT or platform
