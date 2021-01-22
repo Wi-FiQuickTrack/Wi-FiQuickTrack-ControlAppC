@@ -105,12 +105,14 @@ struct loopback_info {
     char message[1600];
 };
 
+/* log and file API */
 void indigo_logger(int level, const char *fmt, ...);
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 char* read_file(char *fn);
 int write_file(char *fn, char *buffer, int len);
 int append_file(char *fn, char *buffer, int len); 
 
+/* network interface and loopback API */
 int get_mac_address(char *buffer, int size, char *interface);
 int set_mac_address(char *ifname, char *mac);
 int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);
@@ -120,7 +122,6 @@ int loopback_client_status();
 int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, double rate);
 int stop_loopback_data(int *pkt_sent);
 int send_broadcast_arp(char *target_ip, int *send_count, int rate);
-
 int is_bridge_created();
 int create_bridge(char *br);
 int add_interface_to_bridge(char *br, char *interface);
@@ -132,7 +133,11 @@ int add_wireless_interface(char *ifname);
 int delete_wireless_interface(char *ifname);
 void bridge_init(char *br);
 
-
+/* hostapd API */
+char* get_hapd_exec_file();
+int set_hapd_exec_file(char* path);
+char* get_hapd_full_exec_path();
+int set_hapd_full_exec_path(char* path);
 char* get_hapd_ctrl_path_by_id(struct interface_info* wlan);
 char* get_hapd_ctrl_path();
 int set_hapd_ctrl_path(char* path);
@@ -141,6 +146,11 @@ int set_hapd_global_ctrl_path(char* path);
 char* get_hapd_conf_file();
 int set_hapd_conf_file(char* path);
 
+/* wpa_supplicant API */
+char* get_wpas_exec_file();
+int set_wpas_exec_file(char* path);
+char* get_wpas_full_exec_path();
+int set_wpas_full_exec_path(char* path);
 char* get_wpas_ctrl_path();
 int set_wpas_ctrl_path(char* path);
 char* get_wpas_global_ctrl_path();
@@ -148,6 +158,7 @@ int set_wpas_global_ctrl_path(char* path);
 char* get_wpas_conf_file();
 int set_wpas_conf_file(char* path);
 
+/* service and environment API */
 char* get_wireless_interface();
 int set_wireless_interface(char *name);
 int get_service_port();
@@ -155,12 +166,6 @@ int set_service_port(int port);
 char* get_default_wireless_interface_info();
 int clear_interfaces_resource();
 char* get_all_hapd_conf_files();
-
-size_t strlcpy(char *dest, const char *src, size_t siz);
-int get_key_value(char *value, char *buffer, char *token);
-
-int verify_band_from_freq(int freq, int band);
-
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
 struct interface_info* assign_wireless_interface_info(struct bss_identifier_info *bss);
 struct interface_info* get_wireless_interface_info(int band, int identifier);
@@ -172,4 +177,8 @@ void get_server_cert_hash(char *pem_file, char *buffer);
 int insert_wpa_network_config(char *config);
 void remove_pac_file(char *path);
 
+/* misc */
+size_t strlcpy(char *dest, const char *src, size_t siz);
+int get_key_value(char *value, char *buffer, char *token);
+int verify_band_from_freq(int freq, int band);
 #endif

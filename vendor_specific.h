@@ -23,6 +23,12 @@
 #ifndef _VENDOR_SPECIFIC_
 #define _VENDOR_SPECIFIC_  1
 
+/* hostapd definitions */
+#ifdef _DUT_
+#define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd" // will be changed to /usr/share/indigo/hostapd
+#else
+#define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd" // will be changed to /usr/share/indigo/hostapd_udp
+#endif /* _DUT_ */
 #define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
 
@@ -43,6 +49,12 @@
 
 #endif /* _OPENWRT_ */
 
+/* wpa_supplicant definitions */
+#ifdef _DUT_
+#define WPAS_EXEC_FILE_DEFAULT                      "/usr/sbin/wpa_supplicant" // will be changed to /usr/share/indigo/wpa_supplicant
+#else
+#define WPAS_EXEC_FILE_DEFAULT                      "/usr/sbin/wpa_supplicant" // will be changed to /usr/share/indigo/wpa_supplicant_udp
+#endif /* _DUT_ */
 #define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
 #define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
 
