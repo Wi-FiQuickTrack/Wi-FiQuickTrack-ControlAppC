@@ -765,6 +765,32 @@ int set_hapd_conf_file(char* path) {
     return 0;
 }
 
+char* get_wpas_exec_file() {
+    return wpas_exec_file;
+}
+
+int set_wpas_exec_file(char* path) {
+    char *ptr = indigo_strrstr(path, "/");
+    if (ptr) {
+        strcpy(wpas_exec_file, ptr+1);
+    } else {
+        strcpy(wpas_exec_file, path);
+    }
+    return 0;
+}
+
+char* get_wpas_full_exec_path() {
+    return wpas_full_exec_path;
+}
+
+int set_wpas_full_exec_path(char* path) {
+    memset(wpas_full_exec_path, 0, sizeof(wpas_full_exec_path));
+    snprintf(wpas_full_exec_path, sizeof(wpas_full_exec_path), "%s", path);
+
+    set_wpas_exec_file(wpas_full_exec_path);
+    return 0;
+}
+
 char* get_wpas_ctrl_path() {
     memset(wpas_full_ctrl_path, 0, sizeof(wpas_full_ctrl_path));
     sprintf(wpas_full_ctrl_path, "%s/%s", wpas_ctrl_path, get_default_wireless_interface_info());
