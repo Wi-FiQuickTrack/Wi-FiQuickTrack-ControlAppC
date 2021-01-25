@@ -615,6 +615,7 @@ int add_all_wireless_interface_to_bridge(char *br) {
 
     return 0;
 }
+
 /* Environment */
 int service_port = SERVICE_PORT_DEFAULT;
 
@@ -622,11 +623,13 @@ char hapd_ctrl_path[64] = HAPD_CTRL_PATH_DEFAULT;
 char hapd_full_ctrl_path[128];
 char hapd_global_ctrl_path[64] = HAPD_GLOBAL_CTRL_PATH_DEFAULT;
 char hapd_conf_file[64] = HAPD_CONF_FILE_DEFAULT;
+int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
 
 char wpas_ctrl_path[64] = WPAS_CTRL_PATH_DEFAULT;
 char wpas_full_ctrl_path[128];
 char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
 char wpas_conf_file[64] = WPAS_CONF_FILE_DEFAULT;
+int wpas_debug_level = DEBUG_LEVEL_DISABLE;
 
 struct interface_info* assign_wireless_interface_info(struct bss_identifier_info *bss) {
     int i;
@@ -664,6 +667,15 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
     }
 
     return NULL;
+}
+
+int get_debug_level(int value) {
+    if (value == 0) {
+        return DEBUG_LEVEL_DISABLE;
+    } else if (value == 1) {
+        return DEBUG_LEVEL_BASIC;
+    }
+    return DEBUG_LEVEL_ADVANCED;
 }
 
 char* get_hapd_ctrl_path_by_id(struct interface_info* wlan) {
@@ -710,6 +722,19 @@ int set_hapd_conf_file(char* path) {
     return 0;
 }
 
+void set_hostapd_debug_level(int level) {
+    hostapd_debug_level = level;
+}
+
+char* get_hostapd_debug_arguments() {
+    if (hostapd_debug_level == DEBUG_LEVEL_ADVANCED) {
+        return "-dddK";
+    } else if (hostapd_debug_level == DEBUG_LEVEL_BASIC) {
+        return "-dK";
+    }
+    return "";
+}
+
 char* get_wpas_ctrl_path() {
     memset(wpas_full_ctrl_path, 0, sizeof(wpas_full_ctrl_path));
     sprintf(wpas_full_ctrl_path, "%s/%s", wpas_ctrl_path, get_default_wireless_interface_info());
@@ -740,6 +765,18 @@ int set_wpas_conf_file(char* path) {
     return 0;
 }
 
+void set_wpas_debug_level(int level) {
+    wpas_debug_level = level;
+}
+
+char* get_wpas_debug_arguments() {
+    if (wpas_debug_level == DEBUG_LEVEL_ADVANCED) {
+        return "-ddd";
+    } else if (wpas_debug_level == DEBUG_LEVEL_BASIC) {
+        return "-d";
+    }
+    return "";
+}
 
 int add_wireless_interface_info(int band, int bssid, char *name) {
     interfaces[interface_count].band = band;
@@ -905,6 +942,7 @@ int set_service_port(int port) {
     return 0;
 }
 
+/* Channel functions */
 struct channel_info band_24[] = { {1, 2412}, {2, 2417}, {3, 2422}, {4, 2427}, {5, 2432}, {6, 2437}, {7, 2442}, {8, 2447}, {9, 2452}, {10, 2457}, {11, 2462} };
 struct channel_info band_5[] = { {36, 5180}, {40, 5200}, {44, 5220}, {48, 5240}, {52, 5260}, {56, 5280}, {60, 5300}, {64, 5320}, {100, 5500}, {104, 5520}, {108, 5540}, 
                                  {112, 5560}, {116, 5580}, {120, 5600}, {124, 5620}, {128, 5640}, {132, 5660}, {136, 5680}, {140, 5700}, {144, 5720}, {149, 5745}, 
@@ -929,6 +967,49 @@ int verify_band_from_freq(int freq, int band) {
     }
 
     return -1;
+}
+
+int get_center_freq_index(int channel, int width) {
+    if (width == 1) {
+        if (channel >= 36 && channel <= 48) {
+            return 42;
+        } else if (channel <= 64) {
+            return 58;
+        } else if (channel >= 100 && channel <= 112) {
+            return 106;
+        } else if (channel <= 128) {
+            return 122;
+        } else if (channel <= 144) {
+            return 138;
+        } else if (channel >= 149 && channel <= 161) {
+            return 155;
+        }
+    } else if (width == 2) {
+        if (channel >= 36 && channel <= 64) {
+            return 50;
+        } else if (channel >= 36 && channel <= 64) {
+            return 114;
+        }
+    }
+    return 0;
+}
+
+int is_ht40plus_chan(int chan) {
+    if (chan == 36 || chan == 44 || chan == 52 || chan == 60 ||
+        chan == 100 || chan == 108 || chan == 116 | chan == 124 ||
+        chan == 132 || chan == 140 || chan == 149 || chan == 157)
+        return 1;
+    else
+        return 0;
+}
+
+int is_ht40minus_chan(int chan) {
+    if (chan == 40 || chan == 48 || chan == 56 || chan == 64 ||
+        chan == 104 || chan == 112 || chan == 120 | chan == 128 ||
+        chan == 136 || chan == 144 || chan == 153 || chan == 161)
+        return 1;
+    else
+        return 0;
 }
 
 /* String operation */

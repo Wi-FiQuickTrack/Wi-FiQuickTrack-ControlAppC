@@ -132,6 +132,10 @@ int add_wireless_interface(char *ifname);
 int delete_wireless_interface(char *ifname);
 void bridge_init(char *br);
 
+#define DEBUG_LEVEL_DISABLE             0
+#define DEBUG_LEVEL_BASIC               1
+#define DEBUG_LEVEL_ADVANCED            2
+int get_debug_level(int value);
 
 char* get_hapd_ctrl_path_by_id(struct interface_info* wlan);
 char* get_hapd_ctrl_path();
@@ -140,6 +144,8 @@ char* get_hapd_global_ctrl_path();
 int set_hapd_global_ctrl_path(char* path);
 char* get_hapd_conf_file();
 int set_hapd_conf_file(char* path);
+void set_hostapd_debug_level(int level);
+char* get_hostapd_debug_arguments();
 
 char* get_wpas_ctrl_path();
 int set_wpas_ctrl_path(char* path);
@@ -147,6 +153,8 @@ char* get_wpas_global_ctrl_path();
 int set_wpas_global_ctrl_path(char* path);
 char* get_wpas_conf_file();
 int set_wpas_conf_file(char* path);
+void set_wpas_debug_level(int level);
+char* get_wpas_debug_arguments();
 
 char* get_wireless_interface();
 int set_wireless_interface(char *name);
@@ -160,6 +168,9 @@ size_t strlcpy(char *dest, const char *src, size_t siz);
 int get_key_value(char *value, char *buffer, char *token);
 
 int verify_band_from_freq(int freq, int band);
+int get_center_freq_index(int channel, int width);
+int is_ht40plus_chan(int chan);
+int is_ht40minus_chan(int chan);
 
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
 struct interface_info* assign_wireless_interface_info(struct bss_identifier_info *bss);
