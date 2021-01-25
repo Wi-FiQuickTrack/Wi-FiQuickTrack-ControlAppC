@@ -73,48 +73,6 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     return 0;
 }
 
-#define DEBUG_LEVEL_DISABLE             0
-#define DEBUG_LEVEL_BASIC               1
-#define DEBUG_LEVEL_ADVANCED            2
-
-int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
-int wpas_debug_level = DEBUG_LEVEL_BASIC;
-
-static int get_debug_level(int value) {
-    if (value == 0) {
-        return DEBUG_LEVEL_DISABLE;
-    } else if (value == 1) {
-        return DEBUG_LEVEL_BASIC;
-    }
-    return DEBUG_LEVEL_ADVANCED;
-}
-
-static void set_hostapd_debug_level(int level) {
-    hostapd_debug_level = level;
-}
-
-static void set_wpas_debug_level(int level) {
-    wpas_debug_level = level;
-}
-
-static char* get_hostapd_debug_arguments() {
-    if (hostapd_debug_level == DEBUG_LEVEL_ADVANCED) {
-        return "-dddK";
-    } else if (hostapd_debug_level == DEBUG_LEVEL_BASIC) {
-        return "-dK";
-    }
-    return "";
-}
-
-static char* get_wpas_debug_arguments() {
-    if (wpas_debug_level == DEBUG_LEVEL_ADVANCED) {
-        return "-ddd";
-    } else if (wpas_debug_level == DEBUG_LEVEL_BASIC) {
-        return "-d";
-    }
-    return "";
-}
-
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_RESET_NOT_OK;
@@ -274,31 +232,6 @@ static struct tlv_to_config_name* find_hostapd_config(int tlv_id) {
         }
     }
     return NULL;
-}
-
-static int get_center_freq_index(int channel, int width) {
-    if (width == 1) {
-        if (channel >= 36 && channel <= 48) {
-            return 42;
-        } else if (channel <= 64) {
-            return 58;
-        } else if (channel >= 100 && channel <= 112) {
-            return 106;
-        } else if (channel <= 128) {
-            return 122;
-        } else if (channel <= 144) {
-            return 138;
-        } else if (channel >= 149 && channel <= 161) {
-            return 155;
-        }
-    } else if (width == 2) {
-        if (channel >= 36 && channel <= 64) {
-            return 50;
-        } else if (channel >= 36 && channel <= 64) {
-            return 114;
-        }
-    }
-    return 0;
 }
 
 #ifdef _RESERVED_
