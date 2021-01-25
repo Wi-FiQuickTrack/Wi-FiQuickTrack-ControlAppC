@@ -27,7 +27,12 @@
 #ifdef _DUT_
 #define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd" // will be changed to /usr/share/indigo/hostapd
 #else
+#ifdef _OPENWRT_ // will be removed
+/* Only OpenWRT + Test Platform, the hostapd path is hostapd-wfa. */
+#define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd-wfa" // will be removed 
+#else // will be removed
 #define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd" // will be changed to /usr/share/indigo/hostapd_udp
+#endif /* _OPENWRT_ */ // will be removed
 #endif /* _DUT_ */
 #define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"

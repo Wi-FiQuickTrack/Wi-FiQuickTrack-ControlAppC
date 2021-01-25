@@ -166,11 +166,13 @@ done:
 /* Show the usage */
 static void usage() {
     printf("usage:\n");
-    printf("app [-h] [-p<port number>] [-i<wireless interface>|-i<band>:<interface>[,<band>:<interface>]]\n\n");
+    printf("app [-h] [-p<port number>] [-i<wireless interface>|-i<band>:<interface>[,<band>:<interface>]] [-a<hostapd path>] [-s<wpa_supplicant path>]\n\n");
     printf("usage:\n");
+    printf("  -a = specify hostapd path\n");
     printf("  -d = debug received and sent message\n");
-    printf("  -i = Specify the interface. E.g., -i wlan0. Or, <band>:<interface>. band can be 2 for 2.4GHz and 5 for 5GHz. E.g., -i 2:wlan0,2:wlan1,5:wlan32,5:wlan33\n");
-    printf("  -p = port number of the application\n\n");
+    printf("  -i = specify the interface. E.g., -i wlan0. Or, <band>:<interface>.\n       band can be 2 for 2.4GHz, 5 for 5GHz and d for the Dual. E.g., -i 2:wlan0,2:wlan1,5:wlan32,5:wlan33\n");
+    printf("  -p = port number of the application\n");
+    printf("  -s = specify wpa_supplicant path\n\n");
 }
 
 /* Show the welcome message with role and version */
@@ -194,11 +196,14 @@ static int parse_parameters(int argc, char *argv[]) {
     char buf[128];
 
 #ifdef _VERSION_
-    while ((c = getopt(argc, argv, "i:hp:dcv")) != -1) {
+    while ((c = getopt(argc, argv, "a:s:i:hp:dcv")) != -1) {
 #else
-    while ((c = getopt(argc, argv, "i:hp:dc")) != -1) {
+    while ((c = getopt(argc, argv, "a:s:i:hp:dc")) != -1) {
 #endif
         switch (c) {
+        case 'a':
+            set_hapd_full_exec_path(optarg);
+            break;
         case 'c':
             capture_packet = 1;
             break;
@@ -215,6 +220,9 @@ static int parse_parameters(int argc, char *argv[]) {
             break;
         case 'p':
             set_service_port(atoi(optarg));
+            break;
+        case 's':
+            set_wpas_full_exec_path(optarg);
             break;
 #ifdef _VERSION_
         case 'v':
@@ -257,13 +265,15 @@ int main(int argc, char* argv[]) {
     print_welcome();
 
     /* Initiate the application */
-    set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);
-    set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);
-    set_hapd_global_ctrl_path(HAPD_GLOBAL_CTRL_PATH_DEFAULT);
-    set_hapd_conf_file(HAPD_CONF_FILE_DEFAULT);
-    set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);
-    set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT);
-    set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);
+    set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);       // Set default wireless interface information
+    set_hapd_full_exec_path(HAPD_EXEC_FILE_DEFAULT);          // Set default hostapd execution file path
+    set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);               // Set default hostapd control interface path
+    set_hapd_global_ctrl_path(HAPD_GLOBAL_CTRL_PATH_DEFAULT); // Set default hostapd global control interface path
+    set_hapd_conf_file(HAPD_CONF_FILE_DEFAULT);               // Set default hostapd configuration file path
+    set_wpas_full_exec_path(WPAS_EXEC_FILE_DEFAULT);          // Set default wap_supplicant execution file path
+    set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);               // Set default wap_supplicant control interface path
+    set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT); // Set default wap_supplicant global control interface path
+    set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);               // Set default wap_supplicant configuration file path
 
     /* Parse the application arguments */
     if (parse_parameters(argc, argv)) {
@@ -274,6 +284,9 @@ int main(int argc, char* argv[]) {
     indigo_logger(LOG_LEVEL_INFO, "Indigo control app running at: %d", get_service_port());
     indigo_logger(LOG_LEVEL_INFO, "Wireless Interface:" );
     show_wireless_interface_info();
+    indigo_logger(LOG_LEVEL_INFO, "hostapd Path: %s (%s)", get_hapd_full_exec_path(), get_hapd_exec_file());
+    indigo_logger(LOG_LEVEL_INFO, "wpa_supplicant Path: %s (%s)", get_wpas_full_exec_path(), get_wpas_exec_file());
+
     /*
      * The following information may not help anymore since
      * - we support multiple vaps

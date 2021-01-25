@@ -112,13 +112,19 @@ void openwrt_apply_radio_config(void) {
 
 #ifdef _WTS_OPENWRT_
     // Apply radio configurations
-    system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "%s -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid"
+        get_hapd_full_exec_path());
+    system(buffer);
     sleep(1);
     system("wifi down >/dev/null 2>/dev/null");
     sleep(2);
     system("wifi up >/dev/null 2>/dev/null");
     sleep(3);
-    system("killall hostapd >/dev/null 2>/dev/null");
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
+    system(buffer);
     sleep(2);
 #endif
 }
