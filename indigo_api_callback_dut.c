@@ -32,6 +32,10 @@
 #include "indigo_api_callback.h"
 
 
+static char pac_file_path[S_BUFFER_LEN] = {0};
+struct interface_info* band_transmitter[16];
+
+
 void register_apis() {
     /* Basic */
     register_api(API_GET_IP_ADDR, NULL, get_ip_addr_handler);
@@ -70,51 +74,6 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
     fill_wrapper_tlv_bytes(resp, TLV_CONTROL_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
     return 0;
-}
-
-#define DEBUG_LEVEL_DISABLE             0
-#define DEBUG_LEVEL_BASIC               1
-#define DEBUG_LEVEL_ADVANCED            2
-
-int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
-int wpas_debug_level = DEBUG_LEVEL_DISABLE;
-
-static char pac_file_path[S_BUFFER_LEN] = {0};
-struct interface_info* band_transmitter[16];
-
-static int get_debug_level(int value) {
-    if (value == 0) {
-        return DEBUG_LEVEL_DISABLE;
-    } else if (value == 1) {
-        return DEBUG_LEVEL_BASIC;
-    }
-    return DEBUG_LEVEL_ADVANCED;
-}
-
-static void set_hostapd_debug_level(int level) {
-    hostapd_debug_level = level;
-}
-
-static void set_wpas_debug_level(int level) {
-    wpas_debug_level = level;
-}
-
-static char* get_hostapd_debug_arguments() {
-    if (hostapd_debug_level == DEBUG_LEVEL_ADVANCED) {
-        return "-dddK";
-    } else if (hostapd_debug_level == DEBUG_LEVEL_BASIC) {
-        return "-dK";
-    }
-    return "";
-}
-
-static char* get_wpas_debug_arguments() {
-    if (wpas_debug_level == DEBUG_LEVEL_ADVANCED) {
-        return "-ddd";
-    } else if (wpas_debug_level == DEBUG_LEVEL_BASIC) {
-        return "-d";
-    }
-    return "";
 }
 
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -277,49 +236,6 @@ static struct tlv_to_config_name* find_hostapd_config(int tlv_id) {
         }
     }
     return NULL;
-}
-
-static int get_center_freq_index(int channel, int width) {
-    if (width == 1) {
-        if (channel >= 36 && channel <= 48) {
-            return 42;
-        } else if (channel <= 64) {
-            return 58;
-        } else if (channel >= 100 && channel <= 112) {
-            return 106;
-        } else if (channel <= 128) {
-            return 122;
-        } else if (channel <= 144) {
-            return 138;
-        } else if (channel >= 149 && channel <= 161) {
-            return 155;
-        }
-    } else if (width == 2) {
-        if (channel >= 36 && channel <= 64) {
-            return 50;
-        } else if (channel >= 36 && channel <= 64) {
-            return 114;
-        }
-    }
-    return 0;
-}
-
-static int is_ht40plus_chan(int chan) {
-    if (chan == 36 || chan == 44 || chan == 52 || chan == 60 ||
-        chan == 100 || chan == 108 || chan == 116 | chan == 124 ||
-        chan == 132 || chan == 140 || chan == 149 || chan == 157)
-        return 1;
-    else
-        return 0;
-}
-
-static int is_ht40minus_chan(int chan) {
-    if (chan == 40 || chan == 48 || chan == 56 || chan == 64 ||
-        chan == 104 || chan == 112 || chan == 120 | chan == 128 ||
-        chan == 136 || chan == 144 || chan == 153 || chan == 161)
-        return 1;
-    else
-        return 0;
 }
 
 #ifdef _RESERVED_
