@@ -112,7 +112,9 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
 
     if (atoi(role) == DUT_TYPE_STAUT) {
         /* stop the wpa_supplicant and release IP address */
-        system("killall wpa_supplicant >/dev/null 2>/dev/null");
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+        system(buffer);
         sleep(1);
         reset_interface_ip(get_wireless_interface());
         if (strlen(log_level)) {
@@ -120,7 +122,9 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         }
     } else if (atoi(role) == DUT_TYPE_APUT) {
         /* stop the hostapd and release IP address */
-        system("killall hostapd >/dev/null 2>/dev/null");
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
+        system(buffer);
         sleep(1);
         reset_interface_ip(get_wireless_interface());
         if (strlen(log_level)) {
@@ -159,7 +163,7 @@ done:
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN], reset_type[16];
-    char *parameter[] = {"pidof", "hostapd", NULL};
+    char *parameter[] = {"pidof", get_hapd_exec_file(), NULL};
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
 
@@ -171,9 +175,10 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         reset = atoi(reset_type);
         indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
     }
-    memset(buffer, 0, sizeof(buffer));
 
-    system("killall hostapd 1>/dev/null 2>/dev/null");
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
+    system(buffer);
     sleep(2);
 
 #ifdef _OPENWRT_
@@ -185,6 +190,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     sleep(1);
 #endif
 
+    memset(buffer, 0, sizeof(buffer));
     len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
     if (len) {
         message = TLV_VALUE_HOSTAPD_STOP_NOT_OK;
@@ -654,8 +660,10 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #endif
 
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "hostapd -B -t -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), 
+    sprintf(buffer, "%s -B -t -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
+        get_hapd_full_exec_path(),
+        get_hapd_global_ctrl_path(),
+        get_hostapd_debug_arguments(), 
         get_all_hapd_conf_files());
     len = system(buffer);
     sleep(1);
@@ -986,7 +994,7 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
     char buffer[S_BUFFER_LEN];
     char response[S_BUFFER_LEN];
     char address[32];
-    char *parameter[] = {"pidof", "hostapd", NULL};
+    char *parameter[] = {"pidof", get_hapd_exec_file(), NULL};
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
@@ -1343,7 +1351,7 @@ done:
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN], reset_type[16];
-    char *parameter[] = {"pidof", "wpa_supplicant", NULL};
+    char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
 
@@ -1356,7 +1364,9 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
     }
 
-    system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
     sleep(2);
 
     len = unlink(get_wpas_conf_file());
@@ -1568,13 +1578,18 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     sleep(1);
 #endif
 
-    system("killall wpa_supplicant >/dev/null 2>/dev/null");
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
     sleep(3);
 
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
-        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
+    sprintf(buffer, "%s -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wpas_debug_arguments(),
+        get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
@@ -1827,8 +1842,10 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     }
 
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -t -c %s -i %s -f /var/log/supplicant.log", 
-                    get_wpas_conf_file(), get_wireless_interface());
+    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wireless_interface());
     len = system(buffer);
     sleep(2);
 

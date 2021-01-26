@@ -211,6 +211,25 @@ int append_file(char *fn, char *buffer, int len) {
     return -1;
 }
 
+/* strrstr(), reversed strstr(), is not available in some compilers. Here is the implementation. */
+static char* indigo_strrstr(char *input, const char *token) {
+    char *result = NULL, *p = NULL;
+
+    if (*token == '\0') {
+        return (char *) input;
+    }
+
+    while (1) {
+        p = strstr(input, token);
+        if (p == NULL)
+            break;
+        result = p;
+        input = p + 1;
+    }
+
+    return result;
+}
+
 /* Loopback */
 int loopback_socket = 0;
 
@@ -619,12 +638,16 @@ int add_all_wireless_interface_to_bridge(char *br) {
 /* Environment */
 int service_port = SERVICE_PORT_DEFAULT;
 
+char hapd_exec_file[64];
+char hapd_full_exec_path[64] = HAPD_EXEC_FILE_DEFAULT;
 char hapd_ctrl_path[64] = HAPD_CTRL_PATH_DEFAULT;
 char hapd_full_ctrl_path[128];
 char hapd_global_ctrl_path[64] = HAPD_GLOBAL_CTRL_PATH_DEFAULT;
 char hapd_conf_file[64] = HAPD_CONF_FILE_DEFAULT;
 int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
 
+char wpas_exec_file[64];
+char wpas_full_exec_path[64] = WPAS_EXEC_FILE_DEFAULT;
 char wpas_ctrl_path[64] = WPAS_CTRL_PATH_DEFAULT;
 char wpas_full_ctrl_path[128];
 char wpas_global_ctrl_path[64] = WPAS_GLOBAL_CTRL_PATH_DEFAULT;
@@ -676,6 +699,37 @@ int get_debug_level(int value) {
         return DEBUG_LEVEL_BASIC;
     }
     return DEBUG_LEVEL_ADVANCED;
+}
+
+/* get hostapd's file name */
+char* get_hapd_exec_file() {
+    return hapd_exec_file;
+}
+
+/* parse hostapd full path and set hostapd's file name */
+int set_hapd_exec_file(char* path) {
+    char *ptr = indigo_strrstr(path, "/");
+
+    if (ptr) {
+        strcpy(hapd_exec_file, ptr+1);
+    } else {
+        strcpy(hapd_exec_file, path);
+    }
+    return 0;
+}
+
+/* get hostapd's full path */
+char* get_hapd_full_exec_path() {
+    return hapd_full_exec_path;
+}
+
+/* set hostapd's full path */
+int set_hapd_full_exec_path(char* path) {
+    memset(hapd_full_exec_path, 0, sizeof(hapd_full_exec_path));
+    snprintf(hapd_full_exec_path, sizeof(hapd_full_exec_path), "%s", path);
+
+    set_hapd_exec_file(hapd_full_exec_path);
+    return 0;
 }
 
 char* get_hapd_ctrl_path_by_id(struct interface_info* wlan) {
@@ -733,6 +787,32 @@ char* get_hostapd_debug_arguments() {
         return "-dK";
     }
     return "";
+}
+
+char* get_wpas_exec_file() {
+    return wpas_exec_file;
+}
+
+int set_wpas_exec_file(char* path) {
+    char *ptr = indigo_strrstr(path, "/");
+    if (ptr) {
+        strcpy(wpas_exec_file, ptr+1);
+    } else {
+        strcpy(wpas_exec_file, path);
+    }
+    return 0;
+}
+
+char* get_wpas_full_exec_path() {
+    return wpas_full_exec_path;
+}
+
+int set_wpas_full_exec_path(char* path) {
+    memset(wpas_full_exec_path, 0, sizeof(wpas_full_exec_path));
+    snprintf(wpas_full_exec_path, sizeof(wpas_full_exec_path), "%s", path);
+
+    set_wpas_exec_file(wpas_full_exec_path);
+    return 0;
 }
 
 char* get_wpas_ctrl_path() {
