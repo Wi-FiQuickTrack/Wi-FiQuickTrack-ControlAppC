@@ -187,6 +187,8 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
         /* Send hostapd log to Tool */
+
+        reset_interface_ip(get_wireless_interface());
     }
 
     stop_loopback_data(NULL);
