@@ -113,7 +113,7 @@ void openwrt_apply_radio_config(void) {
 #ifdef _WTS_OPENWRT_
     // Apply radio configurations
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "%s -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid"
+    sprintf(buffer, "%s -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid",
         get_hapd_full_exec_path());
     system(buffer);
     sleep(1);
