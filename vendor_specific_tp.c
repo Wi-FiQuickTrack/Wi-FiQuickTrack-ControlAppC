@@ -71,10 +71,10 @@ void detect_sta_vendor() {
 
     indigo_logger(LOG_LEVEL_INFO, "Device: %s", strbuf);
 
-    if (strstr(strbuf, desc_platform1)) {
+    if (strbuf && strstr(strbuf, desc_platform1)) {
         sta_drv_ops = &sta_driver_platform1_ops;
         indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 1");
-    } else if (strstr(strbuf, desc_platform2)) {
+    } else if (strbuf && strstr(strbuf, desc_platform2)) {
         sta_drv_ops = &sta_driver_platform2_ops;
         indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 2");
     } else {
