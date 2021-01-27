@@ -1151,3 +1151,144 @@ void remove_pac_file(char *path) {
     }
 }
 
+/* HTTP post request */
+/* Internal. Generate random string for the boundary */
+static void rand_string(char *str, int size) {
+    const char charset[] = "0123456789abcdefghijklmnopqrstuvwxyz";
+    int i = 0, key = 0;
+
+    memset(str, 0, size);
+    srand(time(NULL));
+    for (i = 0; i < size; i++) {
+        key = rand() % (int)(sizeof(charset)-1);
+        str[i] = charset[key];
+    }
+}
+
+/* Internal. Generate the boundary */
+static void random_boundary(char *boundary, int size) {
+    memset(boundary, '-', size);
+    boundary[size-1] = '\0';
+    rand_string(&boundary[size - (16+1)], 16);
+}
+
+/* Internal. Generate HTTP header for the multipart POST */
+static char* http_header_multipart(char *path, char *host, int port, int content_length, char *boundary) {
+    char *buffer = NULL;
+
+    buffer = (char*)malloc(sizeof(char)*256);
+    sprintf(buffer,
+        "POST %s HTTP/1.0\r\n" \
+        "Host: %s:%d\r\n" \
+        "User-Agent: ControlAppC\r\n" \
+        "Accept: */*\r\n" \
+        "Content-Length: %d\r\n" \
+        "Connection: close\r\n" \
+        "Content-Type: multipart/form-data; boundary=%s\r\n\r\n",
+        path,
+        host,
+        port,
+        content_length,
+        boundary
+    );
+
+    return buffer;
+}
+
+/* Internal. Generate HTTP body for uploaded file */
+static char* http_body_multipart(char *boundary, char *param_name, char *file_name) {
+    char *buffer = NULL, *file_content = NULL;
+    int body_size = 0, file_size = 0;
+    struct stat st;
+
+    /* Get the file size and content */
+    stat(file_name, &st);
+    file_size = st.st_size;
+    if (file_size == 0) {
+        return buffer;
+    }
+    file_content = read_file(file_name);
+
+    /* Fill the body buffer */
+    body_size = file_size + 256;
+    buffer = (char*)malloc(body_size*sizeof(char));
+    memset(buffer, 0, body_size);
+
+    sprintf(buffer,
+        "--%s\r\n" \
+        "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n" \
+        "Content-Type: text/plain\r\n\r\n" \
+        "%s\r\n\r\n" \
+        "--%s--",
+        boundary,
+        param_name,
+        file_name,
+        file_content,
+        boundary
+    );
+    free(file_content);
+    return buffer;
+}
+
+/* Internal. Create HTTP socket */
+static int http_socket(char *host, int port) {
+    int socketfd = 0;
+    struct sockaddr_in server_addr;
+
+    if ((socketfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        return -1;
+    }
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(port);
+    server_addr.sin_addr.s_addr = inet_addr(host);
+
+    if (connect(socketfd, (struct sockaddr *)&server_addr, sizeof(struct sockaddr)) == -1) {
+        close(socketfd);
+        return -1;
+    }
+
+    return socketfd;
+}
+
+/*  Upload log by specifying the host, port, path, and the local file name */
+int http_file_post(char *host, int port, char *path, char *file_name) {
+    int socketfd = 0, retval = 0, numbytes = 0;
+    char *header = NULL, *body = NULL;
+    char boundary[64];
+    char response[10240];
+
+    /* Generate boundary, header and body */
+    random_boundary(boundary, 41);
+    /* Parameter name is file */
+    body = http_body_multipart(boundary, "file", file_name);
+    header = http_header_multipart(path, host, port, strlen(body), boundary);
+
+    socketfd = http_socket(host, port);
+    if (send(socketfd, header, strlen(header), 0) == -1){
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open HTTP socket");
+        goto done;
+    }
+
+    if (send(socketfd, body, strlen(body), 0) == -1){
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to upload file");
+        goto done;
+    }
+    
+    while ((numbytes=recv(socketfd, response, sizeof(response), 0)) > 0) {
+        response[numbytes] = '\0';
+        indigo_logger(LOG_LEVEL_DEBUG, "Server response: %s", response);
+    }
+    indigo_logger(LOG_LEVEL_INFO, "Upload completes");
+    
+done:
+    if (header) {
+        free(header);
+    }
+    if (body) {
+        free(body);
+    }
+    if (socketfd) {
+        close(socketfd);
+    }
+}

@@ -181,4 +181,5 @@ void remove_pac_file(char *path);
 size_t strlcpy(char *dest, const char *src, size_t siz);
 int get_key_value(char *value, char *buffer, char *token);
 int verify_band_from_freq(int freq, int band);
+int http_file_post(char *host, int port, char *path, char *file_name);
 #endif
