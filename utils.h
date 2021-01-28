@@ -194,5 +194,5 @@ int verify_band_from_freq(int freq, int band);
 int get_center_freq_index(int channel, int width);
 int is_ht40plus_chan(int chan);
 int is_ht40minus_chan(int chan);
-
+int http_file_post(char *host, int port, char *path, char *file_name);
 #endif
