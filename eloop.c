@@ -27,7 +27,11 @@
 
 #include "eloop.h"
 
+#ifdef _DYNAMIC_DUP_TP_
+extern void (*vendor_deinit_fp)(); 
+#else
 void vendor_deinit();
+#endif
 
 struct eloop_sock {
 	int sock;
@@ -212,7 +216,12 @@ static void eloop_handle_alarm(int sig)
 		"is a bug that ends up in a busy loop that "
 		"prevents clean shutdown.\n"
 		"Killing program forcefully.\n");
+#ifdef _DYNAMIC_DUP_TP_
+    if (vendor_deinit_fp)
+	    vendor_deinit_fp();
+#else
 	vendor_deinit();
+#endif
 	exit(1);
 }
 #endif /* CONFIG_NATIVE_WINDOWS */
