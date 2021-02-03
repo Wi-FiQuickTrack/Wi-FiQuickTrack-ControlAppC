@@ -319,51 +319,48 @@ int loopback_client_status() {
 
 unsigned short icmp_checksum(unsigned short *buf, int size)
 {
-	unsigned long sum = 0;
-	while (size > 1) {
-		sum += *buf;
-		buf++;
-		size -= 2;
-	}
-	if (size == 1)
-		sum += *(unsigned char *)buf;
-	sum = (sum & 0xffff) + (sum >> 16);
-	sum = (sum & 0xffff) + (sum >> 16);
-	return ~sum;
+    unsigned long sum = 0;
+    while (size > 1) {
+        sum += *buf;
+        buf++;
+        size -= 2;
+    }
+    if (size == 1)
+        sum += *(unsigned char *)buf;
+    sum = (sum & 0xffff) + (sum >> 16);
+    sum = (sum & 0xffff) + (sum >> 16);
+    return ~sum;
 }
 
 void setup_icmphdr(u_int8_t type, u_int8_t code, u_int16_t id, 
     u_int16_t seq, struct icmphdr *icmphdr, int packet_size)
 {
-	memset(icmphdr, 0, sizeof(struct icmphdr));
-	icmphdr->type = type;
-	icmphdr->code = code;
-	icmphdr->checksum = 0;
-	icmphdr->un.echo.id = id;
-	icmphdr->un.echo.sequence = seq;
-	icmphdr->checksum = icmp_checksum((unsigned short *)icmphdr, packet_size);
+    memset(icmphdr, 0, sizeof(struct icmphdr));
+    icmphdr->type = type;
+    icmphdr->code = code;
+    icmphdr->un.echo.id = id;
+    icmphdr->un.echo.sequence = seq;
+    icmphdr->checksum = icmp_checksum((unsigned short *)icmphdr, packet_size);
 }
 
 void send_one_loopback_icmp_packet(struct loopback_info *info) {
-	int n;
-	char server_reply[1600];
-	struct in_addr insaddr;
-	struct icmphdr *icmphdr, *recv_icmphdr;
-	struct iphdr *recv_iphdr;
-	struct sockaddr_in addr;
-	u_int16_t pid = 0;
+    int n;
+    char server_reply[1600];
+    struct in_addr insaddr;
+    struct icmphdr *icmphdr, *recv_icmphdr;
+    struct iphdr *recv_iphdr;
+    struct sockaddr_in addr;
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(info->target_ip);
 
     icmphdr = (struct icmphdr *)&info->message;
-    pid = getpid();
 
     info->pkt_sent++;
-	setup_icmphdr(ICMP_ECHO, 0, pid, info->pkt_sent, icmphdr, info->pkt_size);
+    setup_icmphdr(ICMP_ECHO, 0, 0, info->pkt_sent, icmphdr, info->pkt_size);
 
-	n = sendto(info->sock, (char *)info->message, info->pkt_size, 0, (struct sockaddr *)&addr, sizeof(addr));
+    n = sendto(info->sock, (char *)info->message, info->pkt_size, 0, (struct sockaddr *)&addr, sizeof(addr));
     if (n < 0) {
         indigo_logger(LOG_LEVEL_WARNING, "Send failed on icmp packet %d", info->pkt_sent);
         goto done;
@@ -372,22 +369,22 @@ void send_one_loopback_icmp_packet(struct loopback_info *info) {
                   info->pkt_sent, n, info->target_ip);
 
     memset(&server_reply, 0, sizeof(server_reply));
-	n = recv(info->sock, server_reply, sizeof(server_reply), 0);
+    n = recv(info->sock, server_reply, sizeof(server_reply), 0);
     if (n < 0) {
         indigo_logger(LOG_LEVEL_WARNING, "recv failed on icmp packet %d", info->pkt_sent);
         goto done;
     } else {
-		recv_iphdr = (struct iphdr *)server_reply;
-		recv_icmphdr = (struct icmphdr *)(server_reply + (recv_iphdr->ihl << 2));
-		insaddr.s_addr = recv_iphdr->saddr;
+        recv_iphdr = (struct iphdr *)server_reply;
+        recv_icmphdr = (struct icmphdr *)(server_reply + (recv_iphdr->ihl << 2));
+        insaddr.s_addr = recv_iphdr->saddr;
 
-		if (!strcmp(info->target_ip, inet_ntoa(insaddr)) && recv_icmphdr->type == ICMP_ECHOREPLY) {
-			indigo_logger(LOG_LEVEL_INFO, "icmp echo reply from %s, Receive echo %d bytes data", info->target_ip, n - 20);
-			info->pkt_rcv++;
-		} else {
-			indigo_logger(LOG_LEVEL_INFO, "Received packet is not the ICMP reply from the DUT");
-		}
-	}
+        if (!strcmp(info->target_ip, inet_ntoa(insaddr)) && recv_icmphdr->type == ICMP_ECHOREPLY) {
+            indigo_logger(LOG_LEVEL_INFO, "icmp echo reply from %s, Receive echo %d bytes data", info->target_ip, n - 20);
+            info->pkt_rcv++;
+        } else {
+            indigo_logger(LOG_LEVEL_INFO, "Received packet is not the ICMP reply from the DUT");
+        }
+    }
 
 done:
     eloop_register_timeout(0, info->rate * 1000000, send_continuous_loopback_packet, info, NULL);
@@ -540,15 +537,14 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
 
 int send_icmp_data(char *target_ip, int packet_count, int packet_size, double rate)
 {
-	int n, sock, i;
-	char buf[1600], server_reply[1600];
-	struct sockaddr_in addr;
-	struct in_addr insaddr;
-	struct icmphdr *icmphdr, *recv_icmphdr;
-	struct iphdr *recv_iphdr;
+    int n, sock, i;
+    char buf[1600], server_reply[1600];
+    struct sockaddr_in addr;
+    struct in_addr insaddr;
+    struct icmphdr *icmphdr, *recv_icmphdr;
+    struct iphdr *recv_iphdr;
     struct timeval timeout;
-	int pkt_sent = 0, pkt_rcv = 0;
-	u_int16_t pid = 0;
+    int pkt_sent = 0, pkt_rcv = 0;
 
 	sock = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (sock < 0) {
@@ -557,7 +553,7 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = inet_addr(target_ip);
+    addr.sin_addr.s_addr = inet_addr(target_ip);
 
     if (rate < 1) {
         timeout.tv_sec = 0;
@@ -585,18 +581,16 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         return 0;
     }
 
-    pid = getpid();
-
     icmphdr = (struct icmphdr *)&buf;
     memset(&buf, 0, sizeof(buf));
     for (i = sizeof(struct icmphdr); (i < packet_size) && (i < sizeof(buf)); i++)
         buf[i] = 0x0A;
 
     for (pkt_sent = 1; pkt_sent <= packet_count; pkt_sent++) {
-    	memset(&server_reply, 0, sizeof(server_reply));
-		setup_icmphdr(ICMP_ECHO, 0, pid, pkt_sent, icmphdr, packet_size);
+        memset(&server_reply, 0, sizeof(server_reply));
+        setup_icmphdr(ICMP_ECHO, 0, 0, pkt_sent, icmphdr, packet_size);
 
-		n = sendto(sock, (char *)buf, packet_size, 0, (struct sockaddr *)&addr, sizeof(addr));
+        n = sendto(sock, (char *)buf, packet_size, 0, (struct sockaddr *)&addr, sizeof(addr));
         if (n < 0) {
             indigo_logger(LOG_LEVEL_WARNING, "Send failed on icmp packet %d", pkt_sent);
             continue;
@@ -604,28 +598,28 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         indigo_logger(LOG_LEVEL_INFO, "Packet %d: Send icmp %d bytes data to ip %s",
                       pkt_sent, n, target_ip);
 
-		n = recv(sock, server_reply, sizeof(server_reply), 0);
+        n = recv(sock, server_reply, sizeof(server_reply), 0);
         if (n < 0) {
             indigo_logger(LOG_LEVEL_WARNING, "recv failed on icmp packet %d", pkt_sent);
             continue;
         } else {
-			recv_iphdr = (struct iphdr *)server_reply;
-			recv_icmphdr = (struct icmphdr *)(server_reply + (recv_iphdr->ihl << 2));
-			insaddr.s_addr = recv_iphdr->saddr;
+            recv_iphdr = (struct iphdr *)server_reply;
+            recv_icmphdr = (struct icmphdr *)(server_reply + (recv_iphdr->ihl << 2));
+            insaddr.s_addr = recv_iphdr->saddr;
 
-			if (!strcmp(target_ip, inet_ntoa(insaddr)) && recv_icmphdr->type == ICMP_ECHOREPLY) {
+            if (!strcmp(target_ip, inet_ntoa(insaddr)) && recv_icmphdr->type == ICMP_ECHOREPLY) {
                 /* IP header 20 bytes */
-				indigo_logger(LOG_LEVEL_INFO, "icmp echo reply from %s, Receive echo %d bytes data", target_ip, n - 20);
-				pkt_rcv++;
-			} else {
-				indigo_logger(LOG_LEVEL_INFO, "Received packet is not the ICMP reply from the DUT");
-			}
-		}
+                indigo_logger(LOG_LEVEL_INFO, "icmp echo reply from %s, Receive echo %d bytes data", target_ip, n - 20);
+                pkt_rcv++;
+            } else {
+                indigo_logger(LOG_LEVEL_INFO, "Received packet is not the ICMP reply from the DUT");
+            }
+        }
         usleep(rate * 1000000);
     }
 
-	close(sock);
-	return pkt_rcv;
+    close(sock);
+    return pkt_rcv;
 }
 
 int send_broadcast_arp(char *target_ip, int *send_count, int rate) {
