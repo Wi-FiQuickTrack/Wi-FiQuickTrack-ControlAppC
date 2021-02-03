@@ -40,7 +40,7 @@
 #include "indigo_api.h"
 #include "utils.h"
 
-#ifdef _DYNAMIC_DUP_TP_
+#ifdef _DYNAMIC_DUT_TP_
 #include <dlfcn.h>
 
 #define APP_DUT_TYPE 1
@@ -189,7 +189,7 @@ static void usage() {
 
 /* Show the welcome message with role and version */
 static void print_welcome() {
-#ifdef _DYNAMIC_DUP_TP_
+#ifdef _DYNAMIC_DUT_TP_
     printf("Welcome to use Indigo Control App for both DUT and Platform");
 #elif defined(_DUT_)
     printf("Welcome to use Indigo Control App DUT version");
@@ -269,7 +269,7 @@ static int parse_parameters(int argc, char *argv[]) {
 static void handle_term(int sig, void *eloop_ctx, void *signal_ctx) {
     indigo_logger(LOG_LEVEL_INFO, "Signal %d received - terminating\n", sig);
     eloop_terminate();
-#ifdef _DYNAMIC_DUP_TP_
+#ifdef _DYNAMIC_DUT_TP_
     if (vendor_deinit_fp)
         vendor_deinit_fp();
 #else
@@ -277,7 +277,7 @@ static void handle_term(int sig, void *eloop_ctx, void *signal_ctx) {
 #endif
 }
 
-#ifdef _DYNAMIC_DUP_TP_
+#ifdef _DYNAMIC_DUT_TP_
 int load_library(char *lib) {
     char *error = NULL;
 
@@ -379,7 +379,7 @@ int main(int argc, char* argv[]) {
     /* Welcome message */
     print_welcome();
 
-#ifndef _DYNAMIC_DUP_TP_
+#ifndef _DYNAMIC_DUT_TP_
     /* Initiate the application */
     set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);       // Set default wireless interface information
     set_hapd_full_exec_path(HAPD_EXEC_FILE_DEFAULT);          // Set default hostapd execution file path
@@ -401,7 +401,7 @@ int main(int argc, char* argv[]) {
     indigo_logger(LOG_LEVEL_INFO, "Indigo control app running at: %d", get_service_port());
     indigo_logger(LOG_LEVEL_INFO, "Wireless Interface:" );
     show_wireless_interface_info();
-#ifndef _DYNAMIC_DUP_TP_
+#ifndef _DYNAMIC_DUT_TP_
     indigo_logger(LOG_LEVEL_INFO, "hostapd Path: %s (%s)", get_hapd_full_exec_path(), get_hapd_exec_file());
     indigo_logger(LOG_LEVEL_INFO, "wpa_supplicant Path: %s (%s)", get_wpas_full_exec_path(), get_wpas_exec_file());
 #endif
@@ -415,7 +415,7 @@ int main(int argc, char* argv[]) {
     indigo_logger(LOG_LEVEL_INFO, "WPA Supplicant Control Interface: %s", get_wpas_ctrl_path());
     */
 
-#ifdef _DYNAMIC_DUP_TP_
+#ifdef _DYNAMIC_DUT_TP_
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
 #else
     /* Register the callback */

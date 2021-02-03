@@ -90,7 +90,7 @@ void detect_sta_vendor() {
 
 /* Be invoked when start controlApp */
 void vendor_init() {
-#ifdef _DYNAMIC_DUP_TP_
+#ifdef _DYNAMIC_DUT_TP_
     /* Initiate the application */
     set_hapd_full_exec_path(HAPD_EXEC_FILE_DEFAULT);          // Set default hostapd execution file path
     set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);               // Set default hostapd control interface path

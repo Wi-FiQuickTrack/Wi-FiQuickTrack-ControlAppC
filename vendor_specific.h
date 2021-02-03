@@ -32,11 +32,7 @@
 #define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd-wfa" // will be removed 
 #else // will be removed
 
-#ifdef _DYNAMIC_DUP_TP_
 #define HAPD_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/hostapd_udp"
-#else
-#define HAPD_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/hostapd_udp"
-#endif
 
 #endif /* _OPENWRT_ */ // will be removed
 #endif /* _DUT_ */
@@ -65,11 +61,7 @@
 #define WPAS_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/wpa_supplicant"
 #else /* Platform */
 
-#ifdef _DYNAMIC_DUP_TP_
 #define WPAS_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/wpa_supplicant_udp"
-#else
-#define WPAS_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/wpa_supplicant_udp"
-#endif /* _DYNAMIC_DUP_TP_ */
 
 #endif /* _DUT_ */
 #define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"

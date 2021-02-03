@@ -40,7 +40,7 @@ void register_apis() {
     /* Basic */
     register_api(API_GET_IP_ADDR, NULL, get_ip_addr_handler);
     register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
-#ifndef _DYNAMIC_DUP_TP_
+#ifndef _DYNAMIC_DUT_TP_
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
 #endif
     register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);

@@ -27,7 +27,7 @@
 
 #include "eloop.h"
 
-#ifdef _DYNAMIC_DUP_TP_
+#ifdef _DYNAMIC_DUT_TP_
 extern void (*vendor_deinit_fp)(); 
 #else
 void vendor_deinit();
@@ -216,7 +216,7 @@ static void eloop_handle_alarm(int sig)
 		"is a bug that ends up in a busy loop that "
 		"prevents clean shutdown.\n"
 		"Killing program forcefully.\n");
-#ifdef _DYNAMIC_DUP_TP_
+#ifdef _DYNAMIC_DUT_TP_
     if (vendor_deinit_fp)
 	    vendor_deinit_fp();
 #else
