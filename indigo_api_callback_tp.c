@@ -746,7 +746,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     struct tlv_hdr *tlv;
     char dut_ip[64];
     char dut_port[32];
-    char rate[16], pkt_count[16], pkt_size[16], recv_count[16];
+    char rate[16], pkt_count[16], pkt_size[16], recv_count[16], pkt_type[16];
     int status = TLV_VALUE_STATUS_NOT_OK, recvd = 0;
     char *message = TLV_VALUE_SEND_LOOPBACK_DATA_NOT_OK;
 
@@ -767,7 +767,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     }
 
     memset(rate, 0, sizeof(rate));
-    tlv = find_wrapper_tlv_by_id(req, TLV_UDP_PACKET_RATE);
+    tlv = find_wrapper_tlv_by_id(req, TLV_PACKET_RATE);
     if (tlv) {
         memcpy(rate, tlv->value, tlv->len);
     } else {
@@ -783,16 +783,30 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     }
 
     memset(pkt_size, 0, sizeof(pkt_size));
-    tlv = find_wrapper_tlv_by_id(req, TLV_UDP_PACKET_SIZE);
+    tlv = find_wrapper_tlv_by_id(req, TLV_PACKET_SIZE);
     if (tlv) {
         memcpy(pkt_size, tlv->value, tlv->len);
     } else {
         snprintf(pkt_size, sizeof(pkt_size), "1000");
     }
 
+    memset(pkt_type, 0, sizeof(pkt_type));
+    tlv = find_wrapper_tlv_by_id(req, TLV_PACKET_TYPE);
+    if (tlv) {
+        memcpy(pkt_type, tlv->value, tlv->len);
+    } else {
+        snprintf(pkt_type, sizeof(pkt_type), "udp");
+    }
+
     /* Start loopback */
     snprintf(recv_count, sizeof(recv_count), "0");
-    recvd = send_loopback_data(dut_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atof(rate));
+
+    if (strcmp(pkt_type, "icmp") == 0) {
+        recvd = send_icmp_data(dut_ip, atoi(pkt_count), atoi(pkt_size), atof(rate));
+    } else if (strcmp(pkt_type, "udp") == 0) {
+        recvd = send_udp_data(dut_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atof(rate));
+    }
+
     /* -1 : Continuous data case uses timer and directly reply OK */
     if (recvd > 0 || atoi(pkt_count) == -1) {
         status = TLV_VALUE_STATUS_OK;
