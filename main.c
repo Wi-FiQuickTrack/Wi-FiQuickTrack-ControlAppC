@@ -290,22 +290,22 @@ int load_library(char *lib) {
     }
     dl_handle = dlopen (lib, RTLD_LAZY);
     if (!dl_handle) {
-        fputs (dlerror(), stderr);
+        indigo_logger(LOG_LEVEL_ERROR, "%s.", dlerror());
         return -1;
     }
     register_apis_fp = dlsym(dl_handle, "register_apis");
     if ((error = dlerror()) != NULL)  {
-        fputs(error, stderr);
+        indigo_logger(LOG_LEVEL_ERROR, "%s.", error);
         return -1;
     }
     vendor_init_fp = dlsym(dl_handle, "vendor_init");
     if ((error = dlerror()) != NULL)  {
-        fputs(error, stderr);
+        indigo_logger(LOG_LEVEL_ERROR, "%s.", error);
         return -1;
     }
     vendor_deinit_fp = dlsym(dl_handle, "vendor_deinit");
     if ((error = dlerror()) != NULL)  {
-        fputs(error, stderr);
+        indigo_logger(LOG_LEVEL_ERROR, "%s.", error);
         return -1;
     }
     indigo_logger(LOG_LEVEL_INFO, "Dynamically load %s successful.", lib);

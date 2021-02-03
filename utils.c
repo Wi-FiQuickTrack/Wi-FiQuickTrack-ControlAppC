@@ -97,6 +97,9 @@ void indigo_logger(int level, const char *fmt, ...) {
     case LOG_LEVEL_WARNING:
         log_type = "warning";
         break;
+    case LOG_LEVEL_ERROR:
+        log_type = "error";
+        break;
     default:
         log_type = "info";
         break;
