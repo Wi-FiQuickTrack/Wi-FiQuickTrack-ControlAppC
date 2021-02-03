@@ -186,8 +186,8 @@ struct indigo_api {
 #define TLV_REPEAT_M3_FRAMES                    0x0065
 #define TLV_M3_FRAME_REPEAT_RATE                0x0066
 #define TLV_PACKET_COUNT                        0x0067
-#define TLV_SEND_M1_FRAMES                      0x0068
-#define TLV_UDP_PACKET_RATE                     0x0069
+#define TLV_PACKET_TYPE                         0x0068
+#define TLV_PACKET_RATE                         0x0069
 #define TLV_PHYMODE                             0x006a
 #define TLV_CHANNEL_WIDTH                       0x006b
 #define TLV_WMM_MODE                            0x006c
@@ -238,7 +238,7 @@ struct indigo_api {
 #define TLV_TEST_PLATFORM_IP                    0x009a
 #define TLV_TEST_PLATFORM_PORT                  0x009b
 #define TLV_CONTROL_INTERFACE                   0x009c
-#define TLV_UDP_PACKET_SIZE                     0x009d
+#define TLV_PACKET_SIZE                         0x009d
 #define TLV_DUT_UDP_PORT                        0x009e
 #define TLV_GLOBAL_CTRL_IFACE                   0x009f
 #define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x00a2

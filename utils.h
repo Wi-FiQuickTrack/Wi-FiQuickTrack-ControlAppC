@@ -65,6 +65,11 @@ enum {
     CHWIDTH_160 = 5
 };
 
+enum {
+    DATA_TYPE_UDP = 0,
+    DATA_TYPE_ICMP = 1
+};
+
 struct sta_platform_config {
     int phymode;
     int chwidth;
@@ -102,6 +107,9 @@ struct loopback_info {
     double rate;
     int pkt_sent;
     int pkt_rcv;
+    int pkt_type;
+    int pkt_size;
+    char target_ip[64];
     char message[1600];
 };
 
@@ -119,9 +127,10 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name);
 int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout);
 int loopback_client_stop();
 int loopback_client_status();
-int send_loopback_data(char *target_ip, int target_port, int packet_count, int packet_size, double rate);
+int send_udp_data(char *target_ip, int target_port, int packet_count, int packet_size, double rate);
 int stop_loopback_data(int *pkt_sent);
 int send_broadcast_arp(char *target_ip, int *send_count, int rate);
+int send_icmp_data(char *target_ip, int packet_count, int packet_size, double rate);
 int is_bridge_created();
 int create_bridge(char *br);
 int add_interface_to_bridge(char *br, char *interface);
