@@ -104,10 +104,9 @@ def test_get_control_app():
     m = Msg(0x5002)
     return m
 
-def test_loopback_start():
+def test_loopback_start(lb_port=55501):
     m = Msg(0x5003)
-    m.append_tlv(Tlv(0x0053, bytes(b'10.252.10.100')))
-    m.append_tlv(Tlv(0x0054, bytes(b'20480')))
+    m.append_tlv(Tlv(0x0054, bytes(b'%d' % lb_port)))
     return m
 
 def test_loopback_stop():
@@ -237,7 +236,7 @@ command_interval = 1
 outputs = []
 
 # ContrlAppC ip and port
-peer_ip = '10.252.10.47'
+peer_ip = '10.252.10.139'
 peer_port = 9004
 
 if len(sys.argv) == 1:
@@ -248,7 +247,10 @@ elif len(sys.argv) >= 2:
         m = test_get_control_app()
         outputs.append(m.to_bytes())
     elif sys.argv[1] == "loopback_start":
-        m = test_loopback_start()
+        if len(sys.argv) == 3:
+            m = test_loopback_start(int(sys.argv[2]))
+        else:
+            m = test_loopback_start()
         outputs.append(m.to_bytes())
     elif sys.argv[1] == "loopback_test":
         start_loopback_client(peer_ip, 20480, 10, 1000)
