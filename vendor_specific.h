@@ -25,16 +25,19 @@
 
 /* hostapd definitions */
 #ifdef _DUT_
+#ifdef _OPENWRT_ /* DUT & OpenWRT */
+#define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd"
+#else /* DUT & Laptop */
 #define HAPD_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/hostapd"
+#endif /* _OPENWRT_ */
+
 #else /* Platform */
-#ifdef _OPENWRT_ // will be removed
-/* Only OpenWRT + Test Platform, the hostapd path is hostapd-wfa. */
-#define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd-wfa" // will be removed 
-#else // will be removed
-
+#ifdef _OPENWRT_ /* Platform & OpenWRT */
+/* Only OpenWRT + Test Platform, the hostapd path is /usr/sbin/hostapd_udp. */
+#define HAPD_EXEC_FILE_DEFAULT                      "/usr/sbin/hostapd_hostapd_udp"
+#else /* Platform & Laptop */
 #define HAPD_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/hostapd_udp"
-
-#endif /* _OPENWRT_ */ // will be removed
+#endif /* _OPENWRT_ */
 #endif /* _DUT_ */
 #define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
@@ -61,7 +64,11 @@
 #define WPAS_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/wpa_supplicant"
 #else /* Platform */
 
+#ifdef _DYNAMIC_DUP_TP_
 #define WPAS_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/wpa_supplicant_udp"
+#else
+#define WPAS_EXEC_FILE_DEFAULT                      "/usr/local/bin/WFA-Hostapd-Supplicant/wpa_supplicant_udp"
+#endif /* _DYNAMIC_DUP_TP_ */
 
 #endif /* _DUT_ */
 #define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
