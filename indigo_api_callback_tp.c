@@ -39,18 +39,14 @@ int rrm = 0, he_mu_edca = 0;
 
 void register_apis() {
     /* Basic */
-    register_api(API_GET_IP_ADDR, NULL, get_ip_addr_handler);
     register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
 #ifndef _DYNAMIC_DUT_TP_
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
 #endif
-    register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
-    register_api(API_INDIGO_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
     register_api(API_INDIGO_SEND_LOOP_BACK_DATA, NULL, send_loopback_data_handler);
     register_api(API_INDIGO_STOP_LOOP_BACK_DATA, NULL, stop_loopback_data_handler);
     /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
-    register_api(API_DEVICE_RESET, NULL, reset_device_handler);
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
@@ -72,74 +68,6 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
     fill_wrapper_tlv_bytes(resp, TLV_TEST_PLATFORM_APP_VERSION, 
         strlen(TLV_VALUE_TEST_PLATFORM_APP_VERSION), TLV_VALUE_TEST_PLATFORM_APP_VERSION);
-    return 0;
-}
-
-static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
-    char *message = TLV_VALUE_RESET_NOT_OK;
-    char buffer[TLV_VALUE_SIZE];
-    char role[TLV_VALUE_SIZE], log_level[TLV_VALUE_SIZE], clear[TLV_VALUE_SIZE];
-    struct tlv_hdr *tlv = NULL;
-
-    /* TLV: ROLE */
-    tlv = find_wrapper_tlv_by_id(req, TLV_ROLE);
-    memset(role, 0, sizeof(role));
-    if (tlv) {
-        memcpy(role, tlv->value, tlv->len);
-    } else {
-        goto done;
-    }
-    /* TLV: DEBUG_LEVEL */
-    tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
-    memset(log_level, 0, sizeof(log_level));
-    if (tlv) {
-        memcpy(log_level, tlv->value, tlv->len);
-    }
-    /* TLV: CLEAR */
-    tlv = find_wrapper_tlv_by_id(req, TLV_CLEAR);
-    memset(clear, 0, sizeof(clear));
-    if (tlv) {
-        memcpy(clear, tlv->value, tlv->len);
-    }
-
-    if (atoi(role) == DUT_TYPE_STAUT) {
-        /* stop the wpa_supplicant and release IP address */
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
-        system(buffer);
-        sleep(1);
-        reset_interface_ip(get_wireless_interface());
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "cp -rf sta_reset_config.conf %s", get_wpas_conf_file());
-        system(buffer);
-        if (strlen(log_level)) {
-            set_wpas_debug_level(get_debug_level(atoi(log_level)));
-        }
-    } else if (atoi(role) == DUT_TYPE_APUT) {
-        /* stop the hostapd and release IP address */
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
-        system(buffer);
-        sleep(1);
-        reset_interface_ip(get_wireless_interface());
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "cp -rf ap_reset_config.conf %s", get_hapd_conf_file());
-        system(buffer);
-        if (strlen(log_level)) {
-            set_hostapd_debug_level(get_debug_level(atoi(log_level)));
-        }
-    }
-    sleep(1);
-
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_RESET_OK;
-
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-
     return 0;
 }
 
@@ -217,26 +145,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
    
     return 0;
-}
-
-static char* find_hostapd_config_name(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == maps[i].tlv_id) {
-            return maps[i].config_name;
-        }
-    }
-    return NULL;
-}
-
-static struct tlv_to_config_name* find_hostapd_config(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == maps[i].tlv_id) {
-            return &maps[i];
-        }
-    }
-    return NULL;
 }
 
 #ifdef _RESERVED_
@@ -326,7 +234,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
-        cfg = find_hostapd_config(tlv->id);
+        cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
             continue;
@@ -658,71 +566,6 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     return 0;
 }
 
-static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    struct tlv_hdr *tlv;
-    char tool_ip[256];
-    char tool_port[256];
-    char local_ip[256];
-    int status = TLV_VALUE_STATUS_NOT_OK;
-    char *message = TLV_VALUE_LOOPBACK_SVR_START_NOT_OK;
-
-    /* ControlApp on DUT */
-    /* TLV: TLV_TOOL_IP_ADDRESS */
-    memset(tool_ip, 0, sizeof(tool_ip));
-    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_IP_ADDRESS);
-    if (tlv) {
-        memcpy(tool_ip, tlv->value, tlv->len);
-    } else {
-        goto done;
-    }
-    /* TLV: TLV_TOOL_UDP_PORT */
-    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_UDP_PORT);
-    if (tlv) {
-        memcpy(tool_port, tlv->value, tlv->len);
-    } else {
-        goto done;
-    }
-    /* Find network interface. If br0 exists, then use it. Otherwise, it uses the initiation value. */
-    memset(local_ip, 0, sizeof(local_ip));
-    if (find_interface_ip(local_ip, sizeof(local_ip), "br0")) {
-        indigo_logger(LOG_LEVEL_DEBUG, "use %s", "br0");
-    } else if (find_interface_ip(local_ip, sizeof(local_ip), get_wireless_interface())) {
-        indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wireless_interface());
-// #ifdef __TEST__        
-    } else if (find_interface_ip(local_ip, sizeof(local_ip), "eth0")) {
-        indigo_logger(LOG_LEVEL_DEBUG, "use %s", "eth0");
-// #endif /* __TEST__ */
-    } else {
-        indigo_logger(LOG_LEVEL_ERROR, "No availabe interface");
-        goto done;
-    }
-    /* Start loopback */
-    if (!loopback_client_start(tool_ip, atoi(tool_port), local_ip, atoi(tool_port), LOOPBACK_TIMEOUT)) {
-        status = TLV_VALUE_STATUS_OK;
-        message = TLV_VALUE_LOOPBACK_SVR_START_OK;
-    }
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-
-    return 0;
-}
-
-// ACK:  {"status": 0, "message": "ACK: Command received", "tlvs": {}} 
-// RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'} 
-static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    /* Stop loopback */
-    if (loopback_client_status()) {
-        loopback_client_stop();
-    }
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_LOOP_BACK_STOP_OK), TLV_VALUE_LOOP_BACK_STOP_OK);
-
-    return 0;
-}
-
 /* Tool will send this API to stop continuous data */
 static int stop_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char recv_count[16], send_count[16];
@@ -875,32 +718,6 @@ done:
     return 0;
 }
 
-static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK;
-    char *message = NULL;
-    char buffer[64];
-
-    if (find_interface_ip(buffer, sizeof(buffer), "br0")) {
-        status = TLV_VALUE_STATUS_OK;
-        message = TLV_VALUE_OK;
-    } else if (find_interface_ip(buffer, sizeof(buffer), get_wireless_interface())) {
-        status = TLV_VALUE_STATUS_OK;
-        message = TLV_VALUE_OK;
-    } else {
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_NOT_OK;
-    }
-
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (status == TLV_VALUE_STATUS_OK) {
-        fill_wrapper_tlv_bytes(resp, TLV_DUT_WLAN_IP_ADDR, strlen(buffer), buffer);
-    }
-    return 0;
-}
-
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN], reset_type[16];
@@ -956,16 +773,6 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
    
     return 0;
-}
-
-struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(wpas_global_maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == wpas_global_maps[i].tlv_id) {
-            return &wpas_global_maps[i];
-        }
-    }
-    return NULL;
 }
 
 #ifdef _RESERVED_
@@ -1036,7 +843,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 
     //printf("wrapper->tlv_num %d\n", wrapper->tlv_num);
     for (i = 0; i < wrapper->tlv_num; i++) {
-        cfg = find_hostapd_config(wrapper->tlv[i]->id);
+        cfg = find_tlv_config(wrapper->tlv[i]->id);
         //printf("id %d cfg->config_name %s\n", wrapper->tlv[i]->id, cfg->config_name);
         if (cfg && find_wpas_global_config_name(wrapper->tlv[i]->id) == NULL) {
             memset(value, 0, sizeof(value));
