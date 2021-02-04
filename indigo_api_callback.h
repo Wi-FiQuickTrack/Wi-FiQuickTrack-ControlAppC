@@ -118,12 +118,42 @@ struct tlv_to_config_name maps[] = {
     { TLV_STA_OWE_GROUP, "owe_group", 0 },
 };
 
+char* find_tlv_config_name(int tlv_id) {
+    int i;
+    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
+        if (tlv_id == maps[i].tlv_id) {
+            return maps[i].config_name;
+        }
+    }
+    return NULL;
+}
+
+struct tlv_to_config_name* find_tlv_config(int tlv_id) {
+    int i;
+    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
+        if (tlv_id == maps[i].tlv_id) {
+            return &maps[i];
+        }
+    }
+    return NULL;
+}
+
 struct tlv_to_config_name wpas_global_maps[] = {
     { TLV_STA_SAE_GROUPS, "sae_groups", 0 },
     { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
     { TLV_SAE_PWE, "sae_pwe", 0 },
     { TLV_CONTROL_INTERFACE, "ctrl_interface", 0 },
 };
+
+struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
+    int i;
+    for (i = 0; i < sizeof(wpas_global_maps)/sizeof(struct tlv_to_config_name); i++) {
+        if (tlv_id == wpas_global_maps[i].tlv_id) {
+            return &wpas_global_maps[i];
+        }
+    }
+    return NULL;
+}
 
 
 /* Basic */
