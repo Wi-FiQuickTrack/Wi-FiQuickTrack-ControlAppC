@@ -220,26 +220,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     return 0;
 }
 
-static char* find_hostapd_config_name(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == maps[i].tlv_id) {
-            return maps[i].config_name;
-        }
-    }
-    return NULL;
-}
-
-static struct tlv_to_config_name* find_hostapd_config(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == maps[i].tlv_id) {
-            return &maps[i];
-        }
-    }
-    return NULL;
-}
-
 #ifdef _RESERVED_
 /* The function is reserved for the defeault hostapd config */
 #define HOSTAPD_DEFAULT_CONFIG_SSID                 "Indigo"
@@ -308,7 +288,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     /* QCA WTS image doesn't apply 11ax, mu_edca, country, 11d, 11h in hostapd */
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
-        cfg = find_hostapd_config(tlv->id);
+        cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
             continue;
@@ -1077,8 +1057,8 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
     if (!tlv) {
         tlv = find_wrapper_tlv_by_id(req, TLV_GAS_COMEBACK_DELAY);
     }
-    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
-        strcpy(param_name, find_hostapd_config_name(tlv->id));
+    if (tlv && find_tlv_config_name(tlv->id) != NULL) {
+        strcpy(param_name, find_tlv_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
         status = TLV_VALUE_STATUS_NOT_OK;
@@ -1408,16 +1388,6 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     return 0;
 }
 
-struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(wpas_global_maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == wpas_global_maps[i].tlv_id) {
-            return &wpas_global_maps[i];
-        }
-    }
-    return NULL;
-}
-
 #ifdef _RESERVED_
 /* The function is reserved for the defeault wpas config */
 #define WPAS_DEFAULT_CONFIG_SSID                    "Indigo"
@@ -1474,7 +1444,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 #endif /* _RESERVED_ */
 
     for (i = 0; i < wrapper->tlv_num; i++) {
-        cfg = find_hostapd_config(wrapper->tlv[i]->id);
+        cfg = find_tlv_config(wrapper->tlv[i]->id);
         if (cfg && find_wpas_global_config_name(wrapper->tlv[i]->id) == NULL) {
             memset(value, 0, sizeof(value));
             memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
@@ -1728,8 +1698,8 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
     /* TLV: MBO_IGNORE_ASSOC_DISALLOW */
     memset(param_value, 0, sizeof(param_value));
     tlv = find_wrapper_tlv_by_id(req, TLV_MBO_IGNORE_ASSOC_DISALLOW);
-    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
-        strcpy(param_name, find_hostapd_config_name(tlv->id));
+    if (tlv && find_tlv_config_name(tlv->id) != NULL) {
+        strcpy(param_name, find_tlv_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
         status = TLV_VALUE_STATUS_NOT_OK;

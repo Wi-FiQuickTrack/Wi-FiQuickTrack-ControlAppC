@@ -41,6 +41,10 @@
 #include <netinet/ip_icmp.h>
 #include <arpa/inet.h>
 #include <ifaddrs.h>
+#include <stdint.h>
+typedef uint8_t u_int8_t;
+typedef uint16_t u_int16_t;
+typedef uint32_t u_int32_t;
 
 #include "vendor_specific.h"
 #include "utils.h"
@@ -100,9 +104,6 @@ void indigo_logger(int level, const char *fmt, ...) {
         break;
     case LOG_LEVEL_WARNING:
         log_type = "warning";
-        break;
-    case LOG_LEVEL_ERROR:
-        log_type = "error";
         break;
     default:
         log_type = "info";
