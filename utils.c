@@ -240,7 +240,7 @@ static char* indigo_strrstr(char *input, const char *token) {
 /* Loopback */
 int loopback_socket = 0;
 
-static void loopback_client_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
+static void loopback_server_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     struct sockaddr_storage from;
     unsigned char buffer[BUFFER_LEN];
     int fromlen, len;
@@ -248,28 +248,29 @@ static void loopback_client_receive_message(int sock, void *eloop_ctx, void *soc
     fromlen = sizeof(from);
     len = recvfrom(sock, buffer, BUFFER_LEN, 0, (struct sockaddr *) &from, &fromlen);
     if (len < 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Loopback Client recvfrom[server] error");
+        indigo_logger(LOG_LEVEL_ERROR, "Loopback server recvfrom[server] error");
         return ;
     }
 
-    indigo_logger(LOG_LEVEL_INFO, "Loopback Client received length = %d", len);
+    indigo_logger(LOG_LEVEL_INFO, "Loopback server received length = %d", len);
 
     len = sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (struct sockaddr *)&from, sizeof(from));
 
-    indigo_logger(LOG_LEVEL_INFO, "Loopback Client echo back length = %d", len);
+    indigo_logger(LOG_LEVEL_INFO, "Loopback server echo back length = %d", len);
 }
 
-static void loopback_client_timeout(void *eloop_ctx, void *timeout_ctx) {
+static void loopback_server_timeout(void *eloop_ctx, void *timeout_ctx) {
     int s = (intptr_t)eloop_ctx;
     eloop_unregister_read_sock(s);
     close(s);
     loopback_socket = 0;
-    indigo_logger(LOG_LEVEL_INFO, "Loopback Client stops");
+    indigo_logger(LOG_LEVEL_INFO, "Loopback server stops");
 }
 
-int loopback_client_start(char *target_ip, int target_port, char *local_ip, int local_port, int timeout) {
+int loopback_server_start(char *local_ip, char *local_port, int timeout) {
     int s = 0;
     struct sockaddr_in addr;
+    socklen_t len = sizeof(addr);
 
    /* Open UDP socket */
     s = socket(PF_INET, SOCK_DGRAM, 0);
@@ -278,34 +279,43 @@ int loopback_client_start(char *target_ip, int target_port, char *local_ip, int 
         return -1;
     }
 
-    /* Bind specific port */
+    /* Bind specific IP */
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     if (local_ip) {
         addr.sin_addr.s_addr = inet_addr(local_ip);
     }
-    addr.sin_port = htons(local_port);
+
     if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to bind server socket");
         close(s);
         return -1;
     }
 
+    if (getsockname(s, (struct sockaddr *)&addr, &len) == -1) {
+        indigo_logger(LOG_LEVEL_INFO, "Failed to get socket port number");
+        close(s);
+        return -1;
+    } else {
+        indigo_logger(LOG_LEVEL_INFO, "loopback server port number %d\n", ntohs(addr.sin_port));
+        sprintf(local_port, "%d", ntohs(addr.sin_port));
+    }
+
     /* Register to eloop and ready for the socket event */
-    if (eloop_register_read_sock(s, loopback_client_receive_message, NULL, NULL)) {
+    if (eloop_register_read_sock(s, loopback_server_receive_message, NULL, NULL)) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to initiate ControlAppC");
         return -1;
     }
     loopback_socket = s;
-    eloop_register_timeout(timeout, 0, loopback_client_timeout, (void*)(intptr_t)s, NULL);
-    indigo_logger(LOG_LEVEL_INFO, "Loopback Client starts ip %s port %u", local_ip, local_port);
+    eloop_register_timeout(timeout, 0, loopback_server_timeout, (void*)(intptr_t)s, NULL);
+    indigo_logger(LOG_LEVEL_INFO, "Loopback Client starts ip %s port %s", local_ip, local_port);
 
     return 0;
 }
 
-int loopback_client_stop() {
+int loopback_server_stop() {
     if (loopback_socket) {
-        eloop_cancel_timeout(loopback_client_timeout, (void*)(intptr_t)loopback_socket, NULL);
+        eloop_cancel_timeout(loopback_server_timeout, (void*)(intptr_t)loopback_socket, NULL);
         eloop_unregister_read_sock(loopback_socket);
         close(loopback_socket);
         loopback_socket = 0;
@@ -313,7 +323,7 @@ int loopback_client_stop() {
     return 0;
 }
 
-int loopback_client_status() {
+int loopback_server_status() {
     return !!loopback_socket;
 }
 
@@ -532,8 +542,6 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
 
     return pkt_rcv;
 }
-
-
 
 int send_icmp_data(char *target_ip, int packet_count, int packet_size, double rate)
 {

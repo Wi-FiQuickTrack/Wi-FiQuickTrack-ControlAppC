@@ -661,10 +661,10 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
     char tool_ip[256];
-    char tool_port[256];
     char local_ip[256];
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_LOOPBACK_SVR_START_NOT_OK;
+    char tool_udp_port[16];
 
     /* ControlApp on DUT */
     /* TLV: TLV_TOOL_IP_ADDRESS */
@@ -672,16 +672,8 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
     tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_IP_ADDRESS);
     if (tlv) {
         memcpy(tool_ip, tlv->value, tlv->len);
-    } else {
-        goto done;
     }
-    /* TLV: TLV_TOOL_UDP_PORT */
-    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_UDP_PORT);
-    if (tlv) {
-        memcpy(tool_port, tlv->value, tlv->len);
-    } else {
-        goto done;
-    }
+
     /* Find network interface. If br0 exists, then use it. Otherwise, it uses the initiation value. */
     memset(local_ip, 0, sizeof(local_ip));
     if (find_interface_ip(local_ip, sizeof(local_ip), "br0")) {
@@ -697,7 +689,7 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
         goto done;
     }
     /* Start loopback */
-    if (!loopback_client_start(tool_ip, atoi(tool_port), local_ip, atoi(tool_port), LOOPBACK_TIMEOUT)) {
+    if (!loopback_server_start(local_ip, tool_udp_port, LOOPBACK_TIMEOUT)) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_LOOPBACK_SVR_START_OK;
     }
@@ -705,6 +697,7 @@ done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    fill_wrapper_tlv_bytes(resp, TLV_LOOP_BACK_SERVER_PORT, strlen(tool_udp_port), tool_udp_port);
 
     return 0;
 }
@@ -713,8 +706,8 @@ done:
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'} 
 static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     /* Stop loopback */
-    if (loopback_client_status()) {
-        loopback_client_stop();
+    if (loopback_server_status()) {
+        loopback_server_stop();
     }
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
