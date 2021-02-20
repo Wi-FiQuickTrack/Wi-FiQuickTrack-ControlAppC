@@ -258,6 +258,7 @@ struct indigo_api {
 #define TLV_LOOP_BACK_DATA_SENT                 0xa006
 #define TLV_ARP_RECV_NUM                        0xa007
 #define TLV_TEST_PLATFORM_APP_VERSION           0xa008
+#define TLV_LOOP_BACK_SERVER_PORT               0xa009
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
