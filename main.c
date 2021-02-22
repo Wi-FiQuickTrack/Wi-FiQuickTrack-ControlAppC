@@ -333,13 +333,13 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 
     if (!strncmp(app_type, "dut", strlen("dut")) && (current_app_type != APP_DUT_TYPE)) {
         /* dut */
-        if (load_library("./libdut.so") < 0)
+        if (load_library("libdut.so") < 0)
             goto err;
 
         current_app_type = APP_DUT_TYPE;
     } else if (!strncmp(app_type, "tp", strlen("tp")) && (current_app_type != APP_TP_TYPE)){
         /* test platform */
-        if (load_library("./libtest_platform.so") < 0)
+        if (load_library("libtest_platform.so") < 0)
             goto err;
 
         current_app_type = APP_TP_TYPE;
