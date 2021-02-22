@@ -93,12 +93,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     system(buffer);
     sleep(2);
 
-    len = unlink(get_hapd_conf_file());
-    if (len) {
-        indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
-    }
-    sleep(1);
-
 #ifndef _OPENWRT_
     len = system("rfkill unblock wlan");
     if (len) {
@@ -124,6 +118,11 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     stop_loopback_data(NULL);
 
     if (reset == RESET_TYPE_INIT) {
+        len = unlink(get_hapd_conf_file());
+        if (len) {
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
+        }
+
         /* clean the log */
         system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
         memset(buffer, 0, sizeof(buffer));
@@ -739,18 +738,17 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system(buffer);
     sleep(2);
 
-    len = unlink(get_wpas_conf_file());
-    if (len) {
-        indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
-    }
-    sleep(1);
-
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
         /* Send supplicant log to Tool */
     }
 
     if (reset == RESET_TYPE_INIT) {
+        len = unlink(get_wpas_conf_file());
+        if (len) {
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
+        }
+
         /* clean the log */
         system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
     }
