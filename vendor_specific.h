@@ -41,6 +41,7 @@
 #endif /* _DUT_ */
 #define HAPD_CTRL_PATH_DEFAULT                      "/var/run/hostapd"
 #define HAPD_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/hostapd-global"
+#define HAPD_LOG_FILE                               "/var/log/hostapd.log"
 
 #ifdef _OPENWRT_
 #define HAPD_CONF_FILE_DEFAULT                      "/tmp/hostapd.conf"
@@ -68,6 +69,7 @@
 #endif /* _DUT_ */
 #define WPAS_CTRL_PATH_DEFAULT                      "/var/run/wpa_supplicant"
 #define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
+#define WPAS_LOG_FILE                               "/var/log/supplicant.log"
 
 #define WIRELESS_INTERFACE_DEFAULT                  "wlan0"
 #define SERVICE_PORT_DEFAULT                        9004

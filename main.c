@@ -97,6 +97,7 @@ static int control_socket_init(int port) {
     return s;
 }
 
+struct sockaddr_in *tool_addr; // For HTTP Post
 /* Callback function of the Indigo API. */
 static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     int ret;                          // return code
@@ -115,6 +116,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     } else {
         indigo_logger(LOG_LEVEL_DEBUG, "Server: Receive the packet");
     }
+    tool_addr = (struct sockaddr_in *)&from;
 
     /* Parse request to HDR and TLV. Response NACK if parser fails. Otherwises, ACK. */
     memset(&req, 0, sizeof(struct packet_wrapper));
