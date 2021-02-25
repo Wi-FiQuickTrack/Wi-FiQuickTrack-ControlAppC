@@ -685,13 +685,19 @@ int get_mac_address(char *buffer, int size, char *interface) {
     struct ifreq s;
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
 
+    if (fd <= 0) {
+        goto done;
+    }
     strcpy(s.ifr_name, interface);
     if (0 == ioctl(fd, SIOCGIFHWADDR, &s)) {
         sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x", 
             (char)s.ifr_addr.sa_data[0]&0x00ff, (char)s.ifr_addr.sa_data[1]&0x00ff, (char)s.ifr_addr.sa_data[2]&0x00ff, 
             (char)s.ifr_addr.sa_data[3]&0x00ff, (char)s.ifr_addr.sa_data[4]&0x00ff, (char)s.ifr_addr.sa_data[5]&0x00ff);
+        close(fd);
         return 0;
     }
+    close(fd);
+done:
     return 1;
 }
 
