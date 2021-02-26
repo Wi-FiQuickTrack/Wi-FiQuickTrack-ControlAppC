@@ -116,10 +116,15 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
         /* Send hostapd conf and log to Tool */
-        http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, get_hapd_conf_file());
-        sleep(1);
-        http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, HAPD_LOG_FILE);
-        reset_interface_ip(get_wireless_interface());
+        if (tool_addr != NULL) {
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, get_hapd_conf_file());
+            sleep(1);
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, HAPD_LOG_FILE);
+        } else {
+            indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
+        }
+
+       reset_interface_ip(get_wireless_interface());
     }
 
     stop_loopback_data(NULL);
@@ -744,9 +749,13 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
         /* Send supplicant conf and log to Tool */
-        http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, get_wpas_conf_file());
-        sleep(1);
-        http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, WPAS_LOG_FILE);
+        if (tool_addr != NULL) {
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, get_wpas_conf_file());
+            sleep(1);
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, WPAS_LOG_FILE);
+        } else {
+            indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
+        }
     }
 
     if (reset == RESET_TYPE_INIT) {
