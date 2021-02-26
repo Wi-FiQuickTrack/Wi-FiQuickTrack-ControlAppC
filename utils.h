@@ -29,6 +29,10 @@
 #define BUFFER_LEN                1536
 #define L_BUFFER_LEN              8192
 
+#define TOOL_POST_PORT 8080
+#define HAPD_UPLOAD_API "/upload-platform-hapd-log"
+#define WPAS_UPLOAD_API "/upload-platform-wpas-log"
+
 /* Log */
 enum {
     LOG_LEVEL_DEBUG_VERBOSE = 0,    

@@ -24,6 +24,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "indigo_api.h"
 #include "vendor_specific.h"
@@ -36,6 +39,8 @@ struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO, false, f
 #ifdef _WTS_OPENWRT_
 int rrm = 0, he_mu_edca = 0;
 #endif
+
+extern struct sockaddr_in *tool_addr;
 
 void register_apis() {
     /* Basic */
@@ -110,9 +115,16 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
-        /* Send hostapd log to Tool */
+        /* Send hostapd conf and log to Tool */
+        if (tool_addr != NULL) {
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, get_hapd_conf_file());
+            sleep(1);
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, HAPD_LOG_FILE);
+        } else {
+            indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
+        }
 
-        reset_interface_ip(get_wireless_interface());
+       reset_interface_ip(get_wireless_interface());
     }
 
     stop_loopback_data(NULL);
@@ -124,7 +136,8 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         }
 
         /* clean the log */
-        system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
+        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", HAPD_LOG_FILE);
+        system(buffer);
         memset(buffer, 0, sizeof(buffer));
 #ifdef _WTS_OPENWRT_
         /* Reset uci configurations */
@@ -487,18 +500,13 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sprintf(buffer, "cfg80211tool %s twt_responder 0", get_wireless_interface());
     system(buffer);
 #endif
-    sprintf(buffer, "%s -B -t -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
-        get_hapd_full_exec_path(),
-        g_ctrl_iface,
-        get_hostapd_debug_arguments(),
-        get_hapd_conf_file());
-#else
-    sprintf(buffer, "%s -B -t -P /var/run/hostapd.pid -g %s %s %s -f /var/log/hostapd.log",
-        get_hapd_full_exec_path(),
-        g_ctrl_iface,
-        get_hostapd_debug_arguments(),
-        get_hapd_conf_file());
 #endif
+    sprintf(buffer, "%s -B -t -P /var/run/hostapd.pid -g %s %s -f %s %s",
+        get_hapd_full_exec_path(),
+        g_ctrl_iface,
+        get_hostapd_debug_arguments(),
+        HAPD_LOG_FILE,
+        get_hapd_conf_file());
     len = system(buffer);
     sleep(1);
 
@@ -740,7 +748,14 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
-        /* Send supplicant log to Tool */
+        /* Send supplicant conf and log to Tool */
+        if (tool_addr != NULL) {
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, get_wpas_conf_file());
+            sleep(1);
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, WPAS_LOG_FILE);
+        } else {
+            indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
+        }
     }
 
     if (reset == RESET_TYPE_INIT) {
@@ -750,7 +765,8 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         }
 
         /* clean the log */
-        system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
+        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", WPAS_LOG_FILE);
+        system(buffer);
     }
 
     len = reset_interface_ip(get_wireless_interface());
@@ -956,11 +972,12 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "%s -B -t -c %s %s -i %s -f /var/log/supplicant.log",
+    sprintf(buffer, "%s -B -t -c %s %s -i %s -f %s",
         get_wpas_full_exec_path(), 
         get_wpas_conf_file(),
         get_wpas_debug_arguments(),
-        get_wireless_interface());
+        get_wireless_interface(),
+        WPAS_LOG_FILE);
     indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
     len = system(buffer);
 
@@ -1047,11 +1064,12 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
 
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "%s -B -t -c %s %s -i %s -f /var/log/supplicant.log",
+    sprintf(buffer, "%s -B -t -c %s %s -i %s -f %s",
         get_wpas_full_exec_path(),
         get_wpas_conf_file(),
         get_wpas_debug_arguments(),
-        get_wireless_interface());
+        get_wireless_interface(),
+        WPAS_LOG_FILE);
     len = system(buffer);
     sleep(2);
 

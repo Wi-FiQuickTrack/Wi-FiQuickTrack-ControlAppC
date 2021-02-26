@@ -1470,6 +1470,7 @@ static char* http_body_multipart(char *boundary, char *param_name, char *file_na
     char *buffer = NULL, *file_content = NULL;
     int body_size = 0, file_size = 0;
     struct stat st;
+    char *file_ptr = NULL;
 
     /* Get the file size and content */
     stat(file_name, &st);
@@ -1484,6 +1485,12 @@ static char* http_body_multipart(char *boundary, char *param_name, char *file_na
     buffer = (char*)malloc(body_size*sizeof(char));
     memset(buffer, 0, body_size);
 
+    file_ptr = indigo_strrstr(file_name, "/");
+    if (file_ptr) {
+        file_ptr += 1;
+    } else {
+        file_ptr = file_name;
+    }
     sprintf(buffer,
         "--%s\r\n" \
         "Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"\r\n" \
@@ -1492,7 +1499,7 @@ static char* http_body_multipart(char *boundary, char *param_name, char *file_na
         "--%s--",
         boundary,
         param_name,
-        file_name,
+        file_ptr,
         file_content,
         boundary
     );
@@ -1530,8 +1537,15 @@ int http_file_post(char *host, int port, char *path, char *file_name) {
 
     /* Generate boundary, header and body */
     random_boundary(boundary, 41);
-    /* Parameter name is file */
-    body = http_body_multipart(boundary, "file", file_name);
+    /* Parameter name needs to match with CompletedFileUpload in API */
+    if (!strcmp(path, HAPD_UPLOAD_API))
+        body = http_body_multipart(boundary, "hostApdLogFile", file_name);
+    else if (!strcmp(path, WPAS_UPLOAD_API))
+        body = http_body_multipart(boundary, "wpasLogFile", file_name);
+    else {
+        indigo_logger(LOG_LEVEL_ERROR, "Tool doesn't support %s ?", path);
+        goto done;
+    }
     header = http_header_multipart(path, host, port, strlen(body), boundary);
 
     socketfd = http_socket(host, port);
