@@ -1473,6 +1473,7 @@ static char* http_body_multipart(char *boundary, char *param_name, char *file_na
     char *file_ptr = NULL;
 
     /* Get the file size and content */
+    memset(&st, 0, sizeof(st));
     stat(file_name, &st);
     file_size = st.st_size;
     if (file_size == 0) {
@@ -1546,6 +1547,11 @@ int http_file_post(char *host, int port, char *path, char *file_name) {
         indigo_logger(LOG_LEVEL_ERROR, "Tool doesn't support %s ?", path);
         goto done;
     }
+    /* Return if body is NULL */
+    if (body == NULL) {
+        goto done;
+    }
+
     header = http_header_multipart(path, host, port, strlen(body), boundary);
 
     socketfd = http_socket(host, port);
