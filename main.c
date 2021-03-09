@@ -399,6 +399,10 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+#ifndef _OPENWRT_
+    system("mkdir -p /etc/hostapd/");
+#endif
+
     /* Print the run-time information */
     indigo_logger(LOG_LEVEL_INFO, "Indigo control app running at: %d", get_service_port());
     indigo_logger(LOG_LEVEL_INFO, "Wireless Interface:" );
