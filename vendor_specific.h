@@ -83,6 +83,8 @@
  * hostapd support "multiple_bssid" configuration
  */
 #define HOSTAPD_SUPPORT_MBSSID 1
+
+#define HOSTAPD_SUPPORT_MBSSID_WAR
 #endif
 
 void vendor_init();
