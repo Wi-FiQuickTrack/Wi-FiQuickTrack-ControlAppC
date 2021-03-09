@@ -3,7 +3,7 @@ TYPE = laptop
 # Role is dut or platform
 ROLE = dut
 # Package Version
-VERSION = "1.0.9"
+VERSION = "1.0.10"
 
 OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o
 CFLAGS += -g
