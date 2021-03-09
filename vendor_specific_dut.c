@@ -29,6 +29,10 @@
 #include "vendor_specific.h"
 #include "utils.h"
 
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+int use_openwrt_wpad = 0;
+#endif
+
 void interfaces_init() {
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
@@ -118,6 +122,12 @@ void vendor_device_reset() {
 #if HOSTAPD_SUPPORT_MBSSID
     /* interfaces may be destroyed by hostapd after done the MBSSID testing */
     interfaces_init();
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+    if (use_openwrt_wpad > 0) {
+        system("cp /overlay/hostapd /usr/sbin/hostapd");
+        use_openwrt_wpad = 0;
+    }
+#endif
 #endif
 }
 
@@ -158,6 +168,11 @@ void configure_ap_enable_mbssid() {
     system("uci set wireless.qcawifi.mbss_ie_enable=1");
     system("uci commit");
     */
+#elif defined(_OPENWRT_)
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+    system("cp /rom/usr/sbin/wpad /usr/sbin/hostapd");
+    use_openwrt_wpad = 1;
+#endif
 #endif
 }
 
