@@ -90,6 +90,12 @@ void detect_sta_vendor() {
 
 /* Be invoked when start controlApp */
 void vendor_init() {
+    /* Make sure native hostapd/wpa_supplicant is inactive */
+    system("killall hostapd 1>/dev/null 2>/dev/null");
+    sleep(1);
+    system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
+    sleep(1);
+
 #ifdef _DYNAMIC_DUT_TP_
     /* Initiate the application */
     set_hapd_full_exec_path(HAPD_EXEC_FILE_DEFAULT);          // Set default hostapd execution file path
