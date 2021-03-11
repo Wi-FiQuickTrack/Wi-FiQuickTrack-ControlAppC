@@ -407,6 +407,11 @@ int main(int argc, char* argv[]) {
     indigo_logger(LOG_LEVEL_INFO, "hostapd Path: %s (%s)", get_hapd_full_exec_path(), get_hapd_exec_file());
     indigo_logger(LOG_LEVEL_INFO, "wpa_supplicant Path: %s (%s)", get_wpas_full_exec_path(), get_wpas_exec_file());
 #endif
+    /* Make sure native hostapd/wpa_supplicant is inactive */
+    system("killall hostapd 1>/dev/null 2>/dev/null");
+    sleep(1);
+    system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
+    sleep(1);
 
     /*
      * The following information may not help anymore since
