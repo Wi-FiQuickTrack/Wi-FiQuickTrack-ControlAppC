@@ -191,6 +191,7 @@ char* read_file(char *fn) {
     if (fd) {
         buffer = (char*)malloc(sizeof(char)*size);
         read(fd, buffer, size);
+        close(fd);
     }
     return buffer;
 }
