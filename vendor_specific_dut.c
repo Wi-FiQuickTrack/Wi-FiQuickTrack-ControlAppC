@@ -94,6 +94,12 @@ void vendor_init() {
     system(buffer);
 
     interfaces_init();
+#if HOSTAPD_SUPPORT_MBSSID
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+        system("cp /overlay/hostapd /usr/sbin/hostapd");
+        use_openwrt_wpad = 0;
+#endif
+#endif
 #endif
 }
 
