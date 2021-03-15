@@ -221,7 +221,7 @@ static void reload_driver() {
 }
 
 static int set_he_channel_width(int chwidth) {
-    FILE *f_ptr, *f_tmp_ptr;
+    FILE *f_ptr = NULL, *f_tmp_ptr = NULL;
     char *path = "/lib/firmware/iwl-dbg-cfg.ini";
     char *tmp_path = "/lib/firmware/iwl-dbg-cfg-tmp.ini";
     char *he_ie_str = "he_phy_cap=";
@@ -233,6 +233,12 @@ static int set_he_channel_width(int chwidth) {
 
     if (f_ptr == NULL || f_tmp_ptr == NULL) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to open the files");
+        if (f_ptr) {
+	    fclose(f_ptr);
+        }
+        if (f_tmp_ptr) {
+            fclose(f_tmp_ptr);
+        }
         return -1;
     }
 
