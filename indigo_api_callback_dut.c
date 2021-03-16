@@ -133,8 +133,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
         reset_bridge(BRIDGE_WLANS);
-        /* reset interfaces info and remove hostapd conf */
-        clear_interfaces_resource();
     }
 
     if (strcmp(band, TLV_BAND_24GHZ) == 0) {
@@ -202,14 +200,13 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
-        /* Send hostapd log to Tool */
-    }
-
-    /* reset interfaces info and remove hostapd conf */
-    if (clear_interfaces_resource()) {
     }
 
     if (reset == RESET_TYPE_INIT) {
+        /* reset interfaces info and remove hostapd conf */
+        if (clear_interfaces_resource()) {
+        }
+
         system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
     }
 
@@ -1346,15 +1343,8 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     system(buffer);
     sleep(2);
 
-    len = unlink(get_wpas_conf_file());
-    if (len) {
-        indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
-    }
-    sleep(1);
-
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
-        /* Send supplicant log to Tool */
     }
 
     if (reset == RESET_TYPE_INIT) {
