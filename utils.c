@@ -1135,16 +1135,11 @@ void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
 }
 
 int clear_interfaces_resource() {
-    int i, err = 0, ret = 0;
+    int i, ret = 0;
     for (i = 0; i < interface_count; i++)
     {
         if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
             interfaces[i].identifier = UNUSED_IDENTIFIER;
-            err = unlink(interfaces[i].hapd_conf_file);
-            if (err) {
-                indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove %s", interfaces[i].hapd_conf_file);
-                ret = 1;
-            }
         }
     }
     configured_interface_count = 0;
