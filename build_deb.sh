@@ -64,11 +64,15 @@ create_prerm() {
     echo "sudo killall app_dut >/dev/null 2>/dev/null" >>"$prerm_file"
     echo "sudo killall app_tp >/dev/null 2>/dev/null" >>"$prerm_file"
     echo "sleep 3" >>"$prerm_file"
+
+    echo "if [ -d \"/usr/local/bin/WFA-Indigo-ControlAppC/source\" ]" >>"$prerm_file"
+    echo "then" >>"$prerm_file"
     echo "cd ${installed_source_folder}" >>"$prerm_file"
     echo "rm -rf /usr/local/bin/${package_name}/app_dut" >>"$prerm_file"
     echo "rm -rf /usr/local/bin/${package_name}/app_tp" >>"$prerm_file"
-
     echo "/bin/bash ${installed_source_folder}/patch_nwmgr.sh restore" >>"$prerm_file"
+    echo "fi" >>"$prerm_file"
+
     chmod 755 "$prerm_file"
 }
 
