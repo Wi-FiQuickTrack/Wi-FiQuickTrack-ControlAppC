@@ -133,7 +133,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
         reset_bridge(BRIDGE_WLANS);
-        /* reset interfaces info and remove hostapd conf */
+        /* reset interfaces info */
         clear_interfaces_resource();
     }
 
@@ -204,7 +204,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     if (reset == RESET_TYPE_TEARDOWN) {
     }
 
-    /* reset interfaces info and remove hostapd conf */
+    /* reset interfaces info */
     if (clear_interfaces_resource()) {
     }
 
