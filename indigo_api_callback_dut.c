@@ -133,6 +133,8 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
         reset_bridge(BRIDGE_WLANS);
+        /* reset interfaces info and remove hostapd conf */
+        clear_interfaces_resource();
     }
 
     if (strcmp(band, TLV_BAND_24GHZ) == 0) {
@@ -202,11 +204,11 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     if (reset == RESET_TYPE_TEARDOWN) {
     }
 
-    if (reset == RESET_TYPE_INIT) {
-        /* reset interfaces info and remove hostapd conf */
-        if (clear_interfaces_resource()) {
-        }
+    /* reset interfaces info and remove hostapd conf */
+    if (clear_interfaces_resource()) {
+    }
 
+    if (reset == RESET_TYPE_INIT) {
         system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
     }
 
