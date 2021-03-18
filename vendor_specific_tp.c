@@ -37,6 +37,8 @@ const struct sta_driver_ops *sta_drv_ops = NULL;
 const char *desc_platform1 = "Intel Corporation Device 2725";
 const char *desc_platform2 = "Qualcomm Device 1101";
 
+static void check_platform1_default_conf();
+
 /**
  * Generic platform dependent API implementation 
  */
@@ -74,6 +76,8 @@ void detect_sta_vendor() {
     if (strbuf && strstr(strbuf, desc_platform1)) {
         sta_drv_ops = &sta_driver_platform1_ops;
         indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 1");
+
+        check_platform1_default_conf();
     } else if (strbuf && strstr(strbuf, desc_platform2)) {
         sta_drv_ops = &sta_driver_platform2_ops;
         indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 2");
@@ -210,6 +214,27 @@ struct he_chwidth_config he_chwidth_config_list[] = {
     { CHWIDTH_160, "0c3fc200fd09800ecffe00" }
 };
 
+static void check_platform1_default_conf() {
+    char *fname = "/lib/firmware/iwl-dbg-cfg.ini";
+    char buffer[S_BUFFER_LEN];
+    FILE *f_ptr = NULL;
+
+    /* create default ini file if it doesn't exist */
+    if (access(fname, F_OK) != 0) {
+        f_ptr = fopen(fname, "w");
+        if (f_ptr == NULL) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to create %s", fname);
+            return;
+        }
+
+        memset(buffer, 0, sizeof(buffer));
+        snprintf(buffer, sizeof(buffer), "[IWL DEBUG CONFIG DATA]\n");
+        fputs(buffer, f_ptr);
+
+        fclose(f_ptr);
+    }
+}
+
 static void disable_11ax() {
     system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
     sleep(3);
@@ -234,7 +259,7 @@ static int set_he_channel_width(int chwidth) {
     if (f_ptr == NULL || f_tmp_ptr == NULL) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to open the files");
         if (f_ptr) {
-	    fclose(f_ptr);
+            fclose(f_ptr);
         }
         if (f_tmp_ptr) {
             fclose(f_tmp_ptr);
