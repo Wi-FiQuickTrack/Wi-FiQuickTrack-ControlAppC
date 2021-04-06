@@ -525,6 +525,7 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
         send_len = send(s, message, strlen(message), 0);
         if (send_len < 0) {
             indigo_logger(LOG_LEVEL_INFO, "Send failed on packet %d", pkt_sent);
+            usleep(rate*1000000);
             continue;
         }
         indigo_logger(LOG_LEVEL_INFO, "Packet %d: Send loopback %d bytes data to ip %s port %u",
@@ -533,6 +534,8 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
         recv_len = recv(s, server_reply, sizeof(server_reply), 0);
         if (recv_len < 0) {
             indigo_logger(LOG_LEVEL_INFO, "recv failed on packet %d", pkt_sent);
+            if (rate > 1)
+                usleep((rate-1)*1000000);
             continue;
         }
         pkt_rcv++;
@@ -603,6 +606,7 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         n = sendto(sock, (char *)buf, packet_size, 0, (struct sockaddr *)&addr, sizeof(addr));
         if (n < 0) {
             indigo_logger(LOG_LEVEL_WARNING, "Send failed on icmp packet %d", pkt_sent);
+            usleep(rate * 1000000);
             continue;
         }
         indigo_logger(LOG_LEVEL_INFO, "Packet %d: Send icmp %d bytes data to ip %s",
@@ -611,6 +615,8 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         n = recv(sock, server_reply, sizeof(server_reply), 0);
         if (n < 0) {
             indigo_logger(LOG_LEVEL_WARNING, "recv failed on icmp packet %d", pkt_sent);
+            if (rate > 1)
+                usleep((rate - 1) * 1000000);
             continue;
         } else {
             recv_iphdr = (struct iphdr *)server_reply;
