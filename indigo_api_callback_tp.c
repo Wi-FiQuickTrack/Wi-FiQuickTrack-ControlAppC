@@ -994,8 +994,9 @@ done:
 static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[S_BUFFER_LEN], freq_list[512], ssid[512], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i, freq_list_len, ssid_len;
+    char buffer[S_BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
+    char freq_list[S_BUFFER_LEN], ssid[S_BUFFER_LEN], preassoc_rand_addr[S_BUFFER_LEN];
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i, freq_list_len, ssid_len, preassoc_rand_addr_len;
     size_t resp_len;
     char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     struct tlv_hdr *tlv = NULL;
@@ -1018,7 +1019,15 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
         memcpy(value, tlv->value, tlv->len);
         freq_list_len = sprintf(freq_list, "freq_list=%s\n", value);
     }
-    
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_PREASSOC_RAND_MAC_ADDR);
+    memset(preassoc_rand_addr, 0, sizeof(preassoc_rand_addr));
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        preassoc_rand_addr_len = sprintf(preassoc_rand_addr, "preassoc_mac_addr=%s\n", value);
+    }
+
     tlv = find_wrapper_tlv_by_id(req, TLV_SSID);
     memset(ssid, 0, sizeof(ssid));
     if (tlv) {
@@ -1038,7 +1047,11 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
         if (freq_list_len) {
             strcat(buffer, freq_list);
         }
-        
+
+        if (preassoc_rand_addr_len) {
+            strcat(buffer, preassoc_rand_addr);
+        }
+
         if (ssid_len) {
             strcat(buffer, ssid);
         }
