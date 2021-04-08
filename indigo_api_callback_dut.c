@@ -32,11 +32,17 @@
 #include "indigo_api_callback.h"
 
 
+static char pac_file_path[S_BUFFER_LEN] = {0};
+struct interface_info* band_transmitter[16];
+
+
 void register_apis() {
     /* Basic */
     register_api(API_GET_IP_ADDR, NULL, get_ip_addr_handler);
     register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
+#ifndef _DYNAMIC_DUT_TP_
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
+#endif
     register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
     register_api(API_INDIGO_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
     register_api(API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK, NULL, create_bridge_network_handler);
@@ -70,50 +76,6 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
     fill_wrapper_tlv_bytes(resp, TLV_CONTROL_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
     return 0;
-}
-
-#define DEBUG_LEVEL_DISABLE             0
-#define DEBUG_LEVEL_BASIC               1
-#define DEBUG_LEVEL_ADVANCED            2
-
-int hostapd_debug_level = DEBUG_LEVEL_DISABLE;
-int wpas_debug_level = DEBUG_LEVEL_DISABLE;
-
-static char pac_file_path[S_BUFFER_LEN] = {0};
-
-static int get_debug_level(int value) {
-    if (value == 0) {
-        return DEBUG_LEVEL_DISABLE;
-    } else if (value == 1) {
-        return DEBUG_LEVEL_BASIC;
-    }
-    return DEBUG_LEVEL_ADVANCED;
-}
-
-static void set_hostapd_debug_level(int level) {
-    hostapd_debug_level = level;
-}
-
-static void set_wpas_debug_level(int level) {
-    wpas_debug_level = level;
-}
-
-static char* get_hostapd_debug_arguments() {
-    if (hostapd_debug_level == DEBUG_LEVEL_ADVANCED) {
-        return "-dddK";
-    } else if (hostapd_debug_level == DEBUG_LEVEL_BASIC) {
-        return "-dK";
-    }
-    return "";
-}
-
-static char* get_wpas_debug_arguments() {
-    if (wpas_debug_level == DEBUG_LEVEL_ADVANCED) {
-        return "-ddd";
-    } else if (wpas_debug_level == DEBUG_LEVEL_BASIC) {
-        return "-d";
-    }
-    return "";
 }
 
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -152,7 +114,9 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
 
     if (atoi(role) == DUT_TYPE_STAUT) {
         /* stop the wpa_supplicant and release IP address */
-        system("killall wpa_supplicant >/dev/null 2>/dev/null");
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+        system(buffer);
         sleep(1);
         reset_interface_ip(get_wireless_interface());
         if (strlen(log_level)) {
@@ -160,14 +124,16 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         }
     } else if (atoi(role) == DUT_TYPE_APUT) {
         /* stop the hostapd and release IP address */
-        system("killall hostapd >/dev/null 2>/dev/null");
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
+        system(buffer);
         sleep(1);
         reset_interface_ip(get_wireless_interface());
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
         reset_bridge(BRIDGE_WLANS);
-        /* reset interfaces info and remove hostapd conf */
+        /* reset interfaces info */
         clear_interfaces_resource();
     }
 
@@ -176,6 +142,8 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     } else if (strcmp(band, TLV_BAND_5GHZ) == 0) {
         set_default_wireless_interface_info(BAND_5GHZ);
     }
+
+    memset(band_transmitter, 0, sizeof(band_transmitter));
 
     vendor_device_reset();
 
@@ -196,13 +164,23 @@ done:
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
-    char buffer[S_BUFFER_LEN];
-    char *parameter[] = {"pidof", "hostapd", NULL};
+    char buffer[S_BUFFER_LEN], reset_type[16];
+    char *parameter[] = {"pidof", get_hapd_exec_file(), NULL};
     char *message = NULL;
+    struct tlv_hdr *tlv = NULL;
+
+    /* TLV: RESET_TYPE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_RESET_TYPE);
+    memset(reset_type, 0, sizeof(reset_type));
+    if (tlv) {
+        memcpy(reset_type, tlv->value, tlv->len);
+        reset = atoi(reset_type);
+        indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
+    }
 
     memset(buffer, 0, sizeof(buffer));
-
-    system("killall hostapd 1>/dev/null 2>/dev/null");
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
+    system(buffer);
     sleep(2);
 
 #ifdef _OPENWRT_
@@ -214,6 +192,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     sleep(1);
 #endif
 
+    memset(buffer, 0, sizeof(buffer));
     len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
     if (len) {
         message = TLV_VALUE_HOSTAPD_STOP_NOT_OK;
@@ -221,9 +200,15 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         message = TLV_VALUE_HOSTAPD_STOP_OK;
     }
 
-    /* reset interfaces info and remove hostapd conf */
+    /* Test case teardown case */
+    if (reset == RESET_TYPE_TEARDOWN) {
+    }
+
+    /* reset interfaces info */
     if (clear_interfaces_resource()) {
-        /* clean the log if hostapd.conf doesn't exist */
+    }
+
+    if (reset == RESET_TYPE_INIT) {
         system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
     }
 
@@ -232,69 +217,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
    
     return 0;
-}
-
-static char* find_hostapd_config_name(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == maps[i].tlv_id) {
-            return maps[i].config_name;
-        }
-    }
-    return NULL;
-}
-
-static struct tlv_to_config_name* find_hostapd_config(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == maps[i].tlv_id) {
-            return &maps[i];
-        }
-    }
-    return NULL;
-}
-
-static int get_center_freq_index(int channel, int width) {
-    if (width == 1) {
-        if (channel >= 36 && channel <= 48) {
-            return 42;
-        } else if (channel <= 64) {
-            return 58;
-        } else if (channel >= 100 && channel <= 112) {
-            return 106;
-        } else if (channel <= 128) {
-            return 122;
-        } else if (channel <= 144) {
-            return 138;
-        } else if (channel >= 149 && channel <= 161) {
-            return 155;
-        }
-    } else if (width == 2) {
-        if (channel >= 36 && channel <= 64) {
-            return 50;
-        } else if (channel >= 36 && channel <= 64) {
-            return 114;
-        }
-    }
-    return 0;
-}
-
-static int is_ht40plus_chan(int chan) {
-    if (chan == 36 || chan == 44 || chan == 52 || chan == 60 ||
-        chan == 100 || chan == 108 || chan == 116 | chan == 124 ||
-        chan == 132 || chan == 140 || chan == 149 || chan == 157)
-        return 1;
-    else
-        return 0;
-}
-
-static int is_ht40minus_chan(int chan) {
-    if (chan == 40 || chan == 48 || chan == 56 || chan == 64 ||
-        chan == 104 || chan == 112 || chan == 120 | chan == 128 ||
-        chan == 136 || chan == 144 || chan == 153 || chan == 161)
-        return 1;
-    else
-        return 0;
 }
 
 #ifdef _RESERVED_
@@ -336,7 +258,7 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 }
 #endif /* _RESERVED_ */
 
-static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
+static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, struct interface_info* wlanp) {
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups = 0;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
     int i, enable_ac = 0, enable_11h = 0;
@@ -346,7 +268,14 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
 
-    sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, ifname);
+#if HOSTAPD_SUPPORT_MBSSID
+    if (wlanp->mbssid_enable && !wlanp->transmitter)
+        sprintf(output, "bss=%s\nctrl_interface=%s\n", wlanp->ifname, HAPD_CTRL_PATH_DEFAULT);
+    else
+        sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, wlanp->ifname);
+#else
+    sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, wlanp->ifname);
+#endif
 
 #ifdef _RESERVED_
     /* The function is reserved for the defeault hostapd config */
@@ -358,7 +287,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     /* QCA WTS image doesn't apply 11ax, mu_edca, country, 11d, 11h in hostapd */
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
-        cfg = find_hostapd_config(tlv->id);
+        cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
             continue;
@@ -468,7 +397,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             parse_bss_identifier(bss_identifier, &bss_info);
             wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
             if (NULL == wlan) {
-                wlan = assign_wireless_interface_info(bss_info.band, bss_info.identifier);
+                wlan = assign_wireless_interface_info(&bss_info);
             }
             printf("TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
                     bss_identifier,
@@ -507,6 +436,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     if (has_sae == 1) {
         strcat(output, "sae_require_mfp=1\n");
     }
+
+#if HOSTAPD_SUPPORT_MBSSID
+    if (wlanp->mbssid_enable && wlanp->transmitter) {
+        strcat(output, "multiple_bssid=1\n");
+    }
+#endif
 
     // Note: if any new DUT configuration is added for sae_groups,
     // then the following unconditional sae_groups addition should be
@@ -629,10 +564,13 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         parse_bss_identifier(bss_identifier, &bss_info);
         wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
         if (NULL == wlan) {
-            wlan = assign_wireless_interface_info(bss_info.band, bss_info.identifier);
+            wlan = assign_wireless_interface_info(&bss_info);
         }
         if (wlan && bss_info.mbssid_enable) {
             configure_ap_enable_mbssid();
+            if (bss_info.transmitter) {
+                band_transmitter[bss_info.band] = wlan;
+            }
         }
         printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
                bss_identifier,
@@ -654,7 +592,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                 band = BAND_24GHZ;
             }
             /* Single wlan use ID 1 */
-            wlan = assign_wireless_interface_info(band, 1);
+            bss_info.band = band;
+            bss_info.identifier = 1;
+            wlan = assign_wireless_interface_info(&bss_info);
         }
     }
     if (wlan) {
@@ -662,10 +602,19 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                wlan ? wlan->ifname : "n/a",
                wlan ? wlan->hapd_conf_file: "n/a"
                );
-        len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan->ifname);
+        len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan);
         if (len)
         {
-            write_file(wlan->hapd_conf_file, buffer, len);
+#if HOSTAPD_SUPPORT_MBSSID
+            if (bss_info.mbssid_enable && !bss_info.transmitter) {
+                if (band_transmitter[bss_info.band]) {
+                    append_file(band_transmitter[bss_info.band]->hapd_conf_file, buffer, len);
+                }
+                memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
+            }
+            else
+#endif
+                write_file(wlan->hapd_conf_file, buffer, len);
         }
     }
     show_wireless_interface_info();
@@ -692,8 +641,10 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #endif
 
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "hostapd -B -t -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
-        get_hapd_global_ctrl_path(), get_hostapd_debug_arguments(), 
+    sprintf(buffer, "%s -B -t -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
+        get_hapd_full_exec_path(),
+        get_hapd_global_ctrl_path(),
+        get_hostapd_debug_arguments(), 
         get_all_hapd_conf_files());
     len = system(buffer);
     sleep(1);
@@ -814,6 +765,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     struct interface_info* wlan = NULL;
     char bss_identifier_str[16];
     struct bss_identifier_info bss_info;
+    char buff[S_BUFFER_LEN];
 
     if (req->tlv_num == 0) {
         get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
@@ -864,7 +816,8 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     if (atoi(role) == DUT_TYPE_STAUT) {
         w = wpa_ctrl_open(get_wpas_ctrl_path());
     } else {
-        w = wpa_ctrl_open(get_hapd_ctrl_path_by_id(bss_info.identifier, bss_info.band));
+        wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
+        w = wpa_ctrl_open(get_hapd_ctrl_path_by_id(wlan));
     }
 
     if (!w) {
@@ -890,8 +843,20 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         get_key_value(connected_ssid, response, "ssid");
         get_key_value(mac_addr, response, "address");
     } else {
+#if HOSTAPD_SUPPORT_MBSSID
+        if(wlan && wlan->mbssid_enable) {
+            sprintf(buff, "ssid[%d]", wlan->hapd_bss_id);
+            get_key_value(connected_ssid, response, buff);
+            sprintf(buff, "bssid[%d]", wlan->hapd_bss_id);
+            get_key_value(mac_addr, response, buff);
+        } else {
+            get_key_value(connected_ssid, response, "ssid[0]");
+            get_key_value(mac_addr, response, "bssid[0]");
+        }
+#else
         get_key_value(connected_ssid, response, "ssid[0]");
         get_key_value(mac_addr, response, "bssid[0]");
+#endif
     }
 
     if (bss_info.identifier >= 0) {
@@ -945,10 +910,10 @@ done:
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
     char tool_ip[256];
-    char tool_port[256];
     char local_ip[256];
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_LOOPBACK_SVR_START_NOT_OK;
+    char tool_udp_port[16];
 
     /* ControlApp on DUT */
     /* TLV: TLV_TOOL_IP_ADDRESS */
@@ -957,13 +922,7 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
     if (tlv) {
         memcpy(tool_ip, tlv->value, tlv->len);
     }
-    /* TLV: TLV_TOOL_UDP_PORT */
-    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_UDP_PORT);
-    if (tlv) {
-        memcpy(tool_port, tlv->value, tlv->len);
-    } else {
-        goto done;
-    }
+
     /* Find network interface. If BRIDGE_WLANS exists, then use it. Otherwise, it uses the initiation value. */
     memset(local_ip, 0, sizeof(local_ip));
     if (find_interface_ip(local_ip, sizeof(local_ip), BRIDGE_WLANS)) {
@@ -975,11 +934,11 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", "eth0");
 // #endif /* __TEST__ */
     } else {
-        indigo_logger(LOG_LEVEL_ERROR, "No availabe interface");
+        indigo_logger(LOG_LEVEL_ERROR, "No available interface");
         goto done;
     }
     /* Start loopback */
-    if (!loopback_client_start(tool_ip, atoi(tool_port), local_ip, atoi(tool_port), LOOPBACK_TIMEOUT)) {
+    if (!loopback_server_start(local_ip, tool_udp_port, LOOPBACK_TIMEOUT)) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_LOOPBACK_SVR_START_OK;
     }
@@ -987,6 +946,7 @@ done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    fill_wrapper_tlv_bytes(resp, TLV_LOOP_BACK_SERVER_PORT, strlen(tool_udp_port), tool_udp_port);
 
     return 0;
 }
@@ -995,8 +955,8 @@ done:
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'} 
 static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     /* Stop loopback */
-    if (loopback_client_status()) {
-        loopback_client_stop();
+    if (loopback_server_status()) {
+        loopback_server_stop();
     }
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
@@ -1010,7 +970,7 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
     char buffer[S_BUFFER_LEN];
     char response[S_BUFFER_LEN];
     char address[32];
-    char *parameter[] = {"pidof", "hostapd", NULL};
+    char *parameter[] = {"pidof", get_hapd_exec_file(), NULL};
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
@@ -1096,8 +1056,8 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
     if (!tlv) {
         tlv = find_wrapper_tlv_by_id(req, TLV_GAS_COMEBACK_DELAY);
     }
-    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
-        strcpy(param_name, find_hostapd_config_name(tlv->id));
+    if (tlv && find_tlv_config_name(tlv->id) != NULL) {
+        strcpy(param_name, find_tlv_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
         status = TLV_VALUE_STATUS_NOT_OK;
@@ -1366,21 +1326,30 @@ done:
 
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
-    char buffer[S_BUFFER_LEN];
-    char *parameter[] = {"pidof", "wpa_supplicant", NULL};
+    char buffer[S_BUFFER_LEN], reset_type[16];
+    char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     char *message = NULL;
+    struct tlv_hdr *tlv = NULL;
 
-    system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
+    /* TLV: RESET_TYPE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_RESET_TYPE);
+    memset(reset_type, 0, sizeof(reset_type));
+    if (tlv) {
+        memcpy(reset_type, tlv->value, tlv->len);
+        reset = atoi(reset_type);
+        indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
+    }
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
     sleep(2);
 
-    len = unlink(get_wpas_conf_file());
-    if (len) {
-        indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
-        reset = 1;
+    /* Test case teardown case */
+    if (reset == RESET_TYPE_TEARDOWN) {
     }
-    sleep(1);
 
-    if (reset) {
+    if (reset == RESET_TYPE_INIT) {
         /* clean the log */
         system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
 
@@ -1409,16 +1378,6 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
    
     return 0;
-}
-
-struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
-    int i;
-    for (i = 0; i < sizeof(wpas_global_maps)/sizeof(struct tlv_to_config_name); i++) {
-        if (tlv_id == wpas_global_maps[i].tlv_id) {
-            return &wpas_global_maps[i];
-        }
-    }
-    return NULL;
 }
 
 #ifdef _RESERVED_
@@ -1477,7 +1436,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 #endif /* _RESERVED_ */
 
     for (i = 0; i < wrapper->tlv_num; i++) {
-        cfg = find_hostapd_config(wrapper->tlv[i]->id);
+        cfg = find_tlv_config(wrapper->tlv[i]->id);
         if (cfg && find_wpas_global_config_name(wrapper->tlv[i]->id) == NULL) {
             memset(value, 0, sizeof(value));
             memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
@@ -1578,13 +1537,18 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     sleep(1);
 #endif
 
-    system("killall wpa_supplicant >/dev/null 2>/dev/null");
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
     sleep(3);
 
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
-        get_wpas_conf_file(), get_wpas_debug_arguments(), get_wireless_interface());
+    sprintf(buffer, "%s -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wpas_debug_arguments(),
+        get_wireless_interface());
     len = system(buffer);
     sleep(2);
 
@@ -1726,8 +1690,8 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
     /* TLV: MBO_IGNORE_ASSOC_DISALLOW */
     memset(param_value, 0, sizeof(param_value));
     tlv = find_wrapper_tlv_by_id(req, TLV_MBO_IGNORE_ASSOC_DISALLOW);
-    if (tlv && find_hostapd_config_name(tlv->id) != NULL) {
-        strcpy(param_name, find_hostapd_config_name(tlv->id));
+    if (tlv && find_tlv_config_name(tlv->id) != NULL) {
+        strcpy(param_name, find_tlv_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
         status = TLV_VALUE_STATUS_NOT_OK;
@@ -1837,8 +1801,10 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     }
 
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "wpa_supplicant -B -t -c %s -i %s -f /var/log/supplicant.log", 
-                    get_wpas_conf_file(), get_wireless_interface());
+    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wireless_interface());
     len = system(buffer);
     sleep(2);
 

@@ -37,6 +37,8 @@ const struct sta_driver_ops *sta_drv_ops = NULL;
 const char *desc_platform1 = "Intel Corporation Device 2725";
 const char *desc_platform2 = "Qualcomm Device 1101";
 
+static void check_platform1_default_conf();
+
 /**
  * Generic platform dependent API implementation 
  */
@@ -71,17 +73,19 @@ void detect_sta_vendor() {
 
     indigo_logger(LOG_LEVEL_INFO, "Device: %s", strbuf);
 
-    if (strstr(strbuf, desc_platform1)) {
+    if (strbuf && strstr(strbuf, desc_platform1)) {
         sta_drv_ops = &sta_driver_platform1_ops;
         indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 1");
-    } else if (strstr(strbuf, desc_platform2)) {
+
+        check_platform1_default_conf();
+    } else if (strbuf && strstr(strbuf, desc_platform2)) {
         sta_drv_ops = &sta_driver_platform2_ops;
         indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 2");
     } else {
         /* set to platform 1 by default */
         sta_drv_ops = &sta_driver_platform1_ops;
         indigo_logger(LOG_LEVEL_INFO, 
-            "Failed to find any supported drivers, hook the default platform handlers");
+            "Unable to find any supported drivers, hook the default platform handlers");
     }
 
     pclose(fp);
@@ -90,6 +94,23 @@ void detect_sta_vendor() {
 
 /* Be invoked when start controlApp */
 void vendor_init() {
+    /* Make sure native hostapd/wpa_supplicant is inactive */
+    system("killall hostapd 1>/dev/null 2>/dev/null");
+    sleep(1);
+    system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
+    sleep(1);
+
+#ifdef _DYNAMIC_DUT_TP_
+    /* Initiate the application */
+    set_hapd_full_exec_path(HAPD_EXEC_FILE_DEFAULT);          // Set default hostapd execution file path
+    set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);               // Set default hostapd control interface path
+    set_hapd_global_ctrl_path(HAPD_GLOBAL_CTRL_PATH_DEFAULT); // Set default hostapd global control interface path
+    set_hapd_conf_file(HAPD_CONF_FILE_DEFAULT);               // Set default hostapd configuration file path
+    set_wpas_full_exec_path(WPAS_EXEC_FILE_DEFAULT);          // Set default wap_supplicant execution file path
+    set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);               // Set default wap_supplicant control interface path
+    set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT); // Set default wap_supplicant global control interface path
+    set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);               // Set default wap_supplicant configuration file path
+#endif
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
@@ -137,11 +158,14 @@ void vendor_init() {
 
 /* Be invoked when terminate controlApp */
 void vendor_deinit() {
+    char buffer[S_BUFFER_LEN];
+    memset(buffer, 0, sizeof(buffer));
     system("killall hostapd >/dev/null 2>/dev/null");
 #ifdef _OPENWRT_
     system("killall hostapd-wfa >/dev/null 2>/dev/null");
 #endif
-    system("killall wpa_supplicant >/dev/null 2>/dev/null");
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
 }
 
 int set_channel_width() {
@@ -190,6 +214,27 @@ struct he_chwidth_config he_chwidth_config_list[] = {
     { CHWIDTH_160, "0c3fc200fd09800ecffe00" }
 };
 
+static void check_platform1_default_conf() {
+    char *fname = "/lib/firmware/iwl-dbg-cfg.ini";
+    char buffer[S_BUFFER_LEN];
+    FILE *f_ptr = NULL;
+
+    /* create default ini file if it doesn't exist */
+    if (access(fname, F_OK) != 0) {
+        f_ptr = fopen(fname, "w");
+        if (f_ptr == NULL) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to create %s", fname);
+            return;
+        }
+
+        memset(buffer, 0, sizeof(buffer));
+        snprintf(buffer, sizeof(buffer), "[IWL DEBUG CONFIG DATA]\n");
+        fputs(buffer, f_ptr);
+
+        fclose(f_ptr);
+    }
+}
+
 static void disable_11ax() {
     system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
     sleep(3);
@@ -201,7 +246,7 @@ static void reload_driver() {
 }
 
 static int set_he_channel_width(int chwidth) {
-    FILE *f_ptr, *f_tmp_ptr;
+    FILE *f_ptr = NULL, *f_tmp_ptr = NULL;
     char *path = "/lib/firmware/iwl-dbg-cfg.ini";
     char *tmp_path = "/lib/firmware/iwl-dbg-cfg-tmp.ini";
     char *he_ie_str = "he_phy_cap=";
@@ -213,6 +258,12 @@ static int set_he_channel_width(int chwidth) {
 
     if (f_ptr == NULL || f_tmp_ptr == NULL) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to open the files");
+        if (f_ptr) {
+            fclose(f_ptr);
+        }
+        if (f_tmp_ptr) {
+            fclose(f_tmp_ptr);
+        }
         return -1;
     }
 

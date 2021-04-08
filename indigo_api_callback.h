@@ -59,12 +59,9 @@ struct tlv_to_config_name maps[] = {
     { TLV_VHT_CAPB, "vht_capab", 0 },
     { TLV_IEEE8021_X, "ieee8021x", 0 },
     { TLV_EAP_SERVER, "eap_server", 0 },
-    { TLV_EAPOL_KEY_INDEX_WORKAROUND, "eapol_key_index_workaround", 0 },
     { TLV_AUTH_SERVER_ADDR, "auth_server_addr", 0 },
     { TLV_AUTH_SERVER_PORT, "auth_server_port", 0 },
     { TLV_AUTH_SERVER_SHARED_SECRET, "auth_server_shared_secret", 0 },
-    { TLV_LOGGER_SYSLOG, "logger_syslog", 0 },
-    { TLV_LOGGER_SYSLOG_LEVEL, "logger_syslog_level", 0 },
     { TLV_IE_OVERRIDE, "own_ie_override", 0 }, // HostAPD Python Interface
     { TLV_RECONFIG, "reconfig", 0 }, // HostAPD Python Interface
     { TLV_SAME_ANONCE, "same_anonce", 0 }, // # HostAPD Python Interface
@@ -121,6 +118,26 @@ struct tlv_to_config_name maps[] = {
     { TLV_STA_OWE_GROUP, "owe_group", 0 },
 };
 
+char* find_tlv_config_name(int tlv_id) {
+    int i;
+    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
+        if (tlv_id == maps[i].tlv_id) {
+            return maps[i].config_name;
+        }
+    }
+    return NULL;
+}
+
+struct tlv_to_config_name* find_tlv_config(int tlv_id) {
+    int i;
+    for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
+        if (tlv_id == maps[i].tlv_id) {
+            return &maps[i];
+        }
+    }
+    return NULL;
+}
+
 struct tlv_to_config_name wpas_global_maps[] = {
     { TLV_STA_SAE_GROUPS, "sae_groups", 0 },
     { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
@@ -130,6 +147,16 @@ struct tlv_to_config_name wpas_global_maps[] = {
     { TLV_PREASSOC_RAND_MAC_ADDR, "preassoc_mac_addr", 0 },
     { TLV_RAND_ADDR_LIFETIME, "rand_addr_lifetime", 0 },
 };
+
+struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
+    int i;
+    for (i = 0; i < sizeof(wpas_global_maps)/sizeof(struct tlv_to_config_name); i++) {
+        if (tlv_id == wpas_global_maps[i].tlv_id) {
+            return &wpas_global_maps[i];
+        }
+    }
+    return NULL;
+}
 
 
 /* Basic */

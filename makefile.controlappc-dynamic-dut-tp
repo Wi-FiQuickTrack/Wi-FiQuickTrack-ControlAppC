@@ -1,7 +1,5 @@
 # Type is laptop or openwrt
 TYPE = laptop
-# Role is dut or platform
-ROLE = dut
 # Package Version
 VERSION = "1.0.0.17"
 
@@ -29,27 +27,40 @@ CFLAGS += -D_OPENWRT_
 endif
 
 # Define the app is for DUT or platform
-ifeq ($(ROLE),dut)
-OBJS += indigo_api_callback_dut.o vendor_specific_dut.o
-CFLAGS += -D_DUT_
-else
-OBJS += indigo_api_callback_tp.o vendor_specific_tp.o
-CFLAGS += -DCONFIG_CTRL_IFACE_UDP
-CFLAGS += -D_TEST_PLATFORM_
-endif
+DUT_CFLAGS += -D_DUT_ 
+TP_CFLAGS += -DCONFIG_CTRL_IFACE_UDP
+TP_CFLAGS += -D_TEST_PLATFORM_
+
+CFLAGS += -D_DYNAMIC_DUT_TP_
 
 # Define the package version
 ifneq ($(VERSION),)
 CFLAGS += -D_VERSION_='$(VERSION)'
 endif
 
-all: app
+all: libdut.so libtest_platform.so app
 
 %.o: %.c 
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 app: $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -rdynamic -o $@ $^ -ldl
+
+indigo_api_callback_dut.o:indigo_api_callback_dut.c
+	$(CC) $(CFLAGS) $(DUT_CFLAGS) -fPIC -c indigo_api_callback_dut.c -o indigo_api_callback_dut.o
+vendor_specific_dut.o:vendor_specific_dut.c
+	$(CC) $(CFLAGS) $(DUT_CFLAGS) -fPIC -c vendor_specific_dut.c -o vendor_specific_dut.o
+
+libdut.so:indigo_api_callback_dut.o vendor_specific_dut.o
+	$(CC) $(CFLAGS) $(DUT_CFLAGS) -shared -o libdut.so indigo_api_callback_dut.o vendor_specific_dut.o
+
+indigo_api_callback_tp.o:indigo_api_callback_tp.c
+	$(CC) $(CFLAGS) $(TP_CFLAGS) -fPIC -c indigo_api_callback_tp.c -o indigo_api_callback_tp.o
+vendor_specific_tp.o:vendor_specific_tp.c
+	$(CC) $(CFLAGS) $(TP_CFLAGS) -fPIC -c vendor_specific_tp.c -o vendor_specific_tp.o
+
+libtest_platform.so:indigo_api_callback_tp.o vendor_specific_tp.o
+	$(CC) $(CFLAGS) $(TP_CFLAGS) -shared -o libtest_platform.so indigo_api_callback_tp.o vendor_specific_tp.o
 
 clean:
-	rm -rf app *.o
+	rm -rf app *.o *.so

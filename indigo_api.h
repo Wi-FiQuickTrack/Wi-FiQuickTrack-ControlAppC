@@ -115,9 +115,8 @@ struct indigo_api {
 #define TLV_BSS_IDENTIFIER                      0x001d
 #define TLV_HW_MODE                             0x001e
 #define TLV_VHT_OPER_CENTR_FREQ                 0x001f
-#define TLV_EAPOL_KEY_INDEX_WORKAROUND          0x0020
-#define TLV_LOGGER_SYSLOG                       0x0021
-#define TLV_LOGGER_SYSLOG_LEVEL                 0x0022
+#define TLV_RESET_TYPE                          0x0020
+#define APP_TYPE                                0x0021
 #define TLV_IE_OVERRIDE                         0x0023
 #define TLV_RECONFIG                            0x0024
 #define TLV_SAME_ANONCE                         0x0025
@@ -187,8 +186,8 @@ struct indigo_api {
 #define TLV_REPEAT_M3_FRAMES                    0x0065
 #define TLV_M3_FRAME_REPEAT_RATE                0x0066
 #define TLV_PACKET_COUNT                        0x0067
-#define TLV_SEND_M1_FRAMES                      0x0068
-#define TLV_UDP_PACKET_RATE                     0x0069
+#define TLV_PACKET_TYPE                         0x0068
+#define TLV_PACKET_RATE                         0x0069
 #define TLV_PHYMODE                             0x006a
 #define TLV_CHANNEL_WIDTH                       0x006b
 #define TLV_WMM_MODE                            0x006c
@@ -239,7 +238,7 @@ struct indigo_api {
 #define TLV_TEST_PLATFORM_IP                    0x009a
 #define TLV_TEST_PLATFORM_PORT                  0x009b
 #define TLV_CONTROL_INTERFACE                   0x009c
-#define TLV_UDP_PACKET_SIZE                     0x009d
+#define TLV_PACKET_SIZE                         0x009d
 #define TLV_DUT_UDP_PORT                        0x009e
 #define TLV_GLOBAL_CTRL_IFACE                   0x009f
 #define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x00a2
@@ -265,6 +264,7 @@ struct indigo_api {
 #define TLV_LOOP_BACK_DATA_SENT                 0xa006
 #define TLV_ARP_RECV_NUM                        0xa007
 #define TLV_TEST_PLATFORM_APP_VERSION           0xa008
+#define TLV_LOOP_BACK_SERVER_PORT               0xa009
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
@@ -319,6 +319,9 @@ struct indigo_api {
 #define TLV_VALUE_RESET_NOT_OK                  "Failed to run Device reset"
 #define TLV_VALUE_POWER_SAVE_OK                 "Set power save value successfully"
 #define TLV_VALUE_POWER_SAVE_NOT_OK             "Failed to set power save value"
+
+#define RESET_TYPE_INIT                         0x01
+#define RESET_TYPE_TEARDOWN                     0x02
 
 #define WPA_CTRL_OK                             "OK"
 

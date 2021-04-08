@@ -29,17 +29,14 @@
 #include "vendor_specific.h"
 #include "utils.h"
 
-/* Be invoked when start controlApp */
-void vendor_init() {
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+int use_openwrt_wpad = 0;
+#endif
+
+void interfaces_init() {
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
-
-    /* Vendor: add codes to let ControlApp have full control of hostapd */
-    /* Avoid hostapd being invoked by procd */
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "/etc/init.d/wpad stop >/dev/null 2>/dev/null");
-    system(buffer);
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");
@@ -73,11 +70,47 @@ void vendor_init() {
     sleep(1);
 #endif
 }
+/* Be invoked when start controlApp */
+void vendor_init() {
+#ifdef _DYNAMIC_DUT_TP_
+    /* Initiate the application */
+    set_hapd_full_exec_path(HAPD_EXEC_FILE_DEFAULT);          // Set default hostapd execution file path
+    set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);               // Set default hostapd control interface path
+    set_hapd_global_ctrl_path(HAPD_GLOBAL_CTRL_PATH_DEFAULT); // Set default hostapd global control interface path
+    set_hapd_conf_file(HAPD_CONF_FILE_DEFAULT);               // Set default hostapd configuration file path
+    set_wpas_full_exec_path(WPAS_EXEC_FILE_DEFAULT);          // Set default wap_supplicant execution file path
+    set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);               // Set default wap_supplicant control interface path
+    set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT); // Set default wap_supplicant global control interface path
+    set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);               // Set default wap_supplicant configuration file path
+#endif
+#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
+    char buffer[BUFFER_LEN];
+    char mac_addr[S_BUFFER_LEN];
+
+    /* Vendor: add codes to let ControlApp have full control of hostapd */
+    /* Avoid hostapd being invoked by procd */
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "/etc/init.d/wpad stop >/dev/null 2>/dev/null");
+    system(buffer);
+
+    interfaces_init();
+#if HOSTAPD_SUPPORT_MBSSID
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+        system("cp /overlay/hostapd /usr/sbin/hostapd");
+        use_openwrt_wpad = 0;
+#endif
+#endif
+#endif
+}
 
 /* Be invoked when terminate controlApp */
 void vendor_deinit() {
-    system("killall hostapd >/dev/null 2>/dev/null");
-    system("killall wpa_supplicant >/dev/null 2>/dev/null");
+    char buffer[S_BUFFER_LEN];
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
+    system(buffer);
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
 }
 
 /* Called by reset_device_hander() */
@@ -92,6 +125,16 @@ void vendor_device_reset() {
     snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
     system(buffer);
 #endif
+#if HOSTAPD_SUPPORT_MBSSID
+    /* interfaces may be destroyed by hostapd after done the MBSSID testing */
+    interfaces_init();
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+    if (use_openwrt_wpad > 0) {
+        system("cp /overlay/hostapd /usr/sbin/hostapd");
+        use_openwrt_wpad = 0;
+    }
+#endif
+#endif
 }
 
 #ifdef _OPENWRT_
@@ -100,13 +143,19 @@ void openwrt_apply_radio_config(void) {
 
 #ifdef _WTS_OPENWRT_
     // Apply radio configurations
-    system("hostapd -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid");
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "%s -g /var/run/hostapd/global -B -P /var/run/hostapd-global.pid",
+        get_hapd_full_exec_path());
+    system(buffer);
     sleep(1);
     system("wifi down >/dev/null 2>/dev/null");
     sleep(2);
     system("wifi up >/dev/null 2>/dev/null");
     sleep(3);
-    system("killall hostapd >/dev/null 2>/dev/null");
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
+    system(buffer);
     sleep(2);
 #endif
 }
@@ -125,6 +174,11 @@ void configure_ap_enable_mbssid() {
     system("uci set wireless.qcawifi.mbss_ie_enable=1");
     system("uci commit");
     */
+#elif defined(_OPENWRT_)
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+    system("cp /rom/usr/sbin/wpad /usr/sbin/hostapd");
+    use_openwrt_wpad = 1;
+#endif
 #endif
 }
 
