@@ -117,6 +117,7 @@ struct indigo_api {
 #define TLV_VHT_OPER_CENTR_FREQ                 0x001f
 #define TLV_RESET_TYPE                          0x0020
 #define APP_TYPE                                0x0021
+#define TLV_OP_CLASS                            0x0022
 #define TLV_IE_OVERRIDE                         0x0023
 #define TLV_RECONFIG                            0x0024
 #define TLV_SAME_ANONCE                         0x0025

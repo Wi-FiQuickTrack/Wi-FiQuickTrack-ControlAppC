@@ -92,6 +92,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_RSNXE_OVERRIDE_EAPOL, "rsnxe_override_eapol", 0 },
     { TLV_SAE_CONFIRM_IMMEDIATE, "sae_confirm_immediate", 0 },
     { TLV_OWE_TRANSITION_BSS_IDENTIFIER, "owe_transition_ifname", 0 },
+    { TLV_OP_CLASS, "op_class", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },
