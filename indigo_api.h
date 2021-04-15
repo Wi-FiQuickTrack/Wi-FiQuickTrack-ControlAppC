@@ -247,6 +247,8 @@ struct indigo_api {
 #define TLV_SHORT_SSID                          0x00a4
 #define TLV_HE_BEACON_TX_SU_PPDU                0x00a5
 #define TLV_HE_6G_ONLY                          0x00a6
+#define TLV_HE_UNSOL_PR_RESP_CADENCE            0x00a7
+#define TLV_HE_FILS_DISCOVERY_TX                0x00a8
 
 // class IndigoResponseTLV
 // List of TLV used in the Indigo API response and ACK messages from the DUT

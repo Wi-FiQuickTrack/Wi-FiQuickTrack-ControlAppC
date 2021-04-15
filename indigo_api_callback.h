@@ -93,6 +93,8 @@ struct tlv_to_config_name maps[] = {
     { TLV_SAE_CONFIRM_IMMEDIATE, "sae_confirm_immediate", 0 },
     { TLV_OWE_TRANSITION_BSS_IDENTIFIER, "owe_transition_ifname", 0 },
     { TLV_OP_CLASS, "op_class", 0 },
+    { TLV_HE_UNSOL_PR_RESP_CADENCE, "unsol_bcast_probe_resp_interval", 0 },
+    { TLV_HE_FILS_DISCOVERY_TX, "fils_discovery_max_interval", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },

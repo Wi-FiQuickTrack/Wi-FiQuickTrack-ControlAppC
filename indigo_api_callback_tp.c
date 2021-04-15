@@ -314,6 +314,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
         memset(buffer, 0, sizeof(buffer));
         memcpy(buffer, tlv->value, tlv->len);
+        /* FILS discovery enable to set max interval 20 */
+        if (tlv->id == TLV_HE_FILS_DISCOVERY_TX)
+            snprintf(buffer, sizeof(buffer), "20");
         sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
         strcat(output, cfg_item);
 
