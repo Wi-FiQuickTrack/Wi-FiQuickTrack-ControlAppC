@@ -233,6 +233,10 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_DUT_MAC_ADDR, "DUT_MAC_ADDR" },
     { TLV_CONTROL_APP_VERSION, "CONTROL_APP_VERSION" },
     { TLV_FREQ_LIST, "FREQ_LIST" },
+    { TLV_OP_CLASS, "OP_CLASS" },
+    { TLV_HE_6G_ONLY, "HE_6G_ONLY"}
+    { TLV_HE_UNSOL_PR_RESP_CADENCE, "UNSOL_PR_RESP_CADENCE" },
+    { TLV_HE_FILS_DISCOVERY_TX, "FILS_DISCOERY_TX" },
 };
 
 /* Find the type of the API stucture by the ID from the list */
