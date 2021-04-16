@@ -12,14 +12,6 @@ ifeq ($(TYPE),laptop)
 CC = gcc
 CFLAGS += -D_LAPTOP_
 
-else ifeq ($(TYPE),wts_openwrt)
-CC = /openwrt/QCA_Sniffer_11ax/qsdk/staging_dir/toolchain-aarch64_cortex-a53_gcc-5.2.0_musl-1.1.16/bin/aarch64-openwrt-linux-gcc
-LD = /openwrt/QCA_Sniffer_11ax/qsdk/staging_dir/toolchain-aarch64_cortex-a53_gcc-5.2.0_musl-1.1.16/bin/aarch64-openwrt-linux-ld
-# _OPENWRT_: Use OPENWRT
-CFLAGS += -D_OPENWRT_
-# _WTS_OPENWRT_: WTS OPENWRT specific changes
-CFLAGS += -D_WTS_OPENWRT_
-
 else
 # upstream OPENWRT
 # 32 bit
