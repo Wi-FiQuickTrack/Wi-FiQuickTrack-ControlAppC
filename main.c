@@ -184,7 +184,7 @@ static void usage() {
     printf("usage:\n");
     printf("  -a = specify hostapd path\n");
     printf("  -d = debug received and sent message\n");
-    printf("  -i = specify the interface. E.g., -i wlan0. Or, <band>:<interface>.\n       band can be 2 for 2.4GHz, 5 for 5GHz and d for the Dual. E.g., -i 2:wlan0,2:wlan1,5:wlan32,5:wlan33\n");
+    printf("  -i = specify the interface. E.g., -i wlan0. Or, <band>:<interface>.\n       band can be 2 for 2.4GHz, 5 for 5GHz and 6 for 6GHz. E.g., -i 2:wlan0,2:wlan1,5:wlan32,5:wlan33\n");
     printf("  -p = port number of the application\n");
     printf("  -s = specify wpa_supplicant path\n\n");
 }
