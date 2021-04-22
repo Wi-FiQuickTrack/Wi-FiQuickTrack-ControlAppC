@@ -416,7 +416,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     if (tlv) {
         memset(hw_mode_str, 0, sizeof(hw_mode_str));
         memcpy(hw_mode_str, tlv->value, tlv->len);
-        if (!strncmp(hw_mode_str, "a", 1)) {
+        if (find_wrapper_tlv_by_id(req, TLV_OP_CLASS)) {
+            band = BAND_6GHZ;
+        } else if (!strncmp(hw_mode_str, "a", 1)) {
             band = BAND_5GHZ;
         } else {
             band = BAND_24GHZ;

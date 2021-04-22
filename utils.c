@@ -1073,6 +1073,8 @@ int show_wireless_interface_info() {
             band = "2.4GHz";
         } else if (interfaces[i].band == BAND_5GHZ) {
             band = "5GHz";
+        } else if (interfaces[i].band == BAND_6GHZ) {
+            band = "6GHz";
         }
 
         indigo_logger(LOG_LEVEL_INFO, "Interface Name: %s, Band: %s, identifier %d", 
@@ -1092,6 +1094,8 @@ int parse_wireless_interface_info(char *info) {
             add_wireless_interface_info(BAND_24GHZ, -1, token+2);
         } else if (strncmp(token, "5:", 2) == 0) {
             add_wireless_interface_info(BAND_5GHZ, -1, token+2);
+        } else if (strncmp(token, "6:", 2) == 0) {
+            add_wireless_interface_info(BAND_6GHZ, -1, token+2);
         } else {
             return -1;
         }
@@ -1227,9 +1231,14 @@ int verify_band_from_freq(int freq, int band) {
     if (band == BAND_24GHZ) {
         info = band_24;
         size = sizeof(band_24)/sizeof(struct channel_info);
-    } else {
+    } else if (band == BAND_5GHZ) {
         info = band_5;
         size = sizeof(band_5)/sizeof(struct channel_info);
+    } else if (band == BAND_6GHZ) {
+        if (freq >= (5950 + 5*1) && freq <= (5950 + 5*233))
+            return 0;
+        else
+            return -1;
     }
 
     for (i = 0; i < size; i++) {
@@ -1264,6 +1273,23 @@ int get_center_freq_index(int channel, int width) {
         }
     }
     return 0;
+}
+
+int get_6g_center_freq_index(int channel, int width) {
+    int chwidth, i;
+
+    if (width == 1) {
+        chwidth = 80;
+    } else if (width == 2) {
+        chwidth = 160;
+    } else {
+        return channel;
+    }
+
+    for (i=1; i<233; i+=chwidth/5) {
+        if (channel >= i && channel < i + chwidth/5)
+            return i + (chwidth - 20)/10;
+    }
 }
 
 int is_ht40plus_chan(int chan) {

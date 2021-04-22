@@ -269,6 +269,7 @@ struct indigo_api {
 
 #define TLV_BAND_24GHZ                          "2.4GHz"
 #define TLV_BAND_5GHZ                           "5GHz"
+#define TLV_BAND_6GHZ                           "6GHz"
 
 #define TLV_VALUE_APP_VERSION                   "v1.0"
 #define TLV_VALUE_TEST_PLATFORM_APP_VERSION     "v1.0"
