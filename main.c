@@ -40,17 +40,6 @@
 #include "indigo_api.h"
 #include "utils.h"
 
-#ifdef _DYNAMIC_DUT_TP_
-#include <dlfcn.h>
-
-#define APP_DUT_TYPE 1
-#define APP_TP_TYPE  2
-void *dl_handle = NULL;
-int current_app_type = 0;
-void (*register_apis_fp)();
-void (*vendor_init_fp)(); 
-void (*vendor_deinit_fp)(); 
-#endif
 
 /* Internal functions */
 static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx);
@@ -191,9 +180,7 @@ static void usage() {
 
 /* Show the welcome message with role and version */
 static void print_welcome() {
-#ifdef _DYNAMIC_DUT_TP_
-    printf("Welcome to use Indigo Control App for both DUT and Platform");
-#elif defined(_DUT_)
+#ifdef _DUT_
     printf("Welcome to use Indigo Control App DUT version");
 #else
     printf("Welcome to use Indigo Control App Platform version");
@@ -271,109 +258,8 @@ static int parse_parameters(int argc, char *argv[]) {
 static void handle_term(int sig, void *eloop_ctx, void *signal_ctx) {
     indigo_logger(LOG_LEVEL_INFO, "Signal %d received - terminating\n", sig);
     eloop_terminate();
-#ifdef _DYNAMIC_DUT_TP_
-    if (vendor_deinit_fp)
-        vendor_deinit_fp();
-#else
     vendor_deinit();
-#endif
 }
-
-#ifdef _DYNAMIC_DUT_TP_
-int load_library(char *lib) {
-    char *error = NULL;
-
-    if (dl_handle) {
-        dlclose(dl_handle);
-        dl_handle = NULL;
-        register_apis_fp = NULL;
-        vendor_init_fp = NULL;
-        vendor_deinit_fp = NULL;
-    }
-    dl_handle = dlopen (lib, RTLD_LAZY);
-    if (!dl_handle) {
-        indigo_logger(LOG_LEVEL_ERROR, "%s.", dlerror());
-        return -1;
-    }
-    register_apis_fp = dlsym(dl_handle, "register_apis");
-    if ((error = dlerror()) != NULL)  {
-        indigo_logger(LOG_LEVEL_ERROR, "%s.", error);
-        return -1;
-    }
-    vendor_init_fp = dlsym(dl_handle, "vendor_init");
-    if ((error = dlerror()) != NULL)  {
-        indigo_logger(LOG_LEVEL_ERROR, "%s.", error);
-        return -1;
-    }
-    vendor_deinit_fp = dlsym(dl_handle, "vendor_deinit");
-    if ((error = dlerror()) != NULL)  {
-        indigo_logger(LOG_LEVEL_ERROR, "%s.", error);
-        return -1;
-    }
-    indigo_logger(LOG_LEVEL_INFO, "Dynamically load %s successful.", lib);
-    /* Register the callback */
-    if(register_apis_fp)
-        register_apis_fp();
-
-    /* Intiate the vendor's specific startup commands */
-    if (vendor_init_fp)
-        vendor_init_fp();
-    return 0;
-}
-
-static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    struct tlv_hdr *tlv = NULL;
-    char app_type[TLV_VALUE_SIZE];
-
-    tlv = find_wrapper_tlv_by_id(req, APP_TYPE);
-    memset(app_type, 0, sizeof(app_type));
-    if (tlv) {
-        memcpy(app_type, tlv->value, tlv->len);
-    } else {
-        goto err;
-    }
-
-    if (!strncmp(app_type, "dut", strlen("dut")) && (current_app_type != APP_DUT_TYPE)) {
-        /* dut */
-        if (load_library("libdut.so") < 0)
-            goto err;
-
-        current_app_type = APP_DUT_TYPE;
-    } else if (!strncmp(app_type, "tp", strlen("tp")) && (current_app_type != APP_TP_TYPE)){
-        /* test platform */
-        if (load_library("libtest_platform.so") < 0)
-            goto err;
-
-        current_app_type = APP_TP_TYPE;
-    }
-
-    if (current_app_type == APP_TP_TYPE)
-        indigo_logger(LOG_LEVEL_INFO, "Use Indigo Control App Platform function");
-    else
-        indigo_logger(LOG_LEVEL_INFO, "Use Indigo Control App DUT function");
-
-    indigo_logger(LOG_LEVEL_INFO, "hostapd Path: %s (%s)", get_hapd_full_exec_path(), get_hapd_exec_file());
-    indigo_logger(LOG_LEVEL_INFO, "wpa_supplicant Path: %s (%s)", get_wpas_full_exec_path(), get_wpas_exec_file());
-
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
-    if (current_app_type == APP_DUT_TYPE)
-        fill_wrapper_tlv_bytes(resp, TLV_CONTROL_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
-    else
-        fill_wrapper_tlv_bytes(resp, TLV_TEST_PLATFORM_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
-    return 0;
-err:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_NOT_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_NOT_OK), TLV_VALUE_NOT_OK);
-    if (current_app_type == APP_DUT_TYPE)
-        fill_wrapper_tlv_bytes(resp, TLV_CONTROL_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
-    else
-        fill_wrapper_tlv_bytes(resp, TLV_TEST_PLATFORM_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
-    return 0;
-}
-#endif
 
 int main(int argc, char* argv[]) {
     int service_socket = -1;
@@ -381,7 +267,6 @@ int main(int argc, char* argv[]) {
     /* Welcome message */
     print_welcome();
 
-#ifndef _DYNAMIC_DUT_TP_
     /* Initiate the application */
     set_wireless_interface(WIRELESS_INTERFACE_DEFAULT);       // Set default wireless interface information
     set_hapd_full_exec_path(HAPD_EXEC_FILE_DEFAULT);          // Set default hostapd execution file path
@@ -392,7 +277,6 @@ int main(int argc, char* argv[]) {
     set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);               // Set default wap_supplicant control interface path
     set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT); // Set default wap_supplicant global control interface path
     set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);               // Set default wap_supplicant configuration file path
-#endif
 
     /* Parse the application arguments */
     if (parse_parameters(argc, argv)) {
@@ -407,10 +291,8 @@ int main(int argc, char* argv[]) {
     indigo_logger(LOG_LEVEL_INFO, "Indigo control app running at: %d", get_service_port());
     indigo_logger(LOG_LEVEL_INFO, "Wireless Interface:" );
     show_wireless_interface_info();
-#ifndef _DYNAMIC_DUT_TP_
     indigo_logger(LOG_LEVEL_INFO, "hostapd Path: %s (%s)", get_hapd_full_exec_path(), get_hapd_exec_file());
     indigo_logger(LOG_LEVEL_INFO, "wpa_supplicant Path: %s (%s)", get_wpas_full_exec_path(), get_wpas_exec_file());
-#endif
 
     /*
      * The following information may not help anymore since
@@ -421,15 +303,11 @@ int main(int argc, char* argv[]) {
     indigo_logger(LOG_LEVEL_INFO, "WPA Supplicant Control Interface: %s", get_wpas_ctrl_path());
     */
 
-#ifdef _DYNAMIC_DUT_TP_
-    register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
-#else
     /* Register the callback */
     register_apis();
 
     /* Intiate the vendor's specific startup commands */
     vendor_init();
-#endif
 
     /* Start eloop */
     eloop_init(NULL);

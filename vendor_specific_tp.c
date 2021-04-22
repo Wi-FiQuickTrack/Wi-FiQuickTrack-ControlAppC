@@ -100,17 +100,6 @@ void vendor_init() {
     system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
     sleep(1);
 
-#ifdef _DYNAMIC_DUT_TP_
-    /* Initiate the application */
-    set_hapd_full_exec_path(HAPD_EXEC_FILE_DEFAULT);          // Set default hostapd execution file path
-    set_hapd_ctrl_path(HAPD_CTRL_PATH_DEFAULT);               // Set default hostapd control interface path
-    set_hapd_global_ctrl_path(HAPD_GLOBAL_CTRL_PATH_DEFAULT); // Set default hostapd global control interface path
-    set_hapd_conf_file(HAPD_CONF_FILE_DEFAULT);               // Set default hostapd configuration file path
-    set_wpas_full_exec_path(WPAS_EXEC_FILE_DEFAULT);          // Set default wap_supplicant execution file path
-    set_wpas_ctrl_path(WPAS_CTRL_PATH_DEFAULT);               // Set default wap_supplicant control interface path
-    set_wpas_global_ctrl_path(WPAS_GLOBAL_CTRL_PATH_DEFAULT); // Set default wap_supplicant global control interface path
-    set_wpas_conf_file(WPAS_CONF_FILE_DEFAULT);               // Set default wap_supplicant configuration file path
-#endif
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];

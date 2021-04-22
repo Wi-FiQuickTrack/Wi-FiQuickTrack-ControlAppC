@@ -45,9 +45,7 @@ extern struct sockaddr_in *tool_addr;
 void register_apis() {
     /* Basic */
     register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
-#ifndef _DYNAMIC_DUT_TP_
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
-#endif
     register_api(API_INDIGO_SEND_LOOP_BACK_DATA, NULL, send_loopback_data_handler);
     register_api(API_INDIGO_STOP_LOOP_BACK_DATA, NULL, stop_loopback_data_handler);
     /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
