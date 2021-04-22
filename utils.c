@@ -189,7 +189,8 @@ char* read_file(char *fn) {
 
     fd = open(fn, O_RDONLY);
     if (fd) {
-        buffer = (char*)malloc(sizeof(char)*size);
+        buffer = (char*)malloc(sizeof(char)*(size+1));
+        memset(buffer, 0, size+1);
         read(fd, buffer, size);
         close(fd);
     }
