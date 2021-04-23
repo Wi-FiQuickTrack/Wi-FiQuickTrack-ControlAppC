@@ -75,6 +75,13 @@ enum {
     DATA_TYPE_ICMP = 1
 };
 
+enum {
+    OP_CLASS_6G_20 = 131,
+    OP_CLASS_6G_40 = 132,
+    OP_CLASS_6G_80 = 133,
+    OP_CLASS_6G_160 = 134
+};
+
 struct sta_platform_config {
     int phymode;
     int chwidth;
