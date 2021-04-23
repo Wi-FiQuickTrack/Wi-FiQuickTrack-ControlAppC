@@ -37,6 +37,17 @@ void interfaces_init() {
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
+    FILE *fp;
+    int third_radio = 0;
+
+    fp = popen("iw dev", "r");
+    if (fp) {
+        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            if (strstr(buffer, "phy#2"))
+                third_radio = 1;
+        }
+        pclose(fp);
+    }
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");
@@ -47,6 +58,12 @@ void interfaces_init() {
     system(buffer);
     sprintf(buffer, "iw phy phy0 interface add ath01 type managed >/dev/null 2>/dev/null");
     system(buffer);
+    if (third_radio == 1) {
+        sprintf(buffer, "iw phy phy2 interface add ath2 type managed >/dev/null 2>/dev/null");
+        system(buffer);
+        sprintf(buffer, "iw phy phy2 interface add ath21 type managed >/dev/null 2>/dev/null");
+        system(buffer);
+    }
 
     memset(mac_addr, 0, sizeof(mac_addr));
     get_mac_address(mac_addr, sizeof(mac_addr), "ath1");
@@ -67,6 +84,18 @@ void interfaces_init() {
     control_interface("ath01", "down");
     mac_addr[16] = (char)'1';
     set_mac_address("ath01", mac_addr);
+
+    if (third_radio == 1) {
+        memset(mac_addr, 0, sizeof(mac_addr));
+        get_mac_address(mac_addr, sizeof(mac_addr), "ath2");
+        control_interface("ath2", "down");
+        mac_addr[16] = (char)'0';
+        set_mac_address("ath0", mac_addr);
+
+        control_interface("ath21", "down");
+        mac_addr[16] = (char)'1';
+        set_mac_address("ath21", mac_addr);
+    }
     sleep(1);
 #endif
 }
