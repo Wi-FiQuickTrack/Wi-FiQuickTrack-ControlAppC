@@ -242,6 +242,7 @@ struct indigo_api {
 #define TLV_PACKET_SIZE                         0x009d
 #define TLV_DUT_UDP_PORT                        0x009e
 #define TLV_GLOBAL_CTRL_IFACE                   0x009f
+#define TLV_SKIP_6G_BSS_SECURITY_CHECK          0x00a1
 #define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x00a2
 #define TLV_FREQ_LIST                           0x00a3
 #define TLV_SHORT_SSID                          0x00a4

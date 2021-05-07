@@ -237,6 +237,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_HE_6G_ONLY, "HE_6G_ONLY"},
     { TLV_HE_UNSOL_PR_RESP_CADENCE, "UNSOL_PR_RESP_CADENCE" },
     { TLV_HE_FILS_DISCOVERY_TX, "FILS_DISCOERY_TX" },
+    { TLV_SKIP_6G_BSS_SECURITY_CHECK, "SKIP_6G_BSS_SECURITY_CHECK" },
 };
 
 /* Find the type of the API stucture by the ID from the list */
