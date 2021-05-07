@@ -95,6 +95,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_OP_CLASS, "op_class", 0 },
     { TLV_HE_UNSOL_PR_RESP_CADENCE, "unsol_bcast_probe_resp_interval", 0 },
     { TLV_HE_FILS_DISCOVERY_TX, "fils_discovery_max_interval", 0 },
+    { TLV_SKIP_6G_BSS_SECURITY_CHECK, "skip_6g_bss_security_check", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },
