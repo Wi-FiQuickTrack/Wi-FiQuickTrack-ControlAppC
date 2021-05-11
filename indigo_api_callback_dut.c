@@ -493,6 +493,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         } else {
             strcat(output, "fils_discovery_max_interval=20\n");
         }
+        /* Enable bss_color and country IE */
+        strcat(output, "he_bss_color=19\n");
+        strcat(output, "ieee80211d=1\n");
+        strcat(output, "country_code=US\n");
     } else if (strstr(band, "a")) {
         if (is_ht40plus_chan(channel))
             strcat(output, "ht_capab=[HT40+]\n");
