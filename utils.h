@@ -45,7 +45,8 @@ enum {
 
 enum {
     BAND_24GHZ = 0,
-    BAND_5GHZ = 1
+    BAND_5GHZ = 1,
+    BAND_6GHZ = 2
 };
 
 enum {
@@ -72,6 +73,13 @@ enum {
 enum {
     DATA_TYPE_UDP = 0,
     DATA_TYPE_ICMP = 1
+};
+
+enum {
+    OP_CLASS_6G_20 = 131,
+    OP_CLASS_6G_40 = 132,
+    OP_CLASS_6G_80 = 133,
+    OP_CLASS_6G_160 = 134
 };
 
 struct sta_platform_config {
@@ -205,6 +213,7 @@ size_t strlcpy(char *dest, const char *src, size_t siz);
 int get_key_value(char *value, char *buffer, char *token);
 int verify_band_from_freq(int freq, int band);
 int get_center_freq_index(int channel, int width);
+int get_6g_center_freq_index(int channel, int width);
 int is_ht40plus_chan(int chan);
 int is_ht40minus_chan(int chan);
 int http_file_post(char *host, int port, char *path, char *file_name);

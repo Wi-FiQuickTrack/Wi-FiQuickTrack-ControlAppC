@@ -139,6 +139,8 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         set_default_wireless_interface_info(BAND_24GHZ);
     } else if (strcmp(band, TLV_BAND_5GHZ) == 0) {
         set_default_wireless_interface_info(BAND_5GHZ);
+    } else if (strcmp(band, TLV_BAND_6GHZ) == 0) {
+        set_default_wireless_interface_info(BAND_6GHZ);
     }
 
     memset(band_transmitter, 0, sizeof(band_transmitter));
@@ -265,6 +267,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     char country[16];
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
+    int is_6g_only = 0, unsol_pr_resp_interval = 0;
 
 #if HOSTAPD_SUPPORT_MBSSID
     if (wlanp->mbssid_enable && !wlanp->transmitter)
@@ -285,6 +288,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     /* QCA WTS image doesn't apply 11ax, mu_edca, country, 11d, 11h in hostapd */
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
+
+        if (tlv->id == TLV_HE_6G_ONLY ) {
+            is_6g_only = 1;
+            continue;
+        }
+
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
@@ -368,18 +377,24 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 #endif
         }
 
-	if (tlv->id == TLV_IEEE80211_H) {
+        if (tlv->id == TLV_IEEE80211_H) {
 #ifdef _WTS_OPENWRT_
-	    continue;
+            continue;
 #endif
-	    enable_11h = 1;
-	}
+            enable_11h = 1;
+        }
 
 #ifdef _WTS_OPENWRT_
         if (tlv->id == TLV_IEEE80211_D || tlv->id == TLV_HE_OPER_CENTR_FREQ)
             continue;
 
 #endif
+
+        if (tlv->id == TLV_HE_UNSOL_PR_RESP_CADENCE) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            unsol_pr_resp_interval = atoi(value);
+        }
 
         memset(buffer, 0, sizeof(buffer));
         memset(cfg_item, 0, sizeof(cfg_item));
@@ -458,7 +473,29 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     // Default: 20MHz in 2.4G(No configuration required) 80MHz(40MHz for 11N only) in 5G
     if (enable_ac == 0 && enable_ax == 0)
         chwidth = 0;
-    if (strstr(band, "a")) {
+
+    if (is_6g_only) {
+        if (chwidthset == 0) {
+            sprintf(buffer, "he_oper_chwidth=%d\n", chwidth);
+            strcat(output, buffer);
+        }
+        if (chwidth == 1)
+            strcat(output, "op_class=133\n");
+        else if (chwidth == 2)
+            strcat(output, "op_class=134\n");
+        sprintf(buffer, "he_oper_centr_freq_seg0_idx=%d\n", get_6g_center_freq_index(channel, chwidth));
+        strcat(output, buffer);
+        if (unsol_pr_resp_interval) {
+            sprintf(buffer, "unsol_bcast_probe_resp_interval=%d\n", unsol_pr_resp_interval);
+            strcat(output, buffer);
+        } else {
+            strcat(output, "fils_discovery_max_interval=20\n");
+        }
+        /* Enable bss_color and country IE */
+        strcat(output, "he_bss_color=19\n");
+        strcat(output, "ieee80211d=1\n");
+        strcat(output, "country_code=US\n");
+    } else if (strstr(band, "a")) {
         if (is_ht40plus_chan(channel))
             strcat(output, "ht_capab=[HT40+]\n");
         else if (is_ht40minus_chan(channel))
@@ -584,7 +621,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         {
             memset(hw_mode_str, 0, sizeof(hw_mode_str));
             memcpy(hw_mode_str, tlv->value, tlv->len);
-            if (!strncmp(hw_mode_str, "a", 1)) {
+            if (find_wrapper_tlv_by_id(req, TLV_HE_6G_ONLY)) {
+                band = BAND_6GHZ;
+            } else if (!strncmp(hw_mode_str, "a", 1)) {
                 band = BAND_5GHZ;
             } else {
                 band = BAND_24GHZ;
@@ -866,7 +905,15 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
 
     /* Check band and connected freq*/
     if (strlen(band)) {
-        if (verify_band_from_freq(atoi(connected_freq), strcmp(band, "2.4GHz") == 0 ? BAND_24GHZ : BAND_5GHZ) == 0) {
+        int band_id = 0;
+
+        if (strcmp(band, "2.4GHz") == 0)
+            band_id = BAND_24GHZ;
+        else if (strcmp(band, "5GHz") == 0)
+            band_id = BAND_5GHZ;
+        else if (strcmp(band, "6GHz") == 0)
+            band_id = BAND_6GHZ;
+        if (verify_band_from_freq(atoi(connected_freq), band_id) == 0) {
             status = TLV_VALUE_STATUS_OK;
             message = TLV_VALUE_OK;
         } else {

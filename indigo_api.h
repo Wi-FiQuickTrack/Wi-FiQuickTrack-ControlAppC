@@ -117,6 +117,7 @@ struct indigo_api {
 #define TLV_VHT_OPER_CENTR_FREQ                 0x001f
 #define TLV_RESET_TYPE                          0x0020
 #define APP_TYPE                                0x0021
+#define TLV_OP_CLASS                            0x0022
 #define TLV_IE_OVERRIDE                         0x0023
 #define TLV_RECONFIG                            0x0024
 #define TLV_SAME_ANONCE                         0x0025
@@ -241,11 +242,14 @@ struct indigo_api {
 #define TLV_PACKET_SIZE                         0x009d
 #define TLV_DUT_UDP_PORT                        0x009e
 #define TLV_GLOBAL_CTRL_IFACE                   0x009f
+#define TLV_SKIP_6G_BSS_SECURITY_CHECK          0x00a1
 #define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x00a2
 #define TLV_FREQ_LIST                           0x00a3
 #define TLV_SHORT_SSID                          0x00a4
 #define TLV_HE_BEACON_TX_SU_PPDU                0x00a5
 #define TLV_HE_6G_ONLY                          0x00a6
+#define TLV_HE_UNSOL_PR_RESP_CADENCE            0x00a7
+#define TLV_HE_FILS_DISCOVERY_TX                0x00a8
 
 // class IndigoResponseTLV
 // List of TLV used in the Indigo API response and ACK messages from the DUT
@@ -266,6 +270,7 @@ struct indigo_api {
 
 #define TLV_BAND_24GHZ                          "2.4GHz"
 #define TLV_BAND_5GHZ                           "5GHz"
+#define TLV_BAND_6GHZ                           "6GHz"
 
 #define TLV_VALUE_APP_VERSION                   "v1.0"
 #define TLV_VALUE_TEST_PLATFORM_APP_VERSION     "v1.0"

@@ -312,6 +312,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
         memset(buffer, 0, sizeof(buffer));
         memcpy(buffer, tlv->value, tlv->len);
+        /* FILS discovery enable to set max interval 20 */
+        if (tlv->id == TLV_HE_FILS_DISCOVERY_TX)
+            snprintf(buffer, sizeof(buffer), "20");
         sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
         strcat(output, cfg_item);
 
@@ -400,7 +403,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int band, len;
-    char hw_mode_str[8];
+    char hw_mode_str[8], op_class[8];
     char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
     char *message = "DUT configured as AP : Configuration file created";
     struct tlv_hdr *tlv;
@@ -413,6 +416,13 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         memcpy(hw_mode_str, tlv->value, tlv->len);
         if (!strncmp(hw_mode_str, "a", 1)) {
             band = BAND_5GHZ;
+            tlv = find_wrapper_tlv_by_id(req, TLV_OP_CLASS);
+            if (tlv) {
+                memset(op_class, 0, sizeof(op_class));
+                memcpy(op_class, tlv->value, tlv->len);
+                if (atoi(op_class) >= OP_CLASS_6G_20 && atoi(op_class) <= OP_CLASS_6G_160)
+                    band = BAND_6GHZ;
+            }
         } else {
             band = BAND_24GHZ;
         }
