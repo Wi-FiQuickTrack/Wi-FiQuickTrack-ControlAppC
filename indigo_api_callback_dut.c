@@ -289,7 +289,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
 
-        if (tlv->id == TLV_HE_6G_ONLY ) {
+        if (tlv->id == TLV_HE_6G_ONLY) {
             is_6g_only = 1;
             continue;
         }
@@ -663,6 +663,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     return 0;
 }
 
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+extern int use_openwrt_wpad;
+#endif
 // ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
 // RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -670,6 +673,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char buffer[S_BUFFER_LEN];
     int len;
     int status = TLV_VALUE_STATUS_OK;
+    int swap_hostapd = 0;
 
 #ifdef _WTS_OPENWRT_
     openwrt_apply_radio_config();
@@ -682,9 +686,25 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         get_hapd_full_exec_path(),
         get_hapd_global_ctrl_path(),
         get_hostapd_debug_arguments(), 
-        get_all_hapd_conf_files());
+        get_all_hapd_conf_files(&swap_hostapd));
     len = system(buffer);
     sleep(1);
+
+    /* Bring up VAPs with MBSSID disable using WFA hostapd */
+    if (swap_hostapd) {
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+        indigo_logger(LOG_LEVEL_INFO, "Use WFA hostapd for MBSSID disable VAPs with RNR");
+        system("cp /overlay/hostapd /usr/sbin/hostapd");
+        use_openwrt_wpad = 0;
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "%s -B -t -P /var/run/hostapd_1.pid %s -f /var/log/hostapd_1.log %s",
+                get_hapd_full_exec_path(),
+                get_hostapd_debug_arguments(),
+                get_all_hapd_conf_files(&swap_hostapd));
+        len = system(buffer);
+        sleep(1);
+#endif
+    }
 
 #ifndef _WTS_OPENWRT_
     iterate_all_wlan_interfaces(start_ap_set_wlan_params);
