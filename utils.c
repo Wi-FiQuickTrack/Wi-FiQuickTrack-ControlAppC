@@ -1171,13 +1171,25 @@ void iterate_all_wlan_interfaces(void (*callback_fn)(void *)) {
     return ;
 }
 
-char* get_all_hapd_conf_files() {
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+extern int use_openwrt_wpad;
+#endif
+
+char* get_all_hapd_conf_files(int *swap_hapd) {
     int i, valid_id_cnt = 0;
     static char conf_files[128];
 
     memset(conf_files, 0, sizeof(conf_files));
     for (i = 0; i < interface_count; i++) {
         if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+            if (use_openwrt_wpad && !interfaces[i].mbssid_enable) {
+                *swap_hapd = 1;
+                continue;
+            } else if (!use_openwrt_wpad && interfaces[i].mbssid_enable) {
+                continue;
+            }
+#endif
             valid_id_cnt++;
             strncat(conf_files, interfaces[i].hapd_conf_file, strlen(interfaces[i].hapd_conf_file));
             strcat(conf_files, " ");

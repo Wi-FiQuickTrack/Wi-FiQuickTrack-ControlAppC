@@ -195,7 +195,7 @@ int get_service_port();
 int set_service_port(int port);
 char* get_default_wireless_interface_info();
 int clear_interfaces_resource();
-char* get_all_hapd_conf_files();
+char* get_all_hapd_conf_files(int *swap_hostapd);
 
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
 struct interface_info* assign_wireless_interface_info(struct bss_identifier_info *bss);
