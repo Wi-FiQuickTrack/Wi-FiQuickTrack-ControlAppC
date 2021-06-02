@@ -456,6 +456,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     }
 #endif
 
+    if (is_band_enabled(BAND_6GHZ) && !wlanp->mbssid_enable) {
+        strcat(output, "rnr=1\n");
+    }
+
     // Note: if any new DUT configuration is added for sae_groups,
     // then the following unconditional sae_groups addition should be
     // changed to become conditional on there being no other sae_groups

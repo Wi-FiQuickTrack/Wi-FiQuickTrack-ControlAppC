@@ -1171,6 +1171,19 @@ void iterate_all_wlan_interfaces(void (*callback_fn)(void *)) {
     return ;
 }
 
+/* This API is useful only when for provisioning multiple VAPs */
+int is_band_enabled(int band) {
+    int i;
+    for (i = 0; i < interface_count; i++)
+    {
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER &&
+                interfaces[i].band == band) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 #ifdef HOSTAPD_SUPPORT_MBSSID_WAR
 extern int use_openwrt_wpad;
 #endif
