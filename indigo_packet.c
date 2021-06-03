@@ -138,6 +138,9 @@ int free_packet_wrapper(struct packet_wrapper *wrapper) {
 
     for (i = 0; i < TLV_NUM; i++) {
         if (wrapper->tlv[i]) {
+            if (wrapper->tlv[i]->value) {
+                free(wrapper->tlv[i]->value);
+            }
             free(wrapper->tlv[i]);
         }
     }
