@@ -207,6 +207,7 @@ void iterate_all_wlan_interfaces(void (*callback_fn)(void *));
 void get_server_cert_hash(char *pem_file, char *buffer);
 int insert_wpa_network_config(char *config);
 void remove_pac_file(char *path);
+int is_band_enabled(int band);
 
 /* misc */
 size_t strlcpy(char *dest, const char *src, size_t siz);

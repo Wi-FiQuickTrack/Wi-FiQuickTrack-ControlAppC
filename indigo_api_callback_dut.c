@@ -294,6 +294,13 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
+        if (tlv->id == TLV_BSS_IDENTIFIER) {
+            if (is_band_enabled(BAND_6GHZ) && !wlanp->mbssid_enable) {
+                strcat(output, "rnr=1\n");
+            }
+            continue;
+        }
+
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
