@@ -89,11 +89,11 @@ void interfaces_init() {
         memset(mac_addr, 0, sizeof(mac_addr));
         get_mac_address(mac_addr, sizeof(mac_addr), "ath2");
         control_interface("ath2", "down");
-        mac_addr[16] = (char)'0';
-        set_mac_address("ath0", mac_addr);
+        mac_addr[16] = (char)'8';
+        set_mac_address("ath2", mac_addr);
 
         control_interface("ath21", "down");
-        mac_addr[16] = (char)'1';
+        mac_addr[16] = (char)'9';
         set_mac_address("ath21", mac_addr);
     }
     sleep(1);
