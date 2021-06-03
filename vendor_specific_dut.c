@@ -30,7 +30,7 @@
 #include "utils.h"
 
 #ifdef HOSTAPD_SUPPORT_MBSSID_WAR
-int use_openwrt_wpad = 0;
+extern int use_openwrt_wpad;
 #endif
 
 void interfaces_init() {

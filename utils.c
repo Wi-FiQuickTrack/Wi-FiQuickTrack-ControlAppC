@@ -62,6 +62,10 @@ int band_mbssid_cnt[16];
 struct interface_info* default_interface;
 static struct loopback_info loopback = {};
 
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+int use_openwrt_wpad = 0;
+#endif
+
 void send_continuous_loopback_packet(void *eloop_ctx, void *sock_ctx);
 
 void debug_print_timestamp(void) {
@@ -1184,9 +1188,6 @@ int is_band_enabled(int band) {
     return 0;
 }
 
-#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
-extern int use_openwrt_wpad;
-#endif
 
 char* get_all_hapd_conf_files(int *swap_hapd) {
     int i, valid_id_cnt = 0;
