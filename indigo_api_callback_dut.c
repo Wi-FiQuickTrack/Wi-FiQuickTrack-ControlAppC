@@ -1591,10 +1591,10 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 
 /*
  * This func needs to wait association completion and reply status.
- * Default timeout is 20 seconds.
+ * Default timeout is 30 seconds.
  * Timeout can be extended but must be less than 120 seconds.
  */
-#define ASSOC_TIMEOUT 20
+#define ASSOC_TIMEOUT 30
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_ASSOC_OK;
