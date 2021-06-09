@@ -251,6 +251,12 @@ struct indigo_api {
 #define TLV_HE_UNSOL_PR_RESP_CADENCE            0x00a7
 #define TLV_HE_FILS_DISCOVERY_TX                0x00a8
 
+
+#define TLV_RAND_MAC_ADDR                       0x4001
+#define TLV_PREASSOC_RAND_MAC_ADDR              0x4002
+#define TLV_RAND_ADDR_LIFETIME                  0x4003
+#define TLV_DROP_SA                             0x4004
+
 // class IndigoResponseTLV
 // List of TLV used in the Indigo API response and ACK messages from the DUT
 #define TLV_MESSAGE                             0xa000
