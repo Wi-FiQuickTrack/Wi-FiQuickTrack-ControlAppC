@@ -230,10 +230,10 @@ struct indigo_api {
 #define TLV_RSNXE_OVERRIDE_EAPOL                0x0092
 #define TLV_TRANSITION_DISABLE                  0x0093
 #define TLV_SAE_CONFIRM_IMMEDIATE               0x0094
-#define TLV_SCAN_ENTRY_FLUSH                    0x0095
-#define TLV_OWE_TRANSITION_SSID                 0x0096
-#define TLV_OWE_TRANSITION_IFNAME               0x0097
-#define TLV_BEACON_HEXDUMP_REQUIRED             0x0098
+#define TLV_RAND_MAC_ADDR                       0x0095
+#define TLV_PREASSOC_RAND_MAC_ADDR              0x0096
+#define TLV_RAND_ADDR_LIFETIME                  0x0097
+#define TLV_DROP_SA                             0x0098
 #define TLV_SERVER_CERT                         0x0099
 
 #define TLV_TEST_PLATFORM_IP                    0x009a
@@ -250,12 +250,6 @@ struct indigo_api {
 #define TLV_HE_6G_ONLY                          0x00a6
 #define TLV_HE_UNSOL_PR_RESP_CADENCE            0x00a7
 #define TLV_HE_FILS_DISCOVERY_TX                0x00a8
-
-
-#define TLV_RAND_MAC_ADDR                       0x4001
-#define TLV_PREASSOC_RAND_MAC_ADDR              0x4002
-#define TLV_RAND_ADDR_LIFETIME                  0x4003
-#define TLV_DROP_SA                             0x4004
 
 // class IndigoResponseTLV
 // List of TLV used in the Indigo API response and ACK messages from the DUT
