@@ -468,7 +468,7 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
     int s = 0, i = 0;
     struct sockaddr_in addr;
     int pkt_sent = 0, pkt_rcv = 0;
-    char message[1600], server_reply[1600];
+    char message[1600], server_reply[1600], ifname[32];
     ssize_t recv_len = 0, send_len = 0;
     struct timeval timeout;
 
@@ -486,6 +486,13 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
     }
+    snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+    const int len = strnlen(ifname, IFNAMSIZ);
+    if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
+        return -1;
+    }
+
     setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
     setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 
@@ -556,7 +563,7 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
 int send_icmp_data(char *target_ip, int packet_count, int packet_size, double rate)
 {
     int n, sock, i;
-    char buf[1600], server_reply[1600];
+    char buf[1600], server_reply[1600], ifname[32];
     struct sockaddr_in addr;
     struct in_addr insaddr;
     struct icmphdr *icmphdr, *recv_icmphdr;
@@ -579,6 +586,13 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
     } else {
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
+    }
+
+    snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+    const int len = strnlen(ifname, IFNAMSIZ);
+    if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
+        return -1;
     }
 
     setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
