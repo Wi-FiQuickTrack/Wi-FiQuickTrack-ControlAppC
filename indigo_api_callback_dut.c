@@ -80,7 +80,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_RESET_NOT_OK;
     char buffer[TLV_VALUE_SIZE];
-    char role[TLV_VALUE_SIZE], log_level[TLV_VALUE_SIZE], clear[TLV_VALUE_SIZE], band[TLV_VALUE_SIZE];
+    char role[TLV_VALUE_SIZE], log_level[TLV_VALUE_SIZE], band[TLV_VALUE_SIZE];
     struct tlv_hdr *tlv = NULL;
 
     /* TLV: ROLE */
@@ -96,12 +96,6 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     memset(log_level, 0, sizeof(log_level));
     if (tlv) {
         memcpy(log_level, tlv->value, tlv->len);
-    }
-    /* TLV: CLEAR */
-    tlv = find_wrapper_tlv_by_id(req, TLV_CLEAR);
-    memset(clear, 0, sizeof(clear));
-    if (tlv) {
-        memcpy(clear, tlv->value, tlv->len);
     }
     /* TLV: TLV_BAND */
     memset(band, 0, sizeof(band));
@@ -981,19 +975,10 @@ done:
 
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
-    char tool_ip[256];
     char local_ip[256];
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_LOOPBACK_SVR_START_NOT_OK;
     char tool_udp_port[16];
-
-    /* ControlApp on DUT */
-    /* TLV: TLV_TOOL_IP_ADDRESS */
-    memset(tool_ip, 0, sizeof(tool_ip));
-    tlv = find_wrapper_tlv_by_id(req, TLV_TOOL_IP_ADDRESS);
-    if (tlv) {
-        memcpy(tool_ip, tlv->value, tlv->len);
-    }
 
     /* Find network interface. If BRIDGE_WLANS exists, then use it. Otherwise, it uses the initiation value. */
     memset(local_ip, 0, sizeof(local_ip));
@@ -1764,17 +1749,16 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
         goto done;
     }
 
-    /* ControlApp on DUT */
-    /* TLV: MBO_IGNORE_ASSOC_DISALLOW */
+    /* Example: Use TLV_STA_IEEE80211_W. Change to corresponding TLV from Tool */
     memset(param_value, 0, sizeof(param_value));
-    tlv = find_wrapper_tlv_by_id(req, TLV_MBO_IGNORE_ASSOC_DISALLOW);
+    tlv = find_wrapper_tlv_by_id(req, TLV_STA_IEEE80211_W);
     if (tlv && find_tlv_config_name(tlv->id) != NULL) {
         strcpy(param_name, find_tlv_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
     } else {
         status = TLV_VALUE_STATUS_NOT_OK;
         message = TLV_VALUE_INSUFFICIENT_TLV;
-        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: MBO_IGNORE_ASSOC_DISALLOW");
+        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: STA_IEEE80211_W");
         goto done;
     }
     /* Assemble wpa_supplicant command */

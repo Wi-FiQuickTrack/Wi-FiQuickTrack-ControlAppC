@@ -456,14 +456,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     int len;
     struct tlv_hdr *tlv;
 
-    memset(buffer, 0, sizeof(buffer));
-    tlv = find_wrapper_tlv_by_id(req, TLV_GLOBAL_CTRL_IFACE);
-    memset(g_ctrl_iface, 0, sizeof(g_ctrl_iface));
-    if (tlv) {
-        memcpy(g_ctrl_iface, tlv->value, tlv->len);
-    } else {
-        sprintf(g_ctrl_iface, "%s", get_hapd_global_ctrl_path());
-    }
+    sprintf(g_ctrl_iface, "%s", get_hapd_global_ctrl_path());
 
     /* TLV: DEBUG_LEVEL */
     tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
