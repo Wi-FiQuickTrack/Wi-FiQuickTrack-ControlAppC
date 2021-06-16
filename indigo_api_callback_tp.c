@@ -757,6 +757,19 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         } else {
             indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
         }
+
+        if (sta_hw_config.chwidth != CHWIDTH_AUTO) {
+            if (sta_hw_config.phymode != PHYMODE_AUTO) {
+                indigo_logger(LOG_LEVEL_DEBUG, "Reset STA PHY mode in teardown");
+                sta_hw_config.phymode_isset = true;
+                sta_hw_config.phymode = PHYMODE_AUTO;
+                set_phy_mode();
+            }
+            indigo_logger(LOG_LEVEL_DEBUG, "Reset STA channel width in teardown");
+            sta_hw_config.chwidth_isset = true;
+            sta_hw_config.chwidth = CHWIDTH_AUTO;
+            set_channel_width();
+        }
     }
 
     if (reset == RESET_TYPE_INIT) {
@@ -1126,8 +1139,12 @@ static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wr
     sta_hw_config.phymode_isset = true;
 
     if (strcmp(param_value, "auto") == 0) {
-        sta_hw_config.phymode = PHYMODE_AUTO;
-        set_phy_mode();
+        if (sta_hw_config.phymode != PHYMODE_AUTO) {
+            sta_hw_config.phymode = PHYMODE_AUTO;
+            set_phy_mode();
+        } else {
+            sta_hw_config.phymode_isset = false;
+        }
     } else if (strcmp(param_value, "11bgn") == 0) {
         sta_hw_config.phymode = PHYMODE_11BGN;
     } else if (strcmp(param_value, "11bg") == 0) {
@@ -1180,8 +1197,12 @@ static int set_sta_channel_width_handler(struct packet_wrapper *req, struct pack
     sta_hw_config.chwidth_isset = true;
 
     if (strcmp(param_value, "auto") == 0) {
-        sta_hw_config.chwidth = CHWIDTH_AUTO;
-        set_channel_width();
+        if (sta_hw_config.chwidth != CHWIDTH_AUTO) {
+            sta_hw_config.chwidth = CHWIDTH_AUTO;
+            set_channel_width();
+        } else { // Already in auto mode
+            sta_hw_config.chwidth_isset = false;
+        }
     } else if (strcmp(param_value, "20") == 0) {
         sta_hw_config.chwidth = CHWIDTH_20;
     } else if (strcmp(param_value, "40") == 0) {

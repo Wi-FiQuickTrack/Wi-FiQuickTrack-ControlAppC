@@ -139,7 +139,6 @@ struct indigo_api {
 #define TLV_PHASE1                              0x0043
 #define TLV_CLIENT_CERT                         0x0044
 #define TLV_PRIVATE_KEY                         0x0045
-#define TLV_STA_IE_OVERRIDE                     0x0046
 #define TLV_STA_POWER_SAVE                      0x0052
 #define TLV_STATIC_IP                           0x0055
 #define TLV_DEBUG_LEVEL                         0x0057

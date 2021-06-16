@@ -124,7 +124,6 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_PHASE1, "PHASE1" },
     { TLV_CLIENT_CERT, "CLIENT_CERT" },
     { TLV_PRIVATE_KEY, "PRIVATE_KEY" },
-    { TLV_STA_IE_OVERRIDE, "STA_IE_OVERRIDE" },
     { TLV_STA_POWER_SAVE, "STA_POWER_SAVE" },
     { TLV_STATIC_IP, "STATIC_IP" },
     { TLV_DEBUG_LEVEL, "DEBUG_LEVEL" },
