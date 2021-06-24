@@ -1581,18 +1581,10 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     return 0;
 }
 
-/*
- * This func needs to wait association completion and reply status.
- * Default timeout is 30 seconds.
- * Timeout can be extended but must be less than 120 seconds.
- */
-#define ASSOC_TIMEOUT 30
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    struct wpa_ctrl *w = NULL;
-    char *message = TLV_VALUE_WPA_S_ASSOC_OK;
-    char buffer[256], response[1024];
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
-    size_t resp_len;
+    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    char buffer[256];
+    int len, status = TLV_VALUE_STATUS_NOT_OK;
 
 #ifdef _OPENWRT_
 #else
@@ -1615,41 +1607,13 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     len = system(buffer);
     sleep(2);
 
-    /* Open WPA supplicant UDS socket */
-    w = wpa_ctrl_open(get_wpas_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_WPA_S_ASSOC_NOT_OK;
-        goto done;
-    }
-
-    /* Send command to hostapd UDS socket */
-    status = TLV_VALUE_STATUS_NOT_OK;
-    message = TLV_VALUE_WPA_S_ASSOC_NOT_OK;
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "STATUS");    
-    for (i = 0; i < ASSOC_TIMEOUT/2; i++) {
-        memset(response, 0, sizeof(response));
-        resp_len = sizeof(response) - 1;
-        wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-        // Check link
-        if (strstr(response, "wpa_state=COMPLETED")) {
-            indigo_logger(LOG_LEVEL_DEBUG, "Connected");
-            status = TLV_VALUE_STATUS_OK;
-            message = TLV_VALUE_WPA_S_ASSOC_OK;            
-            break;
-        }
-        sleep(2);
-    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_WPA_S_START_UP_OK;
 
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
     return 0;
 }
 
