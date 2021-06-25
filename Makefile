@@ -5,7 +5,7 @@ ROLE = dut
 # Package Version
 APP_VERSION = "1.0.0"
 BUILD_VERSION =
-VERSION = $(APP_VERSION)"."$(BUILD_VERSION)
+VERSION = ""
 
 OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o
 CFLAGS += -g
