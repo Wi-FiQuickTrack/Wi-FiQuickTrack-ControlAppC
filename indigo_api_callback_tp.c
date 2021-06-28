@@ -946,7 +946,8 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     }
 
     /* Apply in this API as some settings are via wpas conf */
-    /* There is potentail problem as not every test case uses this API */
+    /* There is potential problem as not every test case uses this API */
+    /* We can enhance this if we need to support the second STA platform */
     /* platform dependent commands */
     set_channel_width();
     set_phy_mode();
