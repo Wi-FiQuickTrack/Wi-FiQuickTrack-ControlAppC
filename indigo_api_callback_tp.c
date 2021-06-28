@@ -945,6 +945,8 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
         write_file(get_wpas_conf_file(), buffer, len);
     }
 
+    /* Apply in this API as some settings are via wpas conf */
+    /* There is potentail problem as not every test case uses this API */
     /* platform dependent commands */
     set_channel_width();
     set_phy_mode();
@@ -1158,6 +1160,8 @@ static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wr
         sta_hw_config.phymode = PHYMODE_11NA;
     } else if (strcmp(param_value, "11ac") == 0) {
         sta_hw_config.phymode = PHYMODE_11AC;
+        /* No wpa_supplicant config, direcly apply */
+        set_phy_mode();
     } else if (strcmp(param_value, "11axg") == 0) {
         sta_hw_config.phymode = PHYMODE_11AXG;
     } else if (strcmp(param_value, "11axa") == 0) {
