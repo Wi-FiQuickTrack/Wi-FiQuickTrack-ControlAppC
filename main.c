@@ -242,8 +242,13 @@ static int parse_parameters(int argc, char *argv[]) {
 
     if (ifs_configured == 0) {
 #ifdef DEFAULT_APP_INTERFACES_PARAMS
-        snprintf(buf, sizeof(buf), "%s", DEFAULT_APP_INTERFACES_PARAMS);
-        printf("\nUse default interface parameters %s.\n", DEFAULT_APP_INTERFACES_PARAMS);
+#ifdef _OPENWRT_
+        if (detect_third_radio())
+            snprintf(buf, sizeof(buf), "%s", DEFAULT_APP_6E_INTERFACES_PARAMS);
+        else
+#endif
+            snprintf(buf, sizeof(buf), "%s", DEFAULT_APP_INTERFACES_PARAMS);
+        printf("\nUse default interface parameters %s.\n", buf);
         set_wireless_interface(buf);
 #else
         usage();
