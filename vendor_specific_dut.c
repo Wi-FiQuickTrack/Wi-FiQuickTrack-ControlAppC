@@ -33,11 +33,10 @@
 extern int use_openwrt_wpad;
 #endif
 
-void interfaces_init() {
-#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
-    char buffer[BUFFER_LEN];
-    char mac_addr[S_BUFFER_LEN];
+#if defined(_OPENWRT_)
+int detect_third_radio() {
     FILE *fp;
+    char buffer[BUFFER_LEN];
     int third_radio = 0;
 
     fp = popen("iw dev", "r");
@@ -48,6 +47,18 @@ void interfaces_init() {
         }
         pclose(fp);
     }
+
+    return third_radio;
+}
+#endif
+
+void interfaces_init() {
+#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
+    char buffer[BUFFER_LEN];
+    char mac_addr[S_BUFFER_LEN];
+    int third_radio = 0;
+
+    third_radio = detect_third_radio();
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");

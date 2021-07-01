@@ -50,6 +50,7 @@
 // 2(2.4G): first interface ath1, second interface ath11
 // 5(5G): first interface ath0, second interface ath01
 #define DEFAULT_APP_INTERFACES_PARAMS               "2:ath1,2:ath11,5:ath0,5:ath01"
+#define DEFAULT_APP_6E_INTERFACES_PARAMS            "6:ath0,6:ath01,5:ath1,5:ath11,2:ath2,2:ath21"
 
 #else
 #define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"
@@ -115,6 +116,7 @@ void set_phy_mode();
 
 #ifdef _OPENWRT_
 void openwrt_apply_radio_config(void);
+int detect_third_radio(void);
 #endif
 
 void configure_ap_enable_mbssid();

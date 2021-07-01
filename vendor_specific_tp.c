@@ -92,6 +92,25 @@ void detect_sta_vendor() {
     free(strbuf);
 }
 
+#if defined(_OPENWRT_)
+int detect_third_radio() {
+    FILE *fp;
+    char buffer[BUFFER_LEN];
+    int third_radio = 0;
+
+    fp = popen("iw dev", "r");
+    if (fp) {
+        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            if (strstr(buffer, "phy#2"))
+                third_radio = 1;
+        }
+        pclose(fp);
+    }
+
+    return third_radio;
+}
+#endif
+
 /* Be invoked when start controlApp */
 void vendor_init() {
     /* Make sure native hostapd/wpa_supplicant is inactive */
@@ -103,7 +122,6 @@ void vendor_init() {
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
-    FILE *fp;
     int third_radio = 0;
     
     /* Vendor: add codes to let ControlApp have full control of hostapd */
@@ -112,15 +130,7 @@ void vendor_init() {
     sprintf(buffer, "/etc/init.d/wpad stop >/dev/null 2>/dev/null");
     system(buffer);
 
-    fp = popen("iw dev", "r");
-    if (fp) {
-        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-            if (strstr(buffer, "phy#2"))
-                third_radio = 1;
-        }
-        pclose(fp);
-    }
-
+    third_radio = detect_third_radio();
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");
     system(buffer);
@@ -161,11 +171,11 @@ void vendor_init() {
         memset(mac_addr, 0, sizeof(mac_addr));
         get_mac_address(mac_addr, sizeof(mac_addr), "ath2");
         control_interface("ath2", "down");
-        mac_addr[16] = (char)'0';
-        set_mac_address("ath0", mac_addr);
+        mac_addr[16] = (char)'8';
+        set_mac_address("ath2", mac_addr);
 
         control_interface("ath21", "down");
-        mac_addr[16] = (char)'1';
+        mac_addr[16] = (char)'9';
         set_mac_address("ath21", mac_addr);
     }
     sleep(1);
