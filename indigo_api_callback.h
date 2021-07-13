@@ -115,6 +115,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_DOMAIN_SUFFIX_MATCH, "domain_suffix_match", 1 },
     { TLV_PAC_FILE, "pac_file", 1 },
     { TLV_STA_OWE_GROUP, "owe_group", 0 },
+    { TLV_BSSID, "bssid", 0 },
 };
 
 char* find_tlv_config_name(int tlv_id) {
