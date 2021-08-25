@@ -1,4 +1,4 @@
-Indigo Control App
+QuickTrack Control App
 ------------------------------------------------------------------------
 
 Copyright (c) 2020 Wi-Fi Alliance                                             

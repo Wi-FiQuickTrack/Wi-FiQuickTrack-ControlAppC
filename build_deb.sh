@@ -1,6 +1,6 @@
 #!bin/bash
 
-package_name="WFA-Indigo-ControlAppC"
+package_name="WFA-QuickTrack-ControlAppC"
 version=""
 git_revision=""
 deb_name=${package_name}.deb
@@ -65,7 +65,7 @@ create_prerm() {
     echo "sudo killall app_tp >/dev/null 2>/dev/null" >>"$prerm_file"
     echo "sleep 3" >>"$prerm_file"
 
-    echo "if [ -d \"/usr/local/bin/WFA-Indigo-ControlAppC/source\" ]" >>"$prerm_file"
+    echo "if [ -d \"/usr/local/bin/WFA-QuickTrack-ControlAppC/source\" ]" >>"$prerm_file"
     echo "then" >>"$prerm_file"
     echo "cd ${installed_source_folder}" >>"$prerm_file"
     echo "rm -rf /usr/local/bin/${package_name}/app_dut" >>"$prerm_file"
@@ -96,5 +96,5 @@ create_prerm
 create_deb
 
 echo "Complete. Please reference to the following usage."
-echo "1. Please remove the package by \"sudo apt remove wfa-indigo-controlappc\""
-echo "2. Please install the package by \"sudo apt install ./WFA-Indigo-ControlAppC.deb\""
+echo "1. Please remove the package by \"sudo apt remove wfa-quicktrack-controlappc\""
+echo "2. Please install the package by \"sudo apt install ./WFA-QuickTrack-ControlAppC.deb\""
