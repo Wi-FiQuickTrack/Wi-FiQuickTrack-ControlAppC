@@ -64,24 +64,23 @@ int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
         }
     }
 
-    /* Redundant when enable debug_packet */
-    if (!debug_packet) {
-        api = get_api_by_id(req->hdr.type);
-        if (api) {
+    api = get_api_by_id(req->hdr.type);
+    if (api) {
+        if (!debug_packet)
             indigo_logger(LOG_LEVEL_INFO, "API: 0x%04x (%s)", api->type, api->name);
-        } else {
-            indigo_logger(LOG_LEVEL_WARNING, "API: 0x%04x Unknown", req->hdr.type);
-            return -1;
-        }
+    } else {
+        indigo_logger(LOG_LEVEL_WARNING, "API: 0x%04x Unknown", req->hdr.type);
+        return -1;
+    }
 
-        for (i = 0; i < req->tlv_num; i++) {
-            tlv = get_tlv_by_id(req->tlv[i]->id);
-            if (tlv) {
+    for (i = 0; i < req->tlv_num; i++) {
+        tlv = get_tlv_by_id(req->tlv[i]->id);
+        if (tlv) {
+            if (!debug_packet)
                 indigo_logger(LOG_LEVEL_INFO, "    TLV: 0x%04x (%s)", tlv->id, tlv->name);
-            } else {
-                indigo_logger(LOG_LEVEL_WARNING, "    TLV: 0x%04x Unknown", req->tlv[i]->id);
-                return -1;
-            }
+        } else {
+            indigo_logger(LOG_LEVEL_WARNING, "    TLV: 0x%04x Unknown", req->tlv[i]->id);
+            return -1;
         }
     }
 
