@@ -40,8 +40,8 @@ void register_apis() {
     /* Basic */
     register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
-    register_api(API_INDIGO_SEND_LOOP_BACK_DATA, NULL, send_loopback_data_handler);
-    register_api(API_INDIGO_STOP_LOOP_BACK_DATA, NULL, stop_loopback_data_handler);
+    register_api(API_SEND_LOOP_BACK_DATA, NULL, send_loopback_data_handler);
+    register_api(API_STOP_LOOP_BACK_DATA, NULL, stop_loopback_data_handler);
     /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
     /* AP */

@@ -66,16 +66,13 @@ struct indigo_api {
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
 #define API_GET_CONTROL_APP_VERSION             0x5002
-#define API_INDIGO_START_LOOP_BACK_SERVER       0x5003
-#define API_INDIGO_STOP_LOOP_BACK_SERVER        0x5004
+#define API_START_LOOP_BACK_SERVER              0x5003
+#define API_STOP_LOOP_BACK_SERVER               0x5004
 #define API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK 0x5005
 #define API_ASSIGN_STATIC_IP                    0x5006
 #define API_DEVICE_RESET                        0x5007
-
-/* TODO: updated value when they are available */
-#define API_INDIGO_SEND_LOOP_BACK_DATA          0x5008
-#define API_INDIGO_STOP_LOOP_BACK_DATA          0x5009
-/* end of TODO */
+#define API_SEND_LOOP_BACK_DATA                 0x5008
+#define API_STOP_LOOP_BACK_DATA                 0x5009
 
 /* TLV definition */
 #define TLV_SSID                                0x0001

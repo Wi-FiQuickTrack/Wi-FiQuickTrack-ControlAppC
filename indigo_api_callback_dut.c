@@ -35,8 +35,8 @@ void register_apis() {
     register_api(API_GET_IP_ADDR, NULL, get_ip_addr_handler);
     register_api(API_GET_MAC_ADDR, NULL, get_mac_addr_handler);
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
-    register_api(API_INDIGO_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
-    register_api(API_INDIGO_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
+    register_api(API_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
+    register_api(API_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
     register_api(API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK, NULL, create_bridge_network_handler);
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
     register_api(API_DEVICE_RESET, NULL, reset_device_handler);
