@@ -28,6 +28,7 @@ create_control() {
     echo "Architecture: all" >>"$control_file"
     echo "Depends: build-essential, arping" >>"$control_file"
     echo "Essential: no" >>"$control_file"
+    echo "Conflicts: wfa-indigo-controlappc" >>"$control_file"
     echo "Priority: optional" >>"$control_file"
     echo "Maintainer: Wi-Fi Alliance" >>"$control_file"
     echo "Description: This Software is to control the DUT and test platform" >>"$control_file"
