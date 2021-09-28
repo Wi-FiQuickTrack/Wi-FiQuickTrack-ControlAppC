@@ -21,7 +21,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/controlappc-tp/default
   SECTION:=net
   CATEGORY:=Network
-  TITLE:=ControlAppC from Wi-Fi Alliance Indigo Project
+  TITLE:=ControlAppC from Wi-Fi Alliance QuickTrack Project
   URL:=http://wi-fi.org/
 endef
 

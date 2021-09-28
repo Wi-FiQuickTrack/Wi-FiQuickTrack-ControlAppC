@@ -81,7 +81,7 @@ static int control_socket_init(int port) {
 }
 
 struct sockaddr_in *tool_addr; // For HTTP Post
-/* Callback function of the Indigo API. */
+/* Callback function of the QuickTrack API. */
 static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     int ret;                          // return code
     int fromlen, len;                 // structure size and received length
@@ -175,9 +175,9 @@ static void usage() {
 /* Show the welcome message with role and version */
 static void print_welcome() {
 #ifdef _DUT_
-    printf("Welcome to use Indigo Control App DUT version");
+    printf("Welcome to use QuickTrack Control App DUT version");
 #else
-    printf("Welcome to use Indigo Control App Platform version");
+    printf("Welcome to use Quicktrack Control App Platform version");
 #endif
 
 #ifdef _VERSION_
@@ -287,7 +287,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     /* Print the run-time information */
-    indigo_logger(LOG_LEVEL_INFO, "Indigo control app running at: %d", get_service_port());
+    indigo_logger(LOG_LEVEL_INFO, "QuickTrack control app running at: %d", get_service_port());
     indigo_logger(LOG_LEVEL_INFO, "Wireless Interface:" );
     show_wireless_interface_info();
     indigo_logger(LOG_LEVEL_INFO, "hostapd Path: %s (%s)", get_hapd_full_exec_path(), get_hapd_exec_file());

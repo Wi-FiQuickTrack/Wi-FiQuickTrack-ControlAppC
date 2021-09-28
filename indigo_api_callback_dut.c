@@ -148,8 +148,7 @@ done:
     return 0;
 }
 
-// ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
-// RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN], reset_type[16];
@@ -209,7 +208,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
 #ifdef _RESERVED_
 /* The function is reserved for the defeault hostapd config */
-#define HOSTAPD_DEFAULT_CONFIG_SSID                 "Indigo"
+#define HOSTAPD_DEFAULT_CONFIG_SSID                 "QuickTrack"
 #define HOSTAPD_DEFAULT_CONFIG_CHANNEL              "36"
 #define HOSTAPD_DEFAULT_CONFIG_HW_MODE              "a"
 #define HOSTAPD_DEFAULT_CONFIG_WPA_PASSPHRASE       "12345678"
@@ -456,8 +455,8 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     // changed to become conditional on there being no other sae_groups
     // configuration
     // e.g.:
-    // if IndigoRequestTLV.SAE_GROUPS not in tlv_values:
-    //     field_name = tlv_hostapd_config_mapper.get(IndigoRequestTLV.SAE_GROUPS)
+    // if RequestTLV.SAE_GROUPS not in tlv_values:
+    //     field_name = tlv_hostapd_config_mapper.get(RequestTLV.SAE_GROUPS)
     //     hostapd_config += "\n" + field_name + "=15 16 17 18 19 20 21"
     // Append the default SAE groups for SAE and no SAE groups TLV
     if (has_sae && has_sae_groups == 0) {
@@ -570,8 +569,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     return strlen(output);
 }
 
-// ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
-// RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0;
     char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
@@ -661,8 +659,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 #ifdef HOSTAPD_SUPPORT_MBSSID_WAR
 extern int use_openwrt_wpad;
 #endif
-// ACK:  {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
-// RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_HOSTAPD_START_OK;
     char buffer[S_BUFFER_LEN];
@@ -749,8 +746,7 @@ static int create_bridge_network_handler(struct packet_wrapper *req, struct pack
 }
 
 // Bytes to DUT : 01 50 06 00 ed ff ff 00 55 0c 31 39 32 2e 31 36 38 2e 31 30 2e 33
-// ACK  :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'ACK: Command received'} 
-// RESP :{<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'} 
+// RESP :{<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'} 
 static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0;
     char buffer[64];
@@ -794,7 +790,7 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
 
 // Bytes to DUT : 01 50 01 00 ee ff ff 
 // ACK:  Bytes from DUT : 01 00 01 00 ee ff ff a0 01 01 30 a0 00 15 41 43 4b 3a 20 43 6f 6d 6d 61 6e 64 20 72 65 63 65 69 76 65 64 
-// RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: '9c:b6:d0:19:40:c7', <IndigoResponseTLV.DUT_MAC_ADDR: 40963>: '9c:b6:d0:19:40:c7'} 
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: '9c:b6:d0:19:40:c7', <ResponseTLV.DUT_MAC_ADDR: 40963>: '9c:b6:d0:19:40:c7'} 
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
     struct wpa_ctrl *w = NULL;
@@ -1002,8 +998,7 @@ done:
     return 0;
 }
 
-// ACK:  {"status": 0, "message": "ACK: Command received", "tlvs": {}} 
-// RESP: {<IndigoResponseTLV.STATUS: 40961>: '0', <IndigoResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'} 
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'} 
 static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     /* Stop loopback */
     if (loopback_server_status()) {
@@ -1433,7 +1428,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
 #ifdef _RESERVED_
 /* The function is reserved for the defeault wpas config */
-#define WPAS_DEFAULT_CONFIG_SSID                    "Indigo"
+#define WPAS_DEFAULT_CONFIG_SSID                    "QuickTrack"
 #define WPAS_DEFAULT_CONFIG_WPA_KEY_MGMT            "WPA-PSK"
 #define WPAS_DEFAULT_CONFIG_PROTO                   "RSN"
 #define HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE         "CCMP"

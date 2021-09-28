@@ -198,8 +198,8 @@ struct indigo_api {
 #define TLV_HE_UNSOL_PR_RESP_CADENCE            0x00a7
 #define TLV_HE_FILS_DISCOVERY_TX                0x00a8
 
-// class IndigoResponseTLV
-// List of TLV used in the Indigo API response and ACK messages from the DUT
+// class ResponseTLV
+// List of TLV used in the QuickTrack API response and ACK messages from the DUT
 #define TLV_MESSAGE                             0xa000
 #define TLV_STATUS                              0xa001
 #define TLV_DUT_WLAN_IP_ADDR                    0xa002
@@ -251,7 +251,7 @@ struct indigo_api {
 #define TLV_VALUE_WPA_S_START_UP_OK             "wpa_supplicant is initialized successfully"
 #define TLV_VALUE_WPA_S_START_UP_NOT_OK         "The wpa_supplicant was unable to initialize."
 #define TLV_VALUE_WPA_S_STOP_NOT_OK             "Failed to stop wpa supplicant service."
-#define TLV_VALUE_WPA_S_STOP_OK                 "Indigo tool STA was successfully disconnected"
+#define TLV_VALUE_WPA_S_STOP_OK                 "QuickTrack tool STA was successfully disconnected"
 #define TLV_VALUE_WPA_S_ASSOC_OK                "STA is up: WPA supplicant associated"
 #define TLV_VALUE_WPA_S_ASSOC_NOT_OK            "WPA supplicant cannot associate with AP"
 #define TLV_VALUE_WPA_S_DISCONNECT_OK           "Sent DISCONNECT message"
