@@ -25,7 +25,7 @@
 int capture_packet = 0, capture_count = 0;  /* debug. Write the received packets to files */
 int debug_packet = 0;                       /* used by the packet hexstring print */
 
-/* Parse the Indigo message from the packet to the wrapper */
+/* Parse the QuickTrack message from the packet to the wrapper */
 int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
     int i = 0, parser = 0, ret = 0;
     struct indigo_api *api = NULL;
