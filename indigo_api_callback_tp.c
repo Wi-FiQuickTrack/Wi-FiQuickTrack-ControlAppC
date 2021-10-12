@@ -588,6 +588,7 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     char dut_ip[64];
     char dut_port[32];
     char rate[16], pkt_count[16], pkt_size[16], recv_count[16], pkt_type[16];
+    char cmd[128];
     int status = TLV_VALUE_STATUS_NOT_OK, recvd = 0;
     char *message = TLV_VALUE_SEND_LOOPBACK_DATA_NOT_OK;
 
@@ -638,6 +639,9 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     } else {
         snprintf(pkt_type, sizeof(pkt_type), "udp");
     }
+
+    /* Detect and delete existing ARP entry for STAUT randomized MAC */
+    detect_del_arp_entry(dut_ip);
 
     /* Start loopback */
     snprintf(recv_count, sizeof(recv_count), "0");
