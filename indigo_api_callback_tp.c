@@ -639,6 +639,9 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
         snprintf(pkt_type, sizeof(pkt_type), "udp");
     }
 
+    /* Detect and delete existing ARP entry for STAUT randomized MAC */
+    detect_del_arp_entry(dut_ip);
+
     /* Start loopback */
     snprintf(recv_count, sizeof(recv_count), "0");
 

@@ -147,6 +147,7 @@ int reset_interface_ip(char *ifname);
 int add_wireless_interface(char *ifname);
 int delete_wireless_interface(char *ifname);
 void bridge_init(char *br);
+void detect_del_arp_entry(char *ip);
 
 #define DEBUG_LEVEL_DISABLE             0
 #define DEBUG_LEVEL_BASIC               1

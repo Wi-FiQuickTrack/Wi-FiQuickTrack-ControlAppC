@@ -832,6 +832,31 @@ int reset_interface_ip(char *ifname) {
     return system(cmd);
 }
 
+void detect_del_arp_entry(char *ip) {
+    char buffer[S_BUFFER_LEN];
+    char res_ip[32], res_dev[16], res_inf[16];
+    FILE *fp;
+
+    snprintf(buffer, sizeof(buffer), "ip neigh show %s", ip);
+    fp = popen(buffer, "r");
+    if (fp == NULL)
+        return;
+
+    if (NULL == fgets(buffer, sizeof(buffer), fp)) {
+    } else if (3 == sscanf(buffer, "%s %s %s", res_ip, res_dev, res_inf)) {
+        if (!strcmp(res_ip, ip) && !strcmp(res_dev, "dev")) {
+            indigo_logger(LOG_LEVEL_INFO, "Delete existing ARP entry: %s", ip);
+            snprintf(buffer, sizeof(buffer), "ip neigh del %s %s %s", res_ip, res_dev, res_inf);
+            system(buffer);
+        } else {
+            indigo_logger(LOG_LEVEL_INFO, "Format mismatch?: %s %s %s\n", res_ip, res_dev, res_inf);
+        }
+    }
+    pclose(fp);
+
+    return;
+}
+
 int add_all_wireless_interface_to_bridge(char *br) {
     int i;
 
