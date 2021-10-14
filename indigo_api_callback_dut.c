@@ -1810,7 +1810,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 
     /* It may need to check whether to just scan */
     memset(buffer, 0, sizeof(buffer));
-    len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\nnetwork={\nssid=\"Scanning\"\n}", WPAS_CTRL_PATH_DEFAULT);
+    len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
     if (len) {
         write_file(get_wpas_conf_file(), buffer, len);
     }
