@@ -29,6 +29,7 @@
 #include "indigo_api_callback.h"
 
 struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO, false, false};
+struct interface_info* band_transmitter[16];
 
 #ifdef _WTS_OPENWRT_
 int rrm = 0, he_mu_edca = 0;
@@ -120,6 +121,9 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     stop_loopback_data(NULL);
 
+    /* reset interfaces info */
+    clear_interfaces_resource();
+
     if (reset == RESET_TYPE_INIT) {
         len = unlink(get_hapd_conf_file());
         if (len) {
@@ -141,6 +145,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         system("uci -q delete wireless.@wifi-iface[0].own_ie_override");
         system("uci -q delete wireless.@wifi-iface[1].own_ie_override");
 #endif
+        memset(band_transmitter, 0, sizeof(band_transmitter));
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -211,7 +216,7 @@ static void add_mu_edca_params(char *output) {
     strcat(output, "he_mu_edca_ac_vo_timer=255\n");
 }
 
-static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, char *ifname) {
+static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, struct interface_info* wlanp) {
     int i, ctrl_iface = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
 #ifdef _WTS_OPENWRT_
@@ -227,8 +232,16 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
+    int has_owe = 0;
 
-    sprintf(output, "ctrl_interface_group=0\ninterface=%s\n", ifname);
+#if HOSTAPD_SUPPORT_MBSSID
+    if (wlanp->mbssid_enable && !wlanp->transmitter)
+        sprintf(output, "bss=%s\n", wlanp->ifname);
+    else
+        sprintf(output, "ctrl_interface_group=0\ninterface=%s\n", wlanp->ifname);
+#else
+    sprintf(output, "ctrl_interface_group=0\ninterface=%s\n", wlanp->ifname);
+#endif
 
 #ifdef _RESERVED_
     /* The function is reserved for the defeault hostapd config */
@@ -302,14 +315,48 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             memcpy(ie_override, tlv->value, tlv->len);
         }
 #endif
-
+        if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "OWE")) {
+            has_owe = 1;
+        }
         memset(buffer, 0, sizeof(buffer));
-        memcpy(buffer, tlv->value, tlv->len);
-        /* FILS discovery enable to set max interval 20 */
-        if (tlv->id == TLV_HE_FILS_DISCOVERY_TX)
-            snprintf(buffer, sizeof(buffer), "20");
-        sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
-        strcat(output, cfg_item);
+        memset(cfg_item, 0, sizeof(cfg_item));
+        if (tlv->id == TLV_OWE_TRANSITION_BSS_IDENTIFIER) {
+            struct bss_identifier_info bss_info;
+            struct interface_info *wlan;
+            int bss_identifier;
+            char bss_identifier_str[8];
+            memset(&bss_info, 0, sizeof(bss_info));
+            memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
+            memcpy(bss_identifier_str, tlv->value, tlv->len);
+            bss_identifier = atoi(bss_identifier_str);
+            parse_bss_identifier(bss_identifier, &bss_info);
+            wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
+            if (NULL == wlan) {
+                wlan = assign_wireless_interface_info(&bss_info);
+            }
+            printf("TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
+                    bss_identifier,
+                    bss_info.identifier,
+                    wlan ? wlan->ifname : "n/a"
+                    );
+            if (wlan) {
+                memcpy(buffer, wlan->ifname, strlen(wlan->ifname));
+                sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
+                strcat(output, cfg_item);
+                if (has_owe) {
+                    memset(cfg_item, 0, sizeof(cfg_item));
+                    sprintf(cfg_item, "ignore_broadcast_ssid=1\n");
+                    strcat(output, cfg_item);
+                }
+            }
+        } else {
+            memcpy(buffer, tlv->value, tlv->len);
+            /* FILS discovery enable to set max interval 20 */
+            if (tlv->id == TLV_HE_FILS_DISCOVERY_TX)
+                snprintf(buffer, sizeof(buffer), "20");
+            sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
+            strcat(output, cfg_item);
+        }
 
         if (tlv->id == TLV_CONTROL_INTERFACE) {
             ctrl_iface = 1;
@@ -324,6 +371,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         indigo_logger(LOG_LEVEL_ERROR, "No Remote UDP ctrl interface TLV for TP");
         return 0;
     }
+#if HOSTAPD_SUPPORT_MBSSID
+    if (wlanp->mbssid_enable && wlanp->transmitter) {
+        strcat(output, "multiple_bssid=1\n");
+    }
+#endif
 
 #ifdef _WTS_OPENWRT_
     if (!strncmp(band, "a", 1)) {
@@ -400,38 +452,88 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     char *message = "DUT configured as AP : Configuration file created";
     struct tlv_hdr *tlv;
     struct interface_info* wlan = NULL;
+    char bss_identifier_str[16];
+    struct bss_identifier_info bss_info;
+    int bss_identifier = 0;
 
-    /* Single wlan case */
-    tlv = find_wrapper_tlv_by_id(req, TLV_HW_MODE);
+    memset(buffer, 0, sizeof(buffer));
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
+    memset(&bss_info, 0, sizeof(bss_info));
     if (tlv) {
-        memset(hw_mode_str, 0, sizeof(hw_mode_str));
-        memcpy(hw_mode_str, tlv->value, tlv->len);
-        if (!strncmp(hw_mode_str, "a", 1)) {
-            band = BAND_5GHZ;
-            tlv = find_wrapper_tlv_by_id(req, TLV_OP_CLASS);
-            if (tlv) {
-                memset(op_class, 0, sizeof(op_class));
-                memcpy(op_class, tlv->value, tlv->len);
-                if (atoi(op_class) >= OP_CLASS_6G_20 && atoi(op_class) <= OP_CLASS_6G_160)
-                    band = BAND_6GHZ;
-            }
-        } else {
-            band = BAND_24GHZ;
+        /* Multiple wlans configure must carry TLV_BSS_IDENTIFIER */
+        memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
+        memcpy(bss_identifier_str, tlv->value, tlv->len);
+        bss_identifier = atoi(bss_identifier_str);
+        parse_bss_identifier(bss_identifier, &bss_info);
+        wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
+        if (NULL == wlan) {
+            wlan = assign_wireless_interface_info(&bss_info);
         }
-        set_default_wireless_interface_info(band);
+        if (wlan && bss_info.mbssid_enable) {
+            configure_ap_enable_mbssid();
+            if (bss_info.transmitter) {
+                band_transmitter[bss_info.band] = wlan;
+            }
+        }
+        printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
+               bss_identifier,
+               bss_info.band,
+               bss_info.mbssid_enable,
+               bss_info.transmitter,
+               bss_info.identifier
+               );
+    } else {
+        /* Single wlan case */
+        tlv = find_wrapper_tlv_by_id(req, TLV_HW_MODE);
+        if (tlv)
+        {
+            memset(hw_mode_str, 0, sizeof(hw_mode_str));
+            memcpy(hw_mode_str, tlv->value, tlv->len);
+            if (!strncmp(hw_mode_str, "a", 1)) {
+                band = BAND_5GHZ;
+                tlv = find_wrapper_tlv_by_id(req, TLV_OP_CLASS);
+                if (tlv) {
+                    memset(op_class, 0, sizeof(op_class));
+                    memcpy(op_class, tlv->value, tlv->len);
+                    if (atoi(op_class) >= OP_CLASS_6G_20 && atoi(op_class) <= OP_CLASS_6G_160)
+                        band = BAND_6GHZ;
+                }
+            } else {
+                band = BAND_24GHZ;
+            }
+            /* Single wlan use ID 1 */
+            bss_info.band = band;
+            bss_info.identifier = 1;
+            wlan = assign_wireless_interface_info(&bss_info);
+        }
     }
-    strcpy(ifname, get_default_wireless_interface_info());
+    if (wlan) {
+        printf("ifname %s hostapd conf file %s\n", 
+               wlan ? wlan->ifname : "n/a",
+               wlan ? wlan->hapd_conf_file: "n/a"
+               );
+        len = generate_hostapd_config(buffer, sizeof(buffer), req, wlan);
+        if (len)
+        {
+#if HOSTAPD_SUPPORT_MBSSID
+            if (bss_info.mbssid_enable && !bss_info.transmitter) {
+                if (band_transmitter[bss_info.band]) {
+                    append_file(band_transmitter[bss_info.band]->hapd_conf_file, buffer, len);
+                }
+                memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
+            }
+            else
+#endif
+                write_file(wlan->hapd_conf_file, buffer, len);
+        }
+    }
+    show_wireless_interface_info();
 
 #ifdef _WTS_OPENWRT_
     /* Handle the platform dependency */
     tlv = find_wrapper_tlv_by_id(req, TLV_MBO);
     rrm = tlv ? 1 : 0;
 #endif
-    /* Generate the hostapd configuration and write to configuration */
-    len = generate_hostapd_config(buffer, sizeof(buffer), req, ifname);
-    if (len) {
-        write_file(get_hapd_conf_file(), buffer, len);
-    }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len > 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -446,6 +548,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char buffer[S_BUFFER_LEN], g_ctrl_iface[64], log_level[TLV_VALUE_SIZE];
     int len;
     struct tlv_hdr *tlv;
+    int swap_hostapd = 0;
 
     sprintf(g_ctrl_iface, "%s", get_hapd_global_ctrl_path());
 
@@ -498,9 +601,11 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         g_ctrl_iface,
         get_hostapd_debug_arguments(),
         HAPD_LOG_FILE,
-        get_hapd_conf_file());
+        get_all_hapd_conf_files(&swap_hostapd));
     len = system(buffer);
     sleep(1);
+
+    bridge_init(BRIDGE_WLANS);
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -527,7 +632,11 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
         goto response;
     }
 
-    ifname = get_wireless_interface();
+    if (is_bridge_created()) {
+        ifname = BRIDGE_WLANS;
+    } else {
+        ifname = get_wireless_interface();
+    }
 
     /* Release IP address from interface */
     reset_interface_ip(ifname);
@@ -552,14 +661,49 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
 // ACK:  Bytes from DUT : 01 00 01 00 ee ff ff a0 01 01 30 a0 00 15 41 43 4b 3a 20 43 6f 6d 6d 61 6e 64 20 72 65 63 65 69 76 65 64 
 // RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: '9c:b6:d0:19:40:c7', <ResponseTLV.DUT_MAC_ADDR: 40963>: '9c:b6:d0:19:40:c7'} 
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    char buffer[64];
+    char mac_addr[S_BUFFER_LEN];
+    struct bss_identifier_info bss_info;
+    char bss_identifier_str[16];
+    int bss_identifier = 0;
+    struct tlv_hdr *tlv;
+    struct interface_info* wlan = NULL;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_NOT_OK;
 
-    get_mac_address(buffer, sizeof(buffer), get_wireless_interface());
+    printf("req->tlv_num %d\n", req->tlv_num); //remove me
+
+    memset(&bss_info, 0, sizeof(bss_info));
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
+    if (tlv) {
+        memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
+        memcpy(bss_identifier_str, tlv->value, tlv->len);
+        bss_identifier = atoi(bss_identifier_str);
+        parse_bss_identifier(bss_identifier, &bss_info);
+
+        printf("TLV_BSS_IDENTIFIER 0x%x identifier %d band %d\n",
+               bss_identifier,
+               bss_info.identifier,
+               bss_info.band);
+        wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
+        if (wlan) {
+            get_mac_address(mac_addr, sizeof(mac_addr), wlan->ifname);
+            status = TLV_VALUE_STATUS_OK;
+            message = TLV_VALUE_OK;
+        } 
+    } else {
+        get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_OK;
+    }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(buffer), buffer);
-    fill_wrapper_tlv_bytes(resp, TLV_DUT_MAC_ADDR, strlen(buffer), buffer);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    if (status == TLV_VALUE_STATUS_OK) {
+        fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(mac_addr), mac_addr);
+        fill_wrapper_tlv_bytes(resp, TLV_DUT_MAC_ADDR, strlen(mac_addr), mac_addr);
+    } else {
+        fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    }
 
     return 0;
 }

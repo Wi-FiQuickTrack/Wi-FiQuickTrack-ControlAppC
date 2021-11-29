@@ -23,6 +23,10 @@
 #include "vendor_specific.h"
 #include "utils.h"
 
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+extern int use_openwrt_wpad;
+#endif
+
 #ifdef _TEST_PLATFORM_
 extern struct sta_platform_config sta_hw_config;
 const struct sta_driver_ops *sta_drv_ops = NULL;
@@ -105,24 +109,12 @@ int detect_third_radio() {
 }
 #endif
 
-/* Be invoked when start controlApp */
-void vendor_init() {
-    /* Make sure native hostapd/wpa_supplicant is inactive */
-    system("killall hostapd 1>/dev/null 2>/dev/null");
-    sleep(1);
-    system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
-    sleep(1);
-
+void interfaces_init() {
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
     int third_radio = 0;
     
-    /* Vendor: add codes to let ControlApp have full control of hostapd */
-    /* Avoid hostapd being invoked by procd */
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "/etc/init.d/wpad stop >/dev/null 2>/dev/null");
-    system(buffer);
 
     third_radio = detect_third_radio();
     memset(buffer, 0, sizeof(buffer));
@@ -173,6 +165,32 @@ void vendor_init() {
         set_mac_address("ath21", mac_addr);
     }
     sleep(1);
+#endif
+}
+
+/* Be invoked when start controlApp */
+void vendor_init() {
+    /* Make sure native hostapd/wpa_supplicant is inactive */
+    system("killall hostapd 1>/dev/null 2>/dev/null");
+    sleep(1);
+    system("killall wpa_supplicant 1>/dev/null 2>/dev/null");
+    sleep(1);
+
+#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
+    char buffer[BUFFER_LEN];
+    /* Vendor: add codes to let ControlApp have full control of hostapd */
+    /* Avoid hostapd being invoked by procd */
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "/etc/init.d/wpad stop >/dev/null 2>/dev/null");
+    system(buffer);
+
+    interfaces_init();
+#if HOSTAPD_SUPPORT_MBSSID
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+        system("cp /overlay/hostapd /usr/sbin/hostapd");
+        use_openwrt_wpad = 0;
+#endif
+#endif
 #else
     detect_sta_vendor();
 #endif
@@ -188,6 +206,27 @@ void vendor_deinit() {
 #endif
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
     system(buffer);
+}
+
+/* Called by configure_ap_handler() */
+void configure_ap_enable_mbssid() {
+#ifdef _WTS_OPENWRT_
+    /*
+     * the following uci commands need to reboot openwrt
+     *    so it can not be configured by controlApp
+     * 
+     * Manually enable MBSSID on OpenWRT when need to test MBSSID
+     * 
+    system("uci set wireless.qcawifi=qcawifi");
+    system("uci set wireless.qcawifi.mbss_ie_enable=1");
+    system("uci commit");
+    */
+#elif defined(_OPENWRT_)
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+    system("cp /rom/usr/sbin/wpad /usr/sbin/hostapd");
+    use_openwrt_wpad = 1;
+#endif
+#endif
 }
 
 int set_channel_width() {
