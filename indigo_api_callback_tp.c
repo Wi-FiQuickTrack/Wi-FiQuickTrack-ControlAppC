@@ -122,8 +122,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     stop_loopback_data(NULL);
 
     /* reset interfaces info */
-    if (clear_interfaces_resource()) {
-    }
+    clear_interfaces_resource();
 
     if (reset == RESET_TYPE_INIT) {
         len = unlink(get_hapd_conf_file());

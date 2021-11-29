@@ -192,8 +192,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     }
 
     /* reset interfaces info */
-    if (clear_interfaces_resource()) {
-    }
+    clear_interfaces_resource();
 
     if (reset == RESET_TYPE_INIT) {
         system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
