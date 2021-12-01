@@ -69,6 +69,7 @@
 #define WIRELESS_INTERFACE_DEFAULT                  "wlan0"
 #define SERVICE_PORT_DEFAULT                        9004
 
+/* Default bridge for wireless interfaces */
 #define BRIDGE_WLANS                                "br-wlans"
 
 #ifdef _WTS_OPENWRT_
