@@ -55,6 +55,8 @@ struct interface_info interfaces[8];
 int band_mbssid_cnt[16];
 struct interface_info* default_interface;
 static struct loopback_info loopback = {};
+/* bridge used for wireless interfaces */
+char wlans_bridge[32];
 
 #ifdef HOSTAPD_SUPPORT_MBSSID_WAR
 int use_openwrt_wpad = 0;
@@ -730,6 +732,17 @@ int set_mac_address(char *ifname, char *mac) {
 }
 
 int bridge_created = 0;
+
+char* get_wlans_bridge() {
+    return wlans_bridge;
+}
+int set_wlans_bridge(char* br) {
+    memset(wlans_bridge, 0, sizeof(wlans_bridge));
+    snprintf(wlans_bridge, sizeof(wlans_bridge), "%s", br);
+    printf("\nwlans_bridge = %s.\n", wlans_bridge);
+
+    return 0;
+}
 
 int is_bridge_created() {
     return bridge_created;

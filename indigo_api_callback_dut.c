@@ -118,7 +118,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_hostapd_debug_level(get_debug_level(atoi(log_level)));
         }
-        reset_bridge(BRIDGE_WLANS);
+        reset_bridge(get_wlans_bridge());
         /* reset interfaces info */
         clear_interfaces_resource();
     }
@@ -701,7 +701,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     iterate_all_wlan_interfaces(start_ap_set_wlan_params);
 #endif
 
-    bridge_init(BRIDGE_WLANS);
+    bridge_init(get_wlans_bridge());
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -730,11 +730,11 @@ static int create_bridge_network_handler(struct packet_wrapper *req, struct pack
     }
 
     /* Create new bridge */
-    create_bridge(BRIDGE_WLANS);
+    create_bridge(get_wlans_bridge());
 
-    add_all_wireless_interface_to_bridge(BRIDGE_WLANS);
+    add_all_wireless_interface_to_bridge(get_wlans_bridge());
 
-    set_interface_ip(BRIDGE_WLANS, static_ip);
+    set_interface_ip(get_wlans_bridge(), static_ip);
 
     response:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -763,7 +763,7 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     }
    
     if (is_bridge_created()) {
-        ifname = BRIDGE_WLANS;
+        ifname = get_wlans_bridge();
     } else {
         ifname = get_wireless_interface();
     }
@@ -969,10 +969,10 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
     char *message = TLV_VALUE_LOOPBACK_SVR_START_NOT_OK;
     char tool_udp_port[16];
 
-    /* Find network interface. If BRIDGE_WLANS exists, then use it. Otherwise, it uses the initiation value. */
+    /* Find network interface. If bridge exists, then use it. Otherwise, it uses the initiation value. */
     memset(local_ip, 0, sizeof(local_ip));
-    if (find_interface_ip(local_ip, sizeof(local_ip), BRIDGE_WLANS)) {
-        indigo_logger(LOG_LEVEL_DEBUG, "use %s", BRIDGE_WLANS);
+    if (find_interface_ip(local_ip, sizeof(local_ip), get_wlans_bridge())) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wlans_bridge());
     } else if (find_interface_ip(local_ip, sizeof(local_ip), get_wireless_interface())) {
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wireless_interface());
 // #ifdef __TEST__        
@@ -1348,7 +1348,7 @@ static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper
     char *message = NULL;
     char buffer[64];
 
-    if (find_interface_ip(buffer, sizeof(buffer), BRIDGE_WLANS)) {
+    if (find_interface_ip(buffer, sizeof(buffer), get_wlans_bridge())) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_OK;
     } else if (find_interface_ip(buffer, sizeof(buffer), get_wireless_interface())) {

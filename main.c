@@ -166,6 +166,7 @@ static void usage() {
     printf("app [-h] [-p<port number>] [-i<wireless interface>|-i<band>:<interface>[,<band>:<interface>]] [-a<hostapd path>] [-s<wpa_supplicant path>]\n\n");
     printf("usage:\n");
     printf("  -a = specify hostapd path\n");
+    printf("  -b = specify bridge name for wireless interfaces\n");
     printf("  -d = debug received and sent message\n");
     printf("  -i = specify the interface. E.g., -i wlan0. Or, <band>:<interface>.\n       band can be 2 for 2.4GHz, 5 for 5GHz and 6 for 6GHz. E.g., -i 2:wlan0,2:wlan1,5:wlan32,5:wlan33\n");
     printf("  -p = port number of the application\n");
@@ -189,17 +190,21 @@ static void print_welcome() {
 
 /* Parse the commandline parameters */
 static int parse_parameters(int argc, char *argv[]) {
-    int c, ifs_configured = 0;
+    int c, ifs_configured = 0, bridge_configured = 0;
     char buf[128];
 
 #ifdef _VERSION_
-    while ((c = getopt(argc, argv, "a:s:i:hp:dcv")) != -1) {
+    while ((c = getopt(argc, argv, "a:b:s:i:hp:dcv")) != -1) {
 #else
-    while ((c = getopt(argc, argv, "a:s:i:hp:dc")) != -1) {
+    while ((c = getopt(argc, argv, "a:b:s:i:hp:dc")) != -1) {
 #endif
         switch (c) {
         case 'a':
             set_hapd_full_exec_path(optarg);
+            break;
+        case 'b':
+            set_wlans_bridge(optarg);
+            bridge_configured = 1;
             break;
         case 'c':
             capture_packet = 1;
@@ -249,6 +254,10 @@ static int parse_parameters(int argc, char *argv[]) {
         printf("\nWe need to specify the interfaces with -i.\n");
         return 1;
 #endif
+    }
+
+    if (bridge_configured == 0) {
+        set_wlans_bridge(BRIDGE_WLANS);
     }
 
     return 0;

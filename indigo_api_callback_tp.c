@@ -116,6 +116,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
             indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
         }
 
+       reset_bridge(get_wlans_bridge());
        reset_interface_ip(get_wireless_interface());
     }
 
@@ -605,7 +606,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     len = system(buffer);
     sleep(1);
 
-    bridge_init(BRIDGE_WLANS);
+    bridge_init(get_wlans_bridge());
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
@@ -633,7 +634,7 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     }
 
     if (is_bridge_created()) {
-        ifname = BRIDGE_WLANS;
+        ifname = get_wlans_bridge();
     } else {
         ifname = get_wireless_interface();
     }

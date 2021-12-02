@@ -137,6 +137,8 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
 int stop_loopback_data(int *pkt_sent);
 int send_broadcast_arp(char *target_ip, int *send_count, int rate);
 int send_icmp_data(char *target_ip, int packet_count, int packet_size, double rate);
+char* get_wlans_bridge();
+int set_wlans_bridge(char* br);
 int is_bridge_created();
 int create_bridge(char *br);
 int add_interface_to_bridge(char *br, char *interface);
