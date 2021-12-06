@@ -83,6 +83,10 @@
 #define HOSTAPD_SUPPORT_MBSSID_WAR
 #endif
 
+/* Default DUT GO intent value */
+#define P2P_GO_INTENT 7
+
+#define DHCP_SERVER_IP "192.168.65.1"
 void vendor_init();
 void vendor_deinit();
 void vendor_device_reset();
@@ -117,5 +121,8 @@ int detect_third_radio(void);
 void configure_ap_enable_mbssid();
 void configure_ap_radio_params(char *band, char *country, int channel, int chwidth);
 void start_ap_set_wlan_params(void *if_info);
+
+int get_p2p_mac_addr(char *mac_addr, size_t size);
+int get_p2p_group_if(char *if_name, size_t size);
 
 #endif

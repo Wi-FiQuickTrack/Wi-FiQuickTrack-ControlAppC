@@ -49,6 +49,12 @@ struct indigo_api indigo_api_list[] = {
     { API_STA_SET_PHY_MODE, "STA_SET_PHY_MODE", NULL, NULL },
     { API_STA_SET_CHANNEL_WIDTH, "STA_SET_CHANNEL_WIDTH", NULL, NULL },
     { API_STA_POWER_SAVE, "STA_POWER_SAVE", NULL, NULL },
+    { API_P2P_START_UP, "P2P_START_UP", NULL, NULL },
+    { API_P2P_FIND, "P2P_FIND", NULL, NULL },
+    { API_P2P_LISTEN, "P2P_LISTEN", NULL, NULL },
+    { API_P2P_ADD_GROUP, "P2P_ADD_GROUP", NULL, NULL },
+    { API_P2P_START_WPS, "P2P_START_WPS", NULL, NULL },
+    { API_P2P_CONNECT, "P2P_CONNECT", NULL, NULL },
     /* Network operation. E.g., get/set IP address, get MAC address, send the UDP data and reset */
     { API_GET_IP_ADDR, "GET_IP_ADDR", NULL, NULL },
     { API_GET_MAC_ADDR, "GET_MAC_ADDR", NULL, NULL },
@@ -60,6 +66,8 @@ struct indigo_api indigo_api_list[] = {
     { API_DEVICE_RESET, "DEVICE_RESET", NULL, NULL },
     { API_SEND_LOOP_BACK_DATA, "SEND_LOOP_BACK_DATA", NULL, NULL },
     { API_STOP_LOOP_BACK_DATA, "STOP_LOOP_BACK_DATA", NULL, NULL },
+    { API_START_DHCP, "START_DHCP", NULL, NULL },
+    { API_STOP_DHCP, "STOP_DHCP", NULL, NULL },
 };
 
 /* Structure to declare the TLV list */
@@ -216,6 +224,11 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_PPSMO_FILE, "PPSMO_FILE" },
     { TLV_OSU_SERVER_URI, "OSU_SERVER_URI" },
     { TLV_OSU_METHOD, "OSU_METHOD" },
+    { TLV_GO_INTENT, "GO_INTENT" },
+    { TLV_WSC_METHOD, "WSC_METHOD" },
+    { TLV_PIN_METHOD, "PIN_METHOD" },
+    { TLV_PIN_CODE, "PIN_CODE" },
+    { TLV_P2P_CONN_TYPE, "P2P_CONN_TYPE" },
 };
 
 /* Find the type of the API stucture by the ID from the list */

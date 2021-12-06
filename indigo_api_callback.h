@@ -228,6 +228,8 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* AP */
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -250,4 +252,11 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
 static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_channel_width_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+/* P2P */
+static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int find_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int listen_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int add_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int start_wps_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif // __INDIGO_API_CALLBACK

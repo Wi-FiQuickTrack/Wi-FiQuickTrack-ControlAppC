@@ -46,6 +46,8 @@ void register_apis() {
     register_api(API_STOP_LOOP_BACK_DATA, NULL, stop_loopback_data_handler);
     /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
+    register_api(API_START_DHCP, NULL, start_dhcp_handler);
+    register_api(API_STOP_DHCP, NULL, stop_dhcp_handler);
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
@@ -59,6 +61,7 @@ void register_apis() {
     register_api(API_STA_SET_PHY_MODE, NULL, set_sta_phy_mode_handler);
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, set_sta_channel_width_handler);
     register_api(API_STA_POWER_SAVE, NULL, set_sta_power_save_handler);
+    register_api(API_P2P_START_UP, NULL, start_up_p2p_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -731,6 +734,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     struct interface_info* wlan = NULL;
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_NOT_OK;
+    char role[16];
 
     printf("req->tlv_num %d\n", req->tlv_num); //remove me
 
@@ -753,7 +757,22 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
             message = TLV_VALUE_OK;
         } 
     } else {
-        get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
+        /* TLV: TLV_ROLE */
+        memset(role, 0, sizeof(role));
+        tlv = find_wrapper_tlv_by_id(req, TLV_ROLE);
+        if (tlv) {
+            memcpy(role, tlv->value, tlv->len);
+            if (atoi(role) == DUT_TYPE_P2PUT) {
+                /* Get P2P GO/Client or Device MAC */
+                if (get_p2p_mac_addr(mac_addr, sizeof(mac_addr))) {
+                    indigo_logger(LOG_LEVEL_ERROR, "Failed to get TP P2P MAC address!");
+                    get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
+                }
+            }
+        } else {
+            get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
+        }
+
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_OK;
     }
@@ -1460,6 +1479,175 @@ static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_POWER_SAVE_OK;
     }
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    char buffer[S_BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    size_t resp_len;
+    char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
+    struct tlv_hdr *tlv = NULL;
+
+#ifdef _OPENWRT_
+#else
+    system("rfkill unblock wlan");
+    sleep(1);
+#endif
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
+    sleep(3);
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_CONTROL_INTERFACE);
+    if (tlv) {
+        memset(buffer, 0, sizeof(buffer));
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        set_wpas_ctrl_path(value);
+        sprintf(buffer, "ctrl_interface=%s\n", value);
+
+        /* Add Device name and Device type */
+        strcat(buffer, "device_name=WFA P2P Device\n");
+        strcat(buffer, "device_type=1-0050F204-1\n");
+        len = strlen(buffer);
+
+        if (len) {
+            write_file(get_wpas_conf_file(), buffer, len);
+        }
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "No remote UDP port in TP");
+    }
+
+    /* TLV: DEBUG_LEVEL */
+    tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
+    memset(log_level, 0, sizeof(log_level));
+    if (tlv) {
+        memcpy(log_level, tlv->value, tlv->len);
+    }
+
+    if (strlen(log_level)) {
+        set_wpas_debug_level(get_debug_level(atoi(log_level)));
+    }
+
+    /* Start WPA supplicant */
+    memset(buffer, 0 ,sizeof(buffer));
+    sprintf(buffer, "%s -B -t -c %s %s -i %s -f %s",
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wpas_debug_arguments(),
+        get_wireless_interface(),
+        WPAS_LOG_FILE);
+    len = system(buffer);
+    sleep(2);
+
+    len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
+    if (len) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_WPA_S_START_UP_OK;
+    } else {
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    }
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    return 0;
+}
+
+
+static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_START_DHCP_NOT_OK;
+    char buffer[S_BUFFER_LEN];
+    char param_value[256], role[8];
+    struct tlv_hdr *tlv = NULL;
+    FILE *fp;
+    char if_name[32];
+
+    memset(role, 0, sizeof(role));
+    tlv = find_wrapper_tlv_by_id(req, TLV_ROLE);
+    if (tlv) {
+        memcpy(role, tlv->value, tlv->len);
+        if (atoi(role) == DUT_TYPE_P2PUT) {
+            get_p2p_group_if(if_name, sizeof(if_name));
+        } else {
+        }
+    }
+
+    /* TLV: TLV_STATIC_IP */
+    memset(param_value, 0, sizeof(param_value));
+    tlv = find_wrapper_tlv_by_id(req, TLV_STATIC_IP);
+    if (tlv) {
+        memcpy(param_value, tlv->value, tlv->len);
+        if (!strcmp("0.0.0.0", param_value)) {
+            snprintf(buffer, sizeof(buffer), "%s/24", DHCP_SERVER_IP);
+        } else { /* Need to update dhcp conf when using specific IP */
+            snprintf(buffer, sizeof(buffer), "%s/24", param_value);
+        }
+        set_interface_ip(if_name, buffer);
+        /* Assign specific IF for DHCP Server */
+        snprintf(buffer, sizeof(buffer), "sed -i -e 's/INTERFACESv4=\".*\"/INTERFACESv4=\"%s\"/g' /etc/default/isc-dhcp-server", if_name);
+        indigo_logger(LOG_LEVEL_DEBUG, buffer);
+        system(buffer);
+        snprintf(buffer, sizeof(buffer), "systemctl restart isc-dhcp-server.service");
+        system(buffer);
+    } else {
+        snprintf(buffer, sizeof(buffer), "dhclient -4 %s &", if_name);
+        system(buffer);
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_NOT_OK;
+    char buffer[S_BUFFER_LEN];
+    char role[8];
+    struct tlv_hdr *tlv = NULL;
+    char if_name[32];
+
+    memset(role, 0, sizeof(role));
+    tlv = find_wrapper_tlv_by_id(req, TLV_ROLE);
+    if (tlv) {
+        memcpy(role, tlv->value, tlv->len);
+        if (atoi(role) == DUT_TYPE_P2PUT) {
+            get_p2p_group_if(if_name, sizeof(if_name));
+        } else {
+        }
+    } else {
+    }
+
+    /* TLV: TLV_STATIC_IP */
+    tlv = find_wrapper_tlv_by_id(req, TLV_STATIC_IP);
+    if (tlv) { /* DHCP Server */
+        snprintf(buffer, sizeof(buffer), "systemctl stop isc-dhcp-server.service");
+        system(buffer);
+    } else { /* DHCP Client */
+        snprintf(buffer, sizeof(buffer), "killall dhclient 1>/dev/null 2>/dev/null");
+        system(buffer);
+    }
+    reset_interface_ip(if_name);
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
 
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
