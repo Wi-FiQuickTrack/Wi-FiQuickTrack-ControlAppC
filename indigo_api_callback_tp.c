@@ -27,6 +27,7 @@
 #include "utils.h"
 #include "wpa_ctrl.h"
 #include "indigo_api_callback.h"
+#include "hs2_profile.h"
 
 struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO, false, false};
 struct interface_info* band_transmitter[16];
@@ -233,7 +234,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
     struct tlv_to_config_name* cfg = NULL;
     struct tlv_hdr *tlv = NULL;
-    int has_owe = 0;
+    int has_owe = 0, enable_hs20 = 0;
+    struct tlv_to_profile *profile = NULL;
+    int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
+
 
 #if HOSTAPD_SUPPORT_MBSSID
     if (wlanp->mbssid_enable && !wlanp->transmitter)
@@ -251,6 +255,54 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         tlv = wrapper->tlv[i];
+        memset(buffer, 0, sizeof(buffer));
+        memset(cfg_item, 0, sizeof(cfg_item));
+
+        /* This is used when hostapd will use multiple lines to 
+         * configure multiple items in the same configuration parameter
+         * (use semicolon to separate multiple configurations) */
+        cfg = find_generic_tlv_config(tlv->id, semicolon_list, semicolon_list_size);
+        if (cfg) {
+            char *token = NULL, *delimit = ";";
+
+            memcpy(buffer, tlv->value, tlv->len);
+            token = strtok(buffer, delimit);
+ 
+            while(token != NULL) {
+                sprintf(cfg_item, "%s=%s\n", cfg->config_name, token);
+                strcat(output, cfg_item);
+                token = strtok(NULL, delimit);
+            }
+            continue;
+        }
+
+        if (tlv->id == TLV_HESSID && strstr(tlv->value, "self")) {
+            char mac_addr[64];
+
+            memset(mac_addr, 0, sizeof(mac_addr));
+            get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
+            sprintf(cfg_item, "hessid=%s\n", mac_addr);
+            strcat(output, cfg_item);
+            continue;
+        }
+
+        /* profile config */
+        profile = find_tlv_hs2_profile(tlv->id);
+        if (profile) {
+            char *hs2_config = 0;
+            memcpy(buffer, tlv->value, tlv->len);
+
+            if (atoi(buffer) > profile->size) {
+                indigo_logger(LOG_LEVEL_ERROR, "profile index out of bound!: %d, array_size:%d", atoi(buffer), profile->size);
+            } else {
+                hs2_config = (char *)profile->profile[atoi(buffer)];
+            }
+
+            sprintf(cfg_item, "%s", hs2_config);
+            strcat(output, cfg_item);
+            continue;
+        }
+
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
@@ -319,8 +371,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "OWE")) {
             has_owe = 1;
         }
-        memset(buffer, 0, sizeof(buffer));
-        memset(cfg_item, 0, sizeof(cfg_item));
+
+        if (tlv->id == TLV_HS20 && strstr(tlv->value, "1")) {
+            enable_hs20 = 1;
+        }
+
         if (tlv->id == TLV_OWE_TRANSITION_BSS_IDENTIFIER) {
             struct bss_identifier_info bss_info;
             struct interface_info *wlan;
@@ -377,6 +432,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "multiple_bssid=1\n");
     }
 #endif
+    if (enable_hs20) {
+        strcat(output, "hs20_release=3\n");
+        strcat(output, "manage_p2p=1\n");
+        strcat(output, "allow_cross_connection=0\n");
+        strcat(output, "bss_load_update_period=100\n");
+    }
 
 #ifdef _WTS_OPENWRT_
     if (!strncmp(band, "a", 1)) {
@@ -1150,12 +1211,12 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
     char buffer[S_BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
-    char freq_list[S_BUFFER_LEN], ssid[S_BUFFER_LEN], preassoc_rand_addr[S_BUFFER_LEN];
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i, freq_list_len, ssid_len, preassoc_rand_addr_len;
+    char ssid[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i, ssid_len;
     size_t resp_len;
     char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     struct tlv_hdr *tlv = NULL;
-
+    struct tlv_to_config_name* cfg = NULL;
 #ifdef _OPENWRT_
 #else
     system("rfkill unblock wlan");
@@ -1167,22 +1228,6 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     system(buffer);
     sleep(3);
 
-    tlv = find_wrapper_tlv_by_id(req, TLV_FREQ_LIST);
-    memset(freq_list, 0, sizeof(freq_list));
-    if (tlv) {
-        memset(value, 0, sizeof(value));
-        memcpy(value, tlv->value, tlv->len);
-        freq_list_len = sprintf(freq_list, "freq_list=%s\n", value);
-    }
-
-    tlv = find_wrapper_tlv_by_id(req, TLV_PREASSOC_RAND_MAC_ADDR);
-    memset(preassoc_rand_addr, 0, sizeof(preassoc_rand_addr));
-    if (tlv) {
-        memset(value, 0, sizeof(value));
-        memcpy(value, tlv->value, tlv->len);
-        preassoc_rand_addr_len = sprintf(preassoc_rand_addr, "preassoc_mac_addr=%s\n", value);
-    }
-
     tlv = find_wrapper_tlv_by_id(req, TLV_SSID);
     memset(ssid, 0, sizeof(ssid));
     if (tlv) {
@@ -1190,21 +1235,23 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
         memcpy(value, tlv->value, tlv->len);
         ssid_len = sprintf(ssid, "network={\nssid=\"%s\"\nscan_ssid=1\nkey_mgmt=NONE\n}\n", value);
     }
-    
+
     tlv = find_wrapper_tlv_by_id(req, TLV_CONTROL_INTERFACE);
     if (tlv) {
         memset(buffer, 0, sizeof(buffer));
         memset(value, 0, sizeof(value));
         memcpy(value, tlv->value, tlv->len);
         set_wpas_ctrl_path(value);
-        sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", value);
-        
-        if (freq_list_len) {
-            strcat(buffer, freq_list);
-        }
+        sprintf(buffer, "ap_scan=1\n");
 
-        if (preassoc_rand_addr_len) {
-            strcat(buffer, preassoc_rand_addr);
+        for (i = 0; i < req->tlv_num; i++) {
+            cfg = find_wpas_global_config_name(req->tlv[i]->id);
+            if (cfg) {
+                memset(value, 0, sizeof(value));
+                memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
+                sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+                strcat(buffer, cfg_item);
+            }
         }
 
         if (ssid_len) {

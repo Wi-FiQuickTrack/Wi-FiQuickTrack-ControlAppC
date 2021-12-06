@@ -197,6 +197,35 @@ struct indigo_api {
 #define TLV_HE_6G_ONLY                          0x00a6
 #define TLV_HE_UNSOL_PR_RESP_CADENCE            0x00a7
 #define TLV_HE_FILS_DISCOVERY_TX                0x00a8
+#define TLV_HS20                                0x00a9
+#define TLV_ACCESS_NETWORK_TYPE                 0x00aa
+#define TLV_INTERNET                            0x00ab
+#define TLV_VENUE_GROUP                         0x00ac
+#define TLV_VENUE_TYPE                          0x00ad
+#define TLV_HESSID                              0x00ae
+#define TLV_OSU_SSID                            0x00af
+#define TLV_ANQP_3GPP_CELL_NETWORK_INFO         0x00b0 
+#define TLV_PROXY_ARP                           0x00b1
+#define TLV_BSSLOAD_ENABLE                      0x00b2
+#define TLV_ROAMING_CONSORTIUM                  0x00b3
+#define TLV_NETWORK_AUTH_TYPE                   0x00b4
+#define TLV_DOMAIN_LIST                         0x00b5
+#define TLV_HS20_OPERATOR_FRIENDLY_NAME         0x00b6
+#define TLV_NAI_REALM                           0x00b7
+#define TLV_VENUE_NAME                          0x00b8
+#define TLV_IPADDR_TYPE_AVAILABILITY            0x00b9
+#define TLV_HS20_WAN_METRICS                    0x00ba
+#define TLV_HS20_CONN_CAPABILITY                0x00bb
+#define TLV_VENUE_URL                           0x00bc
+#define TLV_OPERATOR_ICON_METADATA              0x00bd
+#define TLV_OSU_PROVIDERS_LIST                  0x00be
+#define TLV_OSU_PROVIDERS_NAI_LIST              0x00bf
+#define TLV_REALM                               0x00c0
+#define TLV_IMSI                                0x00c1
+#define TLV_MILENAGE                            0x00c2
+#define TLV_PPSMO_FILE                          0x00c3
+#define TLV_OSU_SERVER_URI                      0x00c4
+#define TLV_OSU_METHOD                          0x00c5
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
