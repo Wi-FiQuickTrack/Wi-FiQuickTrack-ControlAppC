@@ -939,12 +939,11 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     } else if (atoi(role) == DUT_TYPE_P2PUT) {
         /* Get P2P GO/Client or Device MAC */
         if (get_p2p_mac_addr(mac_addr, sizeof(mac_addr))) {
-            status = TLV_VALUE_STATUS_NOT_OK;
-            message = "Unable to get mac address of the P2P device";
-        } else {
-            status = TLV_VALUE_STATUS_OK;
-            message = TLV_VALUE_OK;
+            indigo_logger(LOG_LEVEL_INFO, "Can't find P2P Device MAC. Use wireless IF MAC");
+            get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
         }
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_OK;
         goto done;
     } else {
         wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
