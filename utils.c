@@ -482,7 +482,8 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
     }
-    snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+    if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
+        snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
     const int len = strnlen(ifname, IFNAMSIZ);
     if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
@@ -584,7 +585,8 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         timeout.tv_usec = 0;
     }
 
-    snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+    if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
+        snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
     const int len = strnlen(ifname, IFNAMSIZ);
     if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
@@ -1069,6 +1071,11 @@ char* get_wpas_ctrl_path() {
     return wpas_full_ctrl_path;
 }
 
+char* get_wpas_if_ctrl_path(char* if_name) {
+    memset(wpas_full_ctrl_path, 0, sizeof(wpas_full_ctrl_path));
+    sprintf(wpas_full_ctrl_path, "%s/%s", wpas_ctrl_path, if_name);
+    return wpas_full_ctrl_path;
+}
 int set_wpas_ctrl_path(char* path) {
     snprintf(wpas_ctrl_path, sizeof(wpas_ctrl_path), "%s", path);
     return 0;

@@ -62,6 +62,12 @@ struct indigo_api {
 #define API_STA_SET_PHY_MODE                    0x2009
 #define API_STA_SET_CHANNEL_WIDTH               0x200a
 #define API_STA_POWER_SAVE                      0x200b
+#define API_P2P_START_UP                        0x200c
+#define API_P2P_FIND                            0x200d
+#define API_P2P_LISTEN                          0x200e
+#define API_P2P_ADD_GROUP                       0x200f
+#define API_P2P_START_WPS                       0x2010
+#define API_P2P_CONNECT                         0x2011
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -73,6 +79,8 @@ struct indigo_api {
 #define API_DEVICE_RESET                        0x5007
 #define API_SEND_LOOP_BACK_DATA                 0x5008
 #define API_STOP_LOOP_BACK_DATA                 0x5009
+#define API_START_DHCP                          0x500a
+#define API_STOP_DHCP                           0x500b
 
 /* TLV definition */
 #define TLV_SSID                                0x0001
@@ -226,6 +234,11 @@ struct indigo_api {
 #define TLV_PPSMO_FILE                          0x00c3
 #define TLV_OSU_SERVER_URI                      0x00c4
 #define TLV_OSU_METHOD                          0x00c5
+#define TLV_GO_INTENT                           0x00c6
+#define TLV_WSC_METHOD                          0x00c7
+#define TLV_PIN_METHOD                          0x00c8
+#define TLV_PIN_CODE                            0x00c9
+#define TLV_P2P_CONN_TYPE                       0x00ca
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
@@ -243,6 +256,7 @@ struct indigo_api {
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
 #define DUT_TYPE_APUT                           0x02
+#define DUT_TYPE_P2PUT                          0x03
 
 #define TLV_BAND_24GHZ                          "2.4GHz"
 #define TLV_BAND_5GHZ                           "5GHz"
@@ -276,6 +290,7 @@ struct indigo_api {
 #define TLV_VALUE_BROADCAST_ARP_TEST_NOT_OK     "Broadcast ARP test failed"
 #define TLV_VALUE_CREATE_BRIDGE_OK              "Bridge network is created successfully"
 #define TLV_VALUE_CREATE_BRIDGE_NOT_OK          "Failed to create bridge network"
+#define TLV_VALUE_START_DHCP_NOT_OK              "Failed to start DHCP server or client"
 
 #define TLV_VALUE_WPA_S_START_UP_OK             "wpa_supplicant is initialized successfully"
 #define TLV_VALUE_WPA_S_START_UP_NOT_OK         "The wpa_supplicant was unable to initialize."
@@ -295,10 +310,19 @@ struct indigo_api {
 #define TLV_VALUE_POWER_SAVE_OK                 "Set power save value successfully"
 #define TLV_VALUE_POWER_SAVE_NOT_OK             "Failed to set power save value"
 
+#define TLV_VALUE_P2P_FIND_NOT_OK               "Failed to trigger P2P find"
+#define TLV_VALUE_P2P_LISTEN_NOT_OK             "Failed to trigger P2P listen"
+#define TLV_VALUE_P2P_ADD_GROUP_NOT_OK          "Failed to add P2P group"
+#define TLV_VALUE_P2P_START_WPS_NOT_OK          "Failed to start WPS on GO interface"
+#define TLV_VALUE_P2P_CONNECT_NOT_OK            "Failed to trigger P2P connect"
+
 #define RESET_TYPE_INIT                         0x01
 #define RESET_TYPE_TEARDOWN                     0x02
 
 #define WPA_CTRL_OK                             "OK"
+
+#define P2P_CONN_TYPE_JOIN                      0x01
+#define P2P_CONN_TYPE_AUTH                      0x02
 
 struct indigo_api* get_api_by_id(int id);
 struct indigo_tlv* get_tlv_by_id(int id);

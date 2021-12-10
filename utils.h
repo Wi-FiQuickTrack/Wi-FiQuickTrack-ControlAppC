@@ -177,6 +177,7 @@ int set_wpas_exec_file(char* path);
 char* get_wpas_full_exec_path();
 int set_wpas_full_exec_path(char* path);
 char* get_wpas_ctrl_path();
+char* get_wpas_if_ctrl_path(char* if_name);
 int set_wpas_ctrl_path(char* path);
 char* get_wpas_global_ctrl_path();
 int set_wpas_global_ctrl_path(char* path);
