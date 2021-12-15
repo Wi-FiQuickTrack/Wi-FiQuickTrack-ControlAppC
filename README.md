@@ -29,28 +29,3 @@ Build & Run
 make clean ; make <br />
 sudo ./app -p &lt;port&gt;
 
-------------------------------------------------------------------------
-OpenWRT Prerequisite
-------------------------------------------------------------------------
-1. Add firewall rule to allow to run ControlAppC on WAN<br />
-uci add firewall rule <br />
-uci add_list firewall.@rule[10].target='ACCEPT'<br />
-uci add_list firewall.@rule[10].src='wan'<br />
-uci add_list firewall.@rule[10].proto='tcp udp'<br />
-uci add_list firewall.@rule[10].dest_port='9004'<br />
-uci add_list firewall.@rule[10].name='ControlAppC'<br />
-uci commit<br />
-2. Disable Wi-Fi for the clean start<br />
-uci delete wireless.@wifi-iface[0]<br />
-uci delete wireless.@wifi-iface[1]<br />
-uci commit<br />
-
-------------------------------------------------------------------------
-OpenWRT Build
-------------------------------------------------------------------------
-Change Makefile <br />
-ROLE = openwrt <br />
-make clean ; make <br />
-
-Use scp to copy app to OpenWRT <br />
-./app -p &lt;port&gt;
