@@ -1263,6 +1263,14 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
         set_wpas_ctrl_path(value);
         sprintf(buffer, "ap_scan=1\n");
 
+        tlv = find_wrapper_tlv_by_id(req, TLV_STA_IEEE80211_W);
+        if (tlv) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            sprintf(cfg_item, "pmf=%s\n", value);
+            strcat(buffer, cfg_item);
+        }
+
         for (i = 0; i < req->tlv_num; i++) {
             cfg = find_wpas_global_config_name(req->tlv[i]->id);
             if (cfg) {
