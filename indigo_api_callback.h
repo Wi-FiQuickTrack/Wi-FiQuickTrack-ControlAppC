@@ -195,7 +195,6 @@ struct tlv_to_config_name wpas_global_maps[] = {
     { TLV_HESSID, "hessid", 0 },
     { TLV_ACCESS_NETWORK_TYPE, "access_network_type", 0 },
     { TLV_FREQ_LIST, "freq_list", 0 },
-    { TLV_IEEE80211_W, "pmf", 0 },
 };
 
 struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
