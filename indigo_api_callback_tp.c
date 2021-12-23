@@ -1518,6 +1518,8 @@ static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrappe
         /* Add Device name and Device type */
         strcat(buffer, "device_name=WFA P2P Device\n");
         strcat(buffer, "device_type=1-0050F204-1\n");
+        /* Add config methods */
+        strcat(buffer, "config_methods=keypad display push_button\n");
         len = strlen(buffer);
 
         if (len) {
@@ -1570,9 +1572,8 @@ static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper 
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_START_DHCP_NOT_OK;
     char buffer[S_BUFFER_LEN];
-    char param_value[256], role[8];
+    char ip_addr[32], role[8];
     struct tlv_hdr *tlv = NULL;
-    FILE *fp;
     char if_name[32];
 
     memset(role, 0, sizeof(role));
@@ -1583,29 +1584,26 @@ static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper 
             get_p2p_group_if(if_name, sizeof(if_name));
         } else {
         }
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_ROLE");
+        goto done;
     }
 
     /* TLV: TLV_STATIC_IP */
-    memset(param_value, 0, sizeof(param_value));
+    memset(ip_addr, 0, sizeof(ip_addr));
     tlv = find_wrapper_tlv_by_id(req, TLV_STATIC_IP);
-    if (tlv) {
-        memcpy(param_value, tlv->value, tlv->len);
-        if (!strcmp("0.0.0.0", param_value)) {
-            snprintf(buffer, sizeof(buffer), "%s/24", DHCP_SERVER_IP);
-        } else { /* Need to update dhcp conf when using specific IP */
-            snprintf(buffer, sizeof(buffer), "%s/24", param_value);
+    if (tlv) { /* DHCP Server */
+        memcpy(ip_addr, tlv->value, tlv->len);
+        if (!strcmp("0.0.0.0", ip_addr)) {
+            snprintf(ip_addr, sizeof(ip_addr), DHCP_SERVER_IP);
         }
+        snprintf(buffer, sizeof(buffer), "%s/24", ip_addr);
         set_interface_ip(if_name, buffer);
-        /* Assign specific IF for DHCP Server */
-        snprintf(buffer, sizeof(buffer), "sed -i -e 's/INTERFACESv4=\".*\"/INTERFACESv4=\"%s\"/g' /etc/default/isc-dhcp-server", if_name);
-        indigo_logger(LOG_LEVEL_DEBUG, buffer);
-        system(buffer);
-        snprintf(buffer, sizeof(buffer), "systemctl restart isc-dhcp-server.service");
-        system(buffer);
-    } else {
-        snprintf(buffer, sizeof(buffer), "dhclient -4 %s &", if_name);
-        system(buffer);
+        start_dhcp_server(if_name, ip_addr);
+    } else { /* DHCP Client */
+        start_dhcp_client(if_name);
     }
+
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
 
@@ -1634,18 +1632,19 @@ static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *
         } else {
         }
     } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_ROLE");
+        goto done;
     }
 
     /* TLV: TLV_STATIC_IP */
     tlv = find_wrapper_tlv_by_id(req, TLV_STATIC_IP);
     if (tlv) { /* DHCP Server */
-        snprintf(buffer, sizeof(buffer), "systemctl stop isc-dhcp-server.service");
-        system(buffer);
+        stop_dhcp_server();
     } else { /* DHCP Client */
-        snprintf(buffer, sizeof(buffer), "killall dhclient 1>/dev/null 2>/dev/null");
-        system(buffer);
+        stop_dhcp_client();
     }
     reset_interface_ip(if_name);
+
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
 

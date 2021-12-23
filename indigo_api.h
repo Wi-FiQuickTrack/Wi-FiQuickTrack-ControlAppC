@@ -81,6 +81,7 @@ struct indigo_api {
 #define API_STOP_LOOP_BACK_DATA                 0x5009
 #define API_START_DHCP                          0x500a
 #define API_STOP_DHCP                           0x500b
+#define API_GET_WSC_PIN                         0x500c
 
 /* TLV definition */
 #define TLV_SSID                                0x0001
@@ -252,6 +253,7 @@ struct indigo_api {
 #define TLV_ARP_RECV_NUM                        0xa007
 #define TLV_TEST_PLATFORM_APP_VERSION           0xa008
 #define TLV_LOOP_BACK_SERVER_PORT               0xa009
+#define TLV_WSC_PIN_CODE                        0xa00a
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
@@ -320,6 +322,7 @@ struct indigo_api {
 #define RESET_TYPE_TEARDOWN                     0x02
 
 #define WPA_CTRL_OK                             "OK"
+#define WPA_CTRL_FAIL                           "FAIL"
 
 #define P2P_CONN_TYPE_JOIN                      0x01
 #define P2P_CONN_TYPE_AUTH                      0x02

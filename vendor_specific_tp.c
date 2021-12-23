@@ -508,4 +508,56 @@ int get_p2p_group_if(char *if_name, size_t size) {
 
     return error;
 }
+
+
+void start_dhcp_server(char *if_name, char *ip_addr)
+{
+    char buffer[S_BUFFER_LEN];
+    char ip_sub[32], *ptr;
+    FILE *fp;
+
+    /*
+       snprintf(buffer, sizeof(buffer), "sed -i -e 's/INTERFACESv4=\".*\"/INTERFACESv4=\"%s\"/g' /etc/default/isc-dhcp-server", if_name);
+       system(buffer);
+       snprintf(buffer, sizeof(buffer), "systemctl restart isc-dhcp-server.service");
+       system(buffer);
+     */
+    // dhcpd -user dhcpd -group dhcpd -f -4 -pf /run/dhcp-server/dhcpd.pid -cf /etc/dhcp/dhcpd.conf p2p-wlp2s0-0 
+    // Avoid apparmor check because we manually start dhcpd
+    memset(ip_sub, 0, sizeof(ip_sub));
+    ptr = strrchr(ip_addr, '.');
+    memcpy(ip_sub, ip_addr, ptr - ip_addr);
+    system("cp QT_dhcpd.conf /etc/dhcp/QT_dhcpd.conf");
+    fp = fopen("/etc/dhcp/QT_dhcpd.conf", "a");
+    if (fp) {
+        snprintf(buffer, sizeof(buffer), "\nsubnet %s.0 netmask 255.255.255.0 {\n", ip_sub);
+        fputs(buffer, fp);
+        snprintf(buffer, sizeof(buffer), "    range %s.50 %s.200;\n", ip_sub, ip_sub);
+        fputs(buffer, fp);
+        fputs("}\n", fp);
+        fclose(fp);
+    }
+    system("touch /var/lib/dhcp/dhcpd.leases_QT");
+    snprintf(buffer, sizeof(buffer), "dhcpd -4 -cf /etc/dhcp/QT_dhcpd.conf -lf /var/lib/dhcp/dhcpd.leases_QT %s", if_name);
+    system(buffer);
+}
+
+void stop_dhcp_server()
+{
+    //system("systemctl stop isc-dhcp-server.service");
+    system("killall dhcpd 1>/dev/null 2>/dev/null");
+}
+
+void start_dhcp_client(char *if_name)
+{
+    char buffer[S_BUFFER_LEN];
+
+    snprintf(buffer, sizeof(buffer), "dhclient -4 %s &", if_name);
+    system(buffer);
+}
+
+void stop_dhcp_client()
+{
+    system("killall dhclient 1>/dev/null 2>/dev/null");
+}
 #endif /* _TEST_PLATFORM_ */
