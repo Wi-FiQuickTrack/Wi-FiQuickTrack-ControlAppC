@@ -68,6 +68,7 @@ struct indigo_api indigo_api_list[] = {
     { API_STOP_LOOP_BACK_DATA, "STOP_LOOP_BACK_DATA", NULL, NULL },
     { API_START_DHCP, "START_DHCP", NULL, NULL },
     { API_STOP_DHCP, "STOP_DHCP", NULL, NULL },
+    { API_GET_WSC_PIN, "GET_WSC_PIN", NULL, NULL },
 };
 
 /* Structure to declare the TLV list */

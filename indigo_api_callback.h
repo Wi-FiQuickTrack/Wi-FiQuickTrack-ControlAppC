@@ -230,6 +230,7 @@ static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* AP */
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);

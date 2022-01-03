@@ -125,4 +125,8 @@ void start_ap_set_wlan_params(void *if_info);
 int get_p2p_mac_addr(char *mac_addr, size_t size);
 int get_p2p_group_if(char *if_name, size_t size);
 
+void start_dhcp_server(char *if_name, char *ip_addr);
+void stop_dhcp_server();
+void start_dhcp_client(char *if_name);
+void stop_dhcp_client();
 #endif
