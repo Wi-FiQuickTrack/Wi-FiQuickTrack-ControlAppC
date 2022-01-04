@@ -249,6 +249,7 @@ static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet
 static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_channel_width_handler(struct packet_wrapper *req, struct packet_wrapper *resp);

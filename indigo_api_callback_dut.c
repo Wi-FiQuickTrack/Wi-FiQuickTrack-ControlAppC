@@ -60,6 +60,7 @@ void register_apis() {
     register_api(API_STA_SET_PARAM, NULL, set_sta_parameter_handler);
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
+    register_api(API_STA_SCAN, NULL, send_sta_scan_handler);
     /* TODO: Add the handlers */
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
     register_api(API_STA_POWER_SAVE, NULL, NULL);
@@ -2220,6 +2221,83 @@ static int start_wps_p2p_handler(struct packet_wrapper *req, struct packet_wrapp
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command(%s).", buffer);
         goto done;
     }
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+
+static int send_sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    char *message = TLV_VALUE_WPA_S_SCAN_NOT_OK;
+    char buffer[1024];
+    char response[1024];
+    struct tlv_hdr *tlv = NULL;
+    struct wpa_ctrl *w = NULL;
+    size_t resp_len;
+    struct tlv_to_config_name* cfg = NULL;
+    char value[TLV_VALUE_SIZE], cfg_item[2*S_BUFFER_LEN];
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
+    tlv = find_wrapper_tlv_by_id(req, TLV_STA_IEEE80211_W);
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        sprintf(cfg_item, "pmf=%s\n", value);
+        strcat(buffer, cfg_item);
+    }
+    for (i = 0; i < req->tlv_num; i++) {
+        cfg = find_wpas_global_config_name(req->tlv[i]->id);
+        if (cfg) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
+            sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+            strcat(buffer, cfg_item);
+        }
+    }
+    len = strlen(buffer);
+    if (len) {
+        write_file(get_wpas_conf_file(), buffer, len);
+    }
+
+    memset(buffer, 0 ,sizeof(buffer));
+    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wireless_interface());
+    len = system(buffer);
+    sleep(2);
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+    // SCAN
+    memset(buffer, 0, sizeof(buffer));
+    memset(response, 0, sizeof(response));
+    sprintf(buffer, "SCAN");
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    /* Check response */
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+    indigo_logger(LOG_LEVEL_DEBUG, "%s -> resp: %s\n", buffer, response);
+    sleep(10);
 
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
