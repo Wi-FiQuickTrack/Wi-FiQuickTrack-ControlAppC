@@ -68,6 +68,9 @@ struct indigo_api {
 #define API_P2P_ADD_GROUP                       0x200f
 #define API_P2P_START_WPS                       0x2010
 #define API_P2P_CONNECT                         0x2011
+#define API_STA_HS2_ASSOCIATE                   0x2012
+#define API_STA_ADD_CREDENTIAL                  0x2013
+#define API_STA_SCAN                            0x2014
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -307,6 +310,7 @@ struct indigo_api {
 #define TLV_VALUE_WPA_S_CTRL_NOT_OK             "Failed to connect to WPA supplicant control interface"
 #define TLV_VALUE_WPA_S_BTM_QUERY_OK            "Sent WNM_BSS_QUERY"
 #define TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK        "Failed to WNM_BSS_QUERY"
+#define TLV_VALUE_WPA_S_SCAN_NOT_OK             "Failed to trigger SCAN"
 #define TLV_VALUE_RESET_OK                      "Device reset successfully"
 #define TLV_VALUE_RESET_NOT_OK                  "Failed to run Device reset"
 #define TLV_VALUE_POWER_SAVE_OK                 "Set power save value successfully"
