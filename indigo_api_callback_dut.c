@@ -1963,8 +1963,6 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
         memcpy(anqp_info_id, tlv->value, tlv->len);
     }
 
-    indigo_logger(LOG_LEVEL_DEBUG, "anqp_info_id: %s\n", anqp_info_id); //remove me
-
     if (strcmp(anqp_info_id, "NAIHomeRealm") == 0) {
         /* TLV: REALM */
         memset(realm, 0, sizeof(realm));
