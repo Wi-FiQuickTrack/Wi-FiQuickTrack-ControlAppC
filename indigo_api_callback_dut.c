@@ -1909,6 +1909,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     size_t resp_len;
     char *token = NULL;
     char *delimit = ";";
+    char realm[S_BUFFER_LEN];
 
     /* It may need to check whether to just scan */
     memset(buffer, 0, sizeof(buffer));
@@ -1962,19 +1963,31 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
         memcpy(anqp_info_id, tlv->value, tlv->len);
     }
 
-    token = strtok(anqp_info_id, delimit);
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ANQP_GET %s ", bssid);
-    while(token != NULL) {
-        for (i = 0; i < sizeof(anqp_maps)/sizeof(struct anqp_tlv_to_config_name); i++) {
-            if (strcmp(token, anqp_maps[i].element) == 0) {
-                strcat(buffer, anqp_maps[i].config);
-            }
+    if (strcmp(anqp_info_id, "NAIHomeRealm") == 0) {
+        /* TLV: REALM */
+        memset(realm, 0, sizeof(realm));
+        tlv = find_wrapper_tlv_by_id(req, TLV_REALM);
+        if (tlv) {
+            memcpy(realm, tlv->value, tlv->len);
+            sprintf(buffer, "HS20_GET_NAI_HOME_REALM_LIST %s realm=%s", bssid, realm);
+        } else {
+            goto done;
         }
+    } else {
+        token = strtok(anqp_info_id, delimit);
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "ANQP_GET %s ", bssid);
+        while(token != NULL) {
+            for (i = 0; i < sizeof(anqp_maps)/sizeof(struct anqp_tlv_to_config_name); i++) {
+                if (strcmp(token, anqp_maps[i].element) == 0) {
+                    strcat(buffer, anqp_maps[i].config);
+                }
+            }
 
-        token = strtok(NULL, delimit);
-        if (token != NULL) {
-            strcat(buffer, ",");
+            token = strtok(NULL, delimit);
+            if (token != NULL) {
+                strcat(buffer, ",");
+            }
         }
     }
 
