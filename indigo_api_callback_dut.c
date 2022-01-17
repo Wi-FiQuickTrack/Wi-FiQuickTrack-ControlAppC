@@ -70,6 +70,7 @@ void register_apis() {
     register_api(API_P2P_ADD_GROUP, NULL, add_group_p2p_handler);
     register_api(API_P2P_START_WPS, NULL, start_wps_p2p_handler);
     register_api(API_P2P_CONNECT, NULL, connect_p2p_handler);
+    register_api(API_P2P_GET_INTENT_VALUE, NULL, get_intent_value_p2p_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -2553,6 +2554,25 @@ done:
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     if (status == TLV_VALUE_STATUS_OK) {
         fill_wrapper_tlv_bytes(resp, TLV_WSC_PIN_CODE, strlen(response), response);
+    }
+    return 0;
+}
+
+
+static int get_intent_value_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_OK;
+    char *message = TLV_VALUE_OK;
+    char response[S_BUFFER_LEN];
+
+    memset(response, 0, sizeof(response));
+    snprintf(response, sizeof(response), "%d", P2P_GO_INTENT);
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (status == TLV_VALUE_STATUS_OK) {
+        fill_wrapper_tlv_bytes(resp, TLV_P2P_INTENT_VALUE, strlen(response), response);
     }
     return 0;
 }

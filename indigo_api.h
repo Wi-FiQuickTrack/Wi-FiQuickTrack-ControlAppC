@@ -71,6 +71,7 @@ struct indigo_api {
 #define API_STA_HS2_ASSOCIATE                   0x2012
 #define API_STA_ADD_CREDENTIAL                  0x2013
 #define API_STA_SCAN                            0x2014
+#define API_P2P_GET_INTENT_VALUE                0x2015
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -257,6 +258,7 @@ struct indigo_api {
 #define TLV_TEST_PLATFORM_APP_VERSION           0xa008
 #define TLV_LOOP_BACK_SERVER_PORT               0xa009
 #define TLV_WSC_PIN_CODE                        0xa00a
+#define TLV_P2P_INTENT_VALUE                    0xa00b
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
