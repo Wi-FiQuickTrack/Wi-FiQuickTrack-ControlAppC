@@ -244,6 +244,7 @@ struct indigo_api {
 #define TLV_PIN_METHOD                          0x00c8
 #define TLV_PIN_CODE                            0x00c9
 #define TLV_P2P_CONN_TYPE                       0x00ca
+#define TLV_HS20_OPERATING_CLASS_INDICATION     0x00cb
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT

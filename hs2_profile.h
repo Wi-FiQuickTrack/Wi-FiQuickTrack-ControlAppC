@@ -80,9 +80,9 @@ const char * hs20_conn_capab[] = {
 
 const char * operating_class_indication[] = {
     "",
-    "",
-    "",
-    "",
+    "hs20_operating_class=51\n",
+    "hs20_operating_class=73\n",
+    "hs20_operating_class=5173\n",
 };
 
 const char * osu_providers_list[] = {
@@ -133,6 +133,7 @@ struct tlv_to_profile hs2_profile[] = {
     { TLV_VENUE_URL, venue_url, ARRAY_SIZE(venue_url) },
     { TLV_BSSLOAD_ENABLE, venue_url, ARRAY_SIZE(venue_url) },
     { TLV_OPERATOR_ICON_METADATA, operator_icon_metadata, ARRAY_SIZE(operator_icon_metadata) },
+    { TLV_HS20_OPERATING_CLASS_INDICATION, operating_class_indication, ARRAY_SIZE(operating_class_indication) },
 };
 
 struct tlv_to_profile* find_tlv_hs2_profile(int tlv_id) {

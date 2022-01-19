@@ -232,6 +232,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_PIN_METHOD, "PIN_METHOD" },
     { TLV_PIN_CODE, "PIN_CODE" },
     { TLV_P2P_CONN_TYPE, "P2P_CONN_TYPE" },
+    { TLV_HS20_OPERATING_CLASS_INDICATION, "HS20_OPERATING_CLASS_INDICATION"},
 };
 
 /* Find the type of the API stucture by the ID from the list */
