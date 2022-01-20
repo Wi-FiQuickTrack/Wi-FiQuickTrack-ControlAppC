@@ -379,3 +379,56 @@ void stop_dhcp_client()
 {
     system("killall dhclient 1>/dev/null 2>/dev/null");
 }
+
+wps_setting wps_settings[GROUP_NUM][SETTING_NUM] = {
+    {
+        /*
+        * WPS OOB required. (Not-Configured OOB state)
+        * */
+        { WPS_OOB_SSID, "Openwrt_ssid", WPS_OOB_ONLY }, /* ap broadcasts ssid */
+        { WPS_OOB_AUTH_TYPE, "WPA-PSK", WPS_OOB_ONLY }, /* authentication type */
+        { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
+        { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
+        { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        /*
+        * General
+        * */
+        { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
+        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_COMMON }, /* wps oob state */
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD, WPS_COMMON }, /* config methods */
+        { WPS_DEV_NAME, "Openwrt-AP", WPS_COMMON }, /* device name  */
+        { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
+        { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
+        { WPS_MODEL_NAME, "Openwrt-AP", WPS_COMMON }, /* model name */
+        { WPS_MODEL_NUMBER, "Openwrt-AP", WPS_COMMON }, /* model number */
+        { WPS_SERIAL_NUMBER, "OA14998888", WPS_COMMON }, /* serial number */
+    },
+    {
+        /*
+        * WPS OOB required. (Configured OOB state)
+        * */
+        { WPS_OOB_SSID, "Openwrt_ssid", WPS_OOB_ONLY }, /* ap broadcasts ssid */
+        { WPS_OOB_AUTH_TYPE, "WPA-PSK", WPS_OOB_ONLY }, /* authentication type */
+        { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
+        { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
+        { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        /*
+        * General
+        * */
+        { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
+        { WPS_OOB_STATE, WPS_OOB_CONFIGURED, WPS_COMMON }, /* wps oob state */
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD, WPS_COMMON }, /* config methods */
+        { WPS_DEV_NAME, "Openwrt-AP", WPS_COMMON }, /* device name  */
+        { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
+        { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
+        { WPS_MODEL_NAME, "Openwrt-AP", WPS_COMMON }, /* model name */
+        { WPS_MODEL_NUMBER, "Openwrt-AP", WPS_COMMON }, /* model number */
+        { WPS_SERIAL_NUMBER, "OA14998888", WPS_COMMON }, /* serial number */
+    },
+};
+
+wps_setting* get_vendor_wps_settings(int oob_flag)
+{
+    return wps_settings[0];
+}
+

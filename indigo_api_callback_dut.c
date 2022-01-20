@@ -51,6 +51,7 @@ void register_apis() {
     register_api(API_AP_SEND_DISCONNECT, NULL, send_ap_disconnect_handler);
     register_api(API_AP_SET_PARAM , NULL, set_ap_parameter_handler);
     register_api(API_AP_SEND_BTM_REQ, NULL, send_ap_btm_handler);
+    register_api(API_AP_START_WPS, NULL, start_wps_ap_handler);
     /* STA */
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
@@ -354,6 +355,41 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             sprintf(cfg_item, "%s", hs2_config);
             strcat(output, cfg_item);
             continue;
+        }
+
+        /* wps settings */
+        if (tlv->id == TLV_WSC_OOB) {
+            int j;
+
+            memcpy(buffer, tlv->value, tlv->len);
+            wps_setting *s = get_vendor_wps_settings(atoi(buffer)); 
+            if (atoi(buffer)) {
+                /* Use OOB */
+                for (j = 0; j < SETTING_NUM; j++) {
+                    memset(cfg_item, 0, sizeof(cfg_item));
+                    sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                    strcat(output, cfg_item);
+                }
+            } else {
+                /* NOT use OOB: Configure manually. */
+                for (j = 0; j < SETTING_NUM; j++) {
+                    memset(cfg_item, 0, sizeof(cfg_item));
+                    if (s[j].attr & WPS_COMMON) {
+                        if (s[j].wkey == WPS_OOB_STATE) {
+                            if (s[j].wkey == WPS_OOB_NOT_CONFIGURED) {
+                                /* Change wps oob state to Configured. */
+                                sprintf(cfg_item, "%s=%s\n", s[j].wkey, WPS_OOB_CONFIGURED);
+                            } else {
+                                indigo_logger(LOG_LEVEL_ERROR, "DUT OOB state Mismatch: 0x%04x", s[j].wkey);
+                                continue;
+                            }
+                        } else {
+                            sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                        }
+                        strcat(output, cfg_item);
+                    }
+                }
+            }
         }
 
         cfg = find_tlv_config(tlv->id);
@@ -2538,6 +2574,14 @@ static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper
 
     if (role == DUT_TYPE_APUT) {
         // TODO
+        sprintf(buffer, "WPS_AP_PIN get");
+        w = wpa_ctrl_open(get_hapd_ctrl_path());
+        if (!w) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to hostapd");
+            status = TLV_VALUE_STATUS_NOT_OK;
+            message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+            goto done;
+        }
     } else if (role == DUT_TYPE_STAUT || role == DUT_TYPE_P2PUT) {
         sprintf(buffer, "WPS_PIN get");
         w = wpa_ctrl_open(get_wpas_ctrl_path());
@@ -2571,7 +2615,6 @@ done:
     return 0;
 }
 
-
 static int get_intent_value_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_OK;
     char *message = TLV_VALUE_OK;
@@ -2580,12 +2623,62 @@ static int get_intent_value_p2p_handler(struct packet_wrapper *req, struct packe
     memset(response, 0, sizeof(response));
     snprintf(response, sizeof(response), "%d", P2P_GO_INTENT);
 
+
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     if (status == TLV_VALUE_STATUS_OK) {
         fill_wrapper_tlv_bytes(resp, TLV_P2P_INTENT_VALUE, strlen(response), response);
+    }
+    return 0;
+}
+
+static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct wpa_ctrl *w = NULL;
+    char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
+    char pin_code[64], if_name[32];
+    size_t resp_len;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
+    struct tlv_hdr *tlv = NULL;
+
+    memset(buffer, 0, sizeof(buffer));
+    tlv = find_wrapper_tlv_by_id(req, TLV_PIN_CODE);
+    if (tlv) {
+        memset(pin_code, 0, sizeof(pin_code));
+        memcpy(pin_code, tlv->value, tlv->len);
+        sprintf(buffer, "WPS_PIN any %s", pin_code);
+    } else {
+        sprintf(buffer, "WPS_PBC");
+    }
+
+    /* Open hostapd UDS socket */
+    w = wpa_ctrl_open(get_hapd_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to hostapd");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+
+    memset(response, 0, sizeof(response));
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    if (strncmp(response, WPA_CTRL_FAIL, strlen(WPA_CTRL_FAIL)) == 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command(%s).", buffer);
+        goto done;
+    }
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
     }
     return 0;
 }

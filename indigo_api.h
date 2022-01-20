@@ -49,6 +49,7 @@ struct indigo_api {
 #define API_AP_SET_PARAM                        0x1005
 #define API_AP_SEND_BTM_REQ                     0x1006
 #define API_AP_SEND_ARP_MSGS                    0x1007
+#define API_AP_START_WPS                        0x1008
 
 #define API_STA_ASSOCIATE                       0x2000
 #define API_STA_CONFIGURE                       0x2001
@@ -86,6 +87,7 @@ struct indigo_api {
 #define API_START_DHCP                          0x500a
 #define API_STOP_DHCP                           0x500b
 #define API_GET_WSC_PIN                         0x500c
+#define API_GET_WSC_CRED                        0x500d
 
 /* TLV definition */
 #define TLV_SSID                                0x0001
@@ -245,6 +247,8 @@ struct indigo_api {
 #define TLV_PIN_CODE                            0x00c9
 #define TLV_P2P_CONN_TYPE                       0x00ca
 #define TLV_HS20_OPERATING_CLASS_INDICATION     0x00cb
+#define TLV_WSC_OOB                             0x00cc
+#define TLV_UPDATE_CONFIG                       0x00cd
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
@@ -260,6 +264,9 @@ struct indigo_api {
 #define TLV_LOOP_BACK_SERVER_PORT               0xa009
 #define TLV_WSC_PIN_CODE                        0xa00a
 #define TLV_P2P_INTENT_VALUE                    0xa00b
+#define TLV_WSC_SSID                            0xa00c
+#define TLV_WSC_WPA_KEY_MGMT                    0xa00d
+#define TLV_WSC_WPA_PASSPHRASS                  0xa00e
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
@@ -325,8 +332,11 @@ struct indigo_api {
 #define TLV_VALUE_P2P_START_WPS_NOT_OK          "Failed to start WPS on GO interface"
 #define TLV_VALUE_P2P_CONNECT_NOT_OK            "Failed to trigger P2P connect"
 
+#define TLV_VALUE_AP_START_WPS_NOT_OK           "Failed to start WPS on AP interface"
+
 #define RESET_TYPE_INIT                         0x01
 #define RESET_TYPE_TEARDOWN                     0x02
+#define RESET_TYPE_MIDDLE                       0x03
 
 #define WPA_CTRL_OK                             "OK"
 #define WPA_CTRL_FAIL                           "FAIL"
