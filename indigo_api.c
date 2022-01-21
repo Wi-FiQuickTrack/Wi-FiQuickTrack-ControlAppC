@@ -36,6 +36,7 @@ struct indigo_api indigo_api_list[] = {
     { API_AP_SET_PARAM, "API_AP_SET_PARAM", NULL, NULL },
     { API_AP_SEND_BTM_REQ, "API_AP_SEND_BTM_REQ", NULL, NULL },
     { API_AP_SEND_ARP_MSGS, "API_AP_SEND_ARP_MSGS", NULL, NULL },
+    { API_AP_START_WPS, "AP_START_WPS", NULL, NULL },
     /* Station specific */
     { API_STA_START_UP, "STA_START_UP", NULL, NULL },
     { API_STA_ASSOCIATE, "STA_ASSOCIATE", NULL, NULL },
@@ -71,6 +72,7 @@ struct indigo_api indigo_api_list[] = {
     { API_START_DHCP, "START_DHCP", NULL, NULL },
     { API_STOP_DHCP, "STOP_DHCP", NULL, NULL },
     { API_GET_WSC_PIN, "GET_WSC_PIN", NULL, NULL },
+    { API_GET_WSC_CRED, "GET_WSC_CRED", NULL, NULL },
 };
 
 /* Structure to declare the TLV list */
@@ -233,6 +235,8 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_PIN_CODE, "PIN_CODE" },
     { TLV_P2P_CONN_TYPE, "P2P_CONN_TYPE" },
     { TLV_HS20_OPERATING_CLASS_INDICATION, "HS20_OPERATING_CLASS_INDICATION"},
+    { TLV_WSC_OOB, "WSC_OOB" },
+    { TLV_UPDATE_CONFIG, "UPDATE_CONFIG" },
 };
 
 /* Find the type of the API stucture by the ID from the list */

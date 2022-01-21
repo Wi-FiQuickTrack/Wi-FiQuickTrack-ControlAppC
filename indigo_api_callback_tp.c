@@ -48,6 +48,7 @@ void register_apis() {
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
     register_api(API_START_DHCP, NULL, start_dhcp_handler);
     register_api(API_STOP_DHCP, NULL, stop_dhcp_handler);
+    register_api(API_GET_WSC_CRED, NULL, get_wsc_cred_handler);
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
@@ -946,10 +947,11 @@ done:
 
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
-    char buffer[S_BUFFER_LEN], reset_type[16];
+    char buffer[S_BUFFER_LEN*2], reset_type[16], buffer1[S_BUFFER_LEN], buffer2[S_BUFFER_LEN];
     char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
+    static int reconf_count = 0;
 
     /* TLV: RESET_TYPE */
     tlv = find_wrapper_tlv_by_id(req, TLV_RESET_TYPE);
@@ -988,6 +990,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
             sta_hw_config.chwidth = CHWIDTH_AUTO;
             set_channel_width();
         }
+        reconf_count = 0;
     }
 
     if (reset == RESET_TYPE_INIT) {
@@ -998,6 +1001,40 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
         /* clean the log */
         snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", WPAS_LOG_FILE);
+        system(buffer);
+    }
+
+    if (reset == RESET_TYPE_RECONFIGURE) {
+        reconf_count++;
+        /* Send intermediate supplicant conf and log to Tool */
+        if (tool_addr != NULL) {
+            /* wpas conf file rename and send */
+            memset(buffer, 0, sizeof(buffer));
+            memset(buffer1, 0, sizeof(buffer1));
+            snprintf(buffer1, sizeof(buffer1), "%s.m%d", get_wpas_conf_file(), reconf_count);
+            snprintf(buffer, sizeof(buffer), "mv %s %s", get_wpas_conf_file(), buffer1);
+            system(buffer);
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, buffer1);
+            sleep(1);
+            /* wpas log file rename and send */
+            memset(buffer, 0, sizeof(buffer));
+            memset(buffer2, 0, sizeof(buffer2));
+            snprintf(buffer2, sizeof(buffer2), "%s.m%d", WPAS_LOG_FILE, reconf_count);
+            snprintf(buffer, sizeof(buffer), "mv %s %s", WPAS_LOG_FILE, buffer2);
+            system(buffer);
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, buffer2);
+            sleep(1);
+        } else {
+            indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
+        }
+        len = unlink(buffer1);
+        if (len) {
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove %s", buffer1);
+        }
+
+        /* clean the log */
+        memset(buffer, 0, sizeof(buffer));
+        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", buffer2);
         system(buffer);
     }
 
@@ -1661,5 +1698,61 @@ done:
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
 
+    return 0;
+}
+
+static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_NOT_OK;
+    char *pos = NULL, *data = NULL;
+    int i, len, ret = -1, count = 0;
+    struct _cfg_cred {
+        char *key;
+        char *tok;
+        char val[S_BUFFER_LEN];
+        unsigned short tid;
+    } cfg_creds[] = {
+      {"ssid", "ssid=", {0}, TLV_WSC_SSID},
+      {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASS},
+      {"key_mgmt", "key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
+    };
+
+    data = read_file(get_wpas_conf_file());
+    if (!data)
+        indigo_logger(LOG_LEVEL_ERROR, "Fail to read file: %s", get_wpas_conf_file());
+
+    count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
+    for (i = 0; i < count; i++) {
+        pos = strstr(data, cfg_creds[i].tok);
+        if (pos) {
+            pos += strlen(cfg_creds[i].tok);
+            if (*pos == '"') {
+                /* Handle with the format ssid/key="xxxxxxxx" */
+                pos++;
+                len = strchr(pos, '"') - pos;
+            } else {
+                /* Handle with the format key_mgmt=yyyyyyyy */
+                len = strchr(pos, '\n') - pos;
+            }
+            memcpy(cfg_creds[i].val, pos, len);
+            indigo_logger(LOG_LEVEL_INFO, "Get %s: %s\n", cfg_creds[i].key, cfg_creds[i].val);
+        } else {
+            indigo_logger(LOG_LEVEL_ERROR, "Cannot find the setting: %s\n", cfg_creds[i].key);
+            goto done;
+        }
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    free(data);
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (status == TLV_VALUE_STATUS_OK) {
+        for (i = 0; i < count; i++) {
+            fill_wrapper_tlv_bytes(resp, cfg_creds[i].tid, strlen(cfg_creds[i].val), cfg_creds[i].val);
+        }
+    }
     return 0;
 }

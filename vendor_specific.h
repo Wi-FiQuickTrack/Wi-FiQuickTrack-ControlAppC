@@ -91,6 +91,46 @@ void vendor_init();
 void vendor_deinit();
 void vendor_device_reset();
 
+/**
+ * wps settings retrieved with vendor-specific operations.
+ */
+
+#define WPS_OOB_SSID          "ssid"
+#define WPS_OOB_AUTH_TYPE     "wpa_key_mgmt"
+#define WPS_OOB_ENC_TYPE      "wpa_pairwise"
+#define WPS_OOB_PSK           "wpa_passphrase"
+#define WPS_OOB_WPA_VER       "wpa"
+#define WPS_OOB_AP_PIN        "ap_pin"
+#define WPS_OOB_STATE         "wps_state"
+#define WPS_CONFIG            "config_methods"
+#define WPS_DEV_NAME          "device_name"
+#define WPS_DEV_TYPE          "device_type"
+#define WPS_MANUFACTURER      "manufacturer"
+#define WPS_MODEL_NAME        "model_name"
+#define WPS_MODEL_NUMBER      "model_number"
+#define WPS_SERIAL_NUMBER     "serial_number"
+
+#define WPS_OOB_NOT_CONFIGURED  "1"
+#define WPS_OOB_CONFIGURED      "2"
+
+#define SUPPORTED_CONF_METHOD "keypad push_button phsical_push_button virtual_push_button display physical_display virtual_display"
+
+enum param_attr {
+    WPS_COMMON = 0x0001,
+    WPS_OOB_ONLY = 0x0010
+};
+
+#define GROUP_NUM (2)
+#define SETTING_NUM (14)
+
+typedef struct _wps_setting {
+    /* key-value for each setting pair */
+    char *wkey;
+    char *value;
+    enum param_attr attr;
+} wps_setting;
+
+
 #ifdef _TEST_PLATFORM_
 
 /**
