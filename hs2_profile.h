@@ -87,7 +87,7 @@ const char * operating_class_indication[] = {
 
 const char * osu_providers_list[] = {
     "",
-    "",
+    "osu_server_uri=https://osu-server.r2-testbed.wi-fi.org/\nosu_friendly_name=eng:SP Red Test Only\nosu_friendly_name=kor:SP 빨강 테스트 전용\nosu_method_list=1\nosu_service_desc=eng:Free service for test purpose\nosu_service_desc=kor:테스트 목적으로 무료 서비스\n",
     "",
     "",
     "",
