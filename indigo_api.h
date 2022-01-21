@@ -336,7 +336,7 @@ struct indigo_api {
 
 #define RESET_TYPE_INIT                         0x01
 #define RESET_TYPE_TEARDOWN                     0x02
-#define RESET_TYPE_MIDDLE                       0x03
+#define RESET_TYPE_RECONFIGURE                  0x03
 
 #define WPA_CTRL_OK                             "OK"
 #define WPA_CTRL_FAIL                           "FAIL"

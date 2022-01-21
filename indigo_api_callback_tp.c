@@ -951,7 +951,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
-    static int middle_reset_count = 0;
+    static int reconf_count = 0;
 
     /* TLV: RESET_TYPE */
     tlv = find_wrapper_tlv_by_id(req, TLV_RESET_TYPE);
@@ -990,7 +990,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
             sta_hw_config.chwidth = CHWIDTH_AUTO;
             set_channel_width();
         }
-        middle_reset_count = 0;
+        reconf_count = 0;
     }
 
     if (reset == RESET_TYPE_INIT) {
@@ -1004,14 +1004,14 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         system(buffer);
     }
 
-    if (reset == RESET_TYPE_MIDDLE) {
-        middle_reset_count++;
+    if (reset == RESET_TYPE_RECONFIGURE) {
+        reconf_count++;
         /* Send intermediate supplicant conf and log to Tool */
         if (tool_addr != NULL) {
             /* wpas conf file rename and send */
             memset(buffer, 0, sizeof(buffer));
             memset(buffer1, 0, sizeof(buffer1));
-            snprintf(buffer1, sizeof(buffer1), "%s.m%d", get_wpas_conf_file(), middle_reset_count);
+            snprintf(buffer1, sizeof(buffer1), "%s.m%d", get_wpas_conf_file(), reconf_count);
             snprintf(buffer, sizeof(buffer), "mv %s %s", get_wpas_conf_file(), buffer1);
             system(buffer);
             http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, buffer1);
@@ -1019,7 +1019,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
             /* wpas log file rename and send */
             memset(buffer, 0, sizeof(buffer));
             memset(buffer2, 0, sizeof(buffer2));
-            snprintf(buffer2, sizeof(buffer2), "%s.m%d", WPAS_LOG_FILE, middle_reset_count);
+            snprintf(buffer2, sizeof(buffer2), "%s.m%d", WPAS_LOG_FILE, reconf_count);
             snprintf(buffer, sizeof(buffer), "mv %s %s", WPAS_LOG_FILE, buffer2);
             system(buffer);
             http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, buffer2);
@@ -1029,7 +1029,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         }
         len = unlink(buffer1);
         if (len) {
-            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove %s", buffer1);
         }
 
         /* clean the log */
