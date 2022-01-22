@@ -169,4 +169,5 @@ void start_dhcp_server(char *if_name, char *ip_addr);
 void stop_dhcp_server();
 void start_dhcp_client(char *if_name);
 void stop_dhcp_client();
+wps_setting* get_vendor_wps_settings(int oob_flag);
 #endif
