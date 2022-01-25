@@ -131,7 +131,7 @@ struct tlv_to_profile hs2_profile[] = {
     { TLV_OSU_PROVIDERS_LIST, osu_providers_list, ARRAY_SIZE(osu_providers_list) },
     { TLV_OSU_PROVIDERS_NAI_LIST, osu_providers_nai_list, ARRAY_SIZE(osu_providers_nai_list) },
     { TLV_VENUE_URL, venue_url, ARRAY_SIZE(venue_url) },
-    { TLV_BSSLOAD_ENABLE, venue_url, ARRAY_SIZE(venue_url) },
+    { TLV_BSSLOAD_ENABLE, bss_load, ARRAY_SIZE(bss_load) },
     { TLV_OPERATOR_ICON_METADATA, operator_icon_metadata, ARRAY_SIZE(operator_icon_metadata) },
     { TLV_HS20_OPERATING_CLASS_INDICATION, operating_class_indication, ARRAY_SIZE(operating_class_indication) },
 };

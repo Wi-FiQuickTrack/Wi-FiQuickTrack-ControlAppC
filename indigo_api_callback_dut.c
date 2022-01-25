@@ -673,6 +673,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "manage_p2p=1\n");
         strcat(output, "allow_cross_connection=0\n");
         strcat(output, "bss_load_update_period=100\n");
+        strcat(output, "hs20_deauth_req_timeout=3\n");
     }
 
     /* vendor specific config, not via hostapd */
