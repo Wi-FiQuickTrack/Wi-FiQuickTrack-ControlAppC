@@ -117,7 +117,12 @@ const char * venue_url[] = {
 
 const char * operator_icon_metadata[] = {
     "",
-    "",
+    "operator_icon=icon_red_eng\n",
+};
+
+// <Icon Width>:<Icon Height>:<Language code>:<Icon Type>:<Name>:<file path>
+const char * hs20_icon[] = {
+    "hs20_icon=160:76:eng:image/png:icon_red_eng:/overlay/icon_red_eng.png\n",
 };
 
 struct tlv_to_profile hs2_profile[] = {
@@ -144,6 +149,14 @@ struct tlv_to_profile* find_tlv_hs2_profile(int tlv_id) {
         }
     }
     return NULL;
+}
+
+void attach_hs20_icons(char * buffer) {
+    int i;
+    for (i = 0; i < ARRAY_SIZE(hs20_icon); i++) {
+        strcat(buffer, hs20_icon[i]);
+    }
+    return;
 }
 
 #endif // _HS2_PROFILE
