@@ -120,8 +120,14 @@ enum param_attr {
     WPS_OOB_ONLY = 0x0010
 };
 
+enum wps_device_role {
+    WPS_AP,
+    WPS_STA
+};
+
 #define GROUP_NUM (2)
-#define SETTING_NUM (14)
+#define AP_SETTING_NUM (14)
+#define STA_SETTING_NUM (5)
 
 typedef struct _wps_setting {
     /* key-value for each setting pair */
@@ -169,5 +175,5 @@ void start_dhcp_server(char *if_name, char *ip_addr);
 void stop_dhcp_server();
 void start_dhcp_client(char *if_name);
 void stop_dhcp_client();
-wps_setting* get_vendor_wps_settings(int oob_flag);
+wps_setting* get_vendor_wps_settings(enum wps_device_role);
 #endif

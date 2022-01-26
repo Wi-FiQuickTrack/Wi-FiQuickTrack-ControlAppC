@@ -73,6 +73,7 @@ struct indigo_api {
 #define API_STA_ADD_CREDENTIAL                  0x2013
 #define API_STA_SCAN                            0x2014
 #define API_P2P_GET_INTENT_VALUE                0x2015
+#define API_STA_START_WPS                       0x2016
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001

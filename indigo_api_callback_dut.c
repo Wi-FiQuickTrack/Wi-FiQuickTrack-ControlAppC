@@ -56,12 +56,14 @@ void register_apis() {
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
     register_api(API_STA_DISCONNECT, NULL, stop_sta_handler);
+    register_api(API_STA_START_UP, NULL, start_up_sta_handler);
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
     register_api(API_STA_REASSOCIATE, NULL, send_sta_reconnect_handler);
     register_api(API_STA_SET_PARAM, NULL, set_sta_parameter_handler);
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_SCAN, NULL, send_sta_scan_handler);
+    register_api(API_STA_START_WPS, NULL, start_wps_sta_handler);
     /* TODO: Add the handlers */
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
     register_api(API_STA_POWER_SAVE, NULL, NULL);
@@ -362,25 +364,26 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             int j;
 
             memcpy(buffer, tlv->value, tlv->len);
-            wps_setting *s = get_vendor_wps_settings(atoi(buffer)); 
+            wps_setting *s = get_vendor_wps_settings(WPS_AP);
             if (atoi(buffer)) {
                 /* Use OOB */
-                for (j = 0; j < SETTING_NUM; j++) {
+                for (j = 0; j < AP_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
                     sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
                     strcat(output, cfg_item);
                 }
             } else {
                 /* NOT use OOB: Configure manually. */
-                for (j = 0; j < SETTING_NUM; j++) {
+                for (j = 0; j < AP_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
                     if (s[j].attr & WPS_COMMON) {
-                        if (s[j].wkey == WPS_OOB_STATE) {
-                            if (s[j].wkey == WPS_OOB_NOT_CONFIGURED) {
+                        if (strlen(s[j].wkey) == strlen(WPS_OOB_STATE) &&
+                            !(memcmp(s[j].wkey, WPS_OOB_STATE, strlen(WPS_OOB_STATE)))) {
+                            if (atoi(s[j].value) == atoi(WPS_OOB_NOT_CONFIGURED)) {
                                 /* Change wps oob state to Configured. */
                                 sprintf(cfg_item, "%s=%s\n", s[j].wkey, WPS_OOB_CONFIGURED);
                             } else {
-                                indigo_logger(LOG_LEVEL_ERROR, "DUT OOB state Mismatch: 0x%04x", s[j].wkey);
+                                indigo_logger(LOG_LEVEL_ERROR, "DUT OOB state Mismatch: 0x%s", s[j].value);
                                 continue;
                             }
                         } else {
@@ -2657,6 +2660,162 @@ static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     w = wpa_ctrl_open(get_hapd_ctrl_path());
     if (!w) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to hostapd");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+
+    memset(response, 0, sizeof(response));
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    if (strncmp(response, WPA_CTRL_FAIL, strlen(WPA_CTRL_FAIL)) == 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command(%s).", buffer);
+        goto done;
+    }
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+
+static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    char buffer[BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
+    char ssid[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i, ssid_len = 0;
+    size_t resp_len;
+    char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
+    struct tlv_hdr *tlv = NULL;
+    struct tlv_to_config_name* cfg = NULL;
+#ifdef _OPENWRT_
+#else
+    system("rfkill unblock wlan");
+    sleep(1);
+#endif
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
+    sleep(3);
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_SSID);
+    memset(ssid, 0, sizeof(ssid));
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        ssid_len = sprintf(ssid, "network={\nssid=\"%s\"\nscan_ssid=1\nkey_mgmt=NONE\n}\n", value);
+    }
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
+
+    for (i = 0; i < req->tlv_num; i++) {
+        cfg = find_wpas_global_config_name(req->tlv[i]->id);
+        if (cfg) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
+            sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+            strcat(buffer, cfg_item);
+        }
+    }
+
+    /* wps settings */
+    tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
+    if (tlv) {
+        int j;
+
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+
+        /* To get STA wps vendor info */
+        wps_setting *s = get_vendor_wps_settings(WPS_STA);
+        if (atoi(value)) {
+            for (j = 0; j < STA_SETTING_NUM; j++) {
+                memset(cfg_item, 0, sizeof(cfg_item));
+                sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                strcat(buffer, cfg_item);
+            }
+        }
+    }
+
+    if (ssid_len) {
+        strcat(buffer, ssid);
+    }
+    len = strlen(buffer);
+
+    if (len) {
+        write_file(get_wpas_conf_file(), buffer, len);
+    }
+
+    /* TLV: DEBUG_LEVEL */
+    tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
+    memset(log_level, 0, sizeof(log_level));
+    if (tlv) {
+        memcpy(log_level, tlv->value, tlv->len);
+    }
+
+    if (strlen(log_level)) {
+        set_wpas_debug_level(get_debug_level(atoi(log_level)));
+    }
+
+    /* Start WPA supplicant */
+    memset(buffer, 0 ,sizeof(buffer));
+    sprintf(buffer, "%s -B -t -c %s %s -i %s -f %s",
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wpas_debug_arguments(),
+        get_wireless_interface(),
+        WPAS_LOG_FILE);
+    len = system(buffer);
+    sleep(2);
+
+    len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
+    if (len) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_WPA_S_START_UP_OK;
+    } else {
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    }
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    return 0;
+}
+
+static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct wpa_ctrl *w = NULL;
+    char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
+    char pin_code[64], if_name[32];
+    size_t resp_len;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
+    struct tlv_hdr *tlv = NULL;
+
+    memset(buffer, 0, sizeof(buffer));
+    tlv = find_wrapper_tlv_by_id(req, TLV_PIN_CODE);
+    if (tlv) {
+        memset(pin_code, 0, sizeof(pin_code));
+        memcpy(pin_code, tlv->value, tlv->len);
+        sprintf(buffer, "WPS_PIN any %s", pin_code);
+    } else {
+        sprintf(buffer, "WPS_PBC");
+    }
+
+    /* Open hostapd UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
         status = TLV_VALUE_STATUS_NOT_OK;
         message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
         goto done;
