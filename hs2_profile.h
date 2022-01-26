@@ -87,7 +87,7 @@ const char * operating_class_indication[] = {
 
 const char * osu_providers_list[] = {
     "",
-    "",
+    "osu_server_uri=https://osu-server.r2-testbed.wi-fi.org/\nosu_friendly_name=eng:SP Red Test Only\nosu_friendly_name=kor:SP 빨강 테스트 전용\nosu_method_list=1\nosu_service_desc=eng:Free service for test purpose\nosu_service_desc=kor:테스트 목적으로 무료 서비스\n",
     "",
     "",
     "",
@@ -117,7 +117,12 @@ const char * venue_url[] = {
 
 const char * operator_icon_metadata[] = {
     "",
-    "",
+    "operator_icon=icon_red_eng\n",
+};
+
+// <Icon Width>:<Icon Height>:<Language code>:<Icon Type>:<Name>:<file path>
+const char * hs20_icon[] = {
+    "hs20_icon=160:76:eng:image/png:icon_red_eng:/overlay/icon_red_eng.png\n",
 };
 
 struct tlv_to_profile hs2_profile[] = {
@@ -131,7 +136,7 @@ struct tlv_to_profile hs2_profile[] = {
     { TLV_OSU_PROVIDERS_LIST, osu_providers_list, ARRAY_SIZE(osu_providers_list) },
     { TLV_OSU_PROVIDERS_NAI_LIST, osu_providers_nai_list, ARRAY_SIZE(osu_providers_nai_list) },
     { TLV_VENUE_URL, venue_url, ARRAY_SIZE(venue_url) },
-    { TLV_BSSLOAD_ENABLE, venue_url, ARRAY_SIZE(venue_url) },
+    { TLV_BSSLOAD_ENABLE, bss_load, ARRAY_SIZE(bss_load) },
     { TLV_OPERATOR_ICON_METADATA, operator_icon_metadata, ARRAY_SIZE(operator_icon_metadata) },
     { TLV_HS20_OPERATING_CLASS_INDICATION, operating_class_indication, ARRAY_SIZE(operating_class_indication) },
 };
@@ -144,6 +149,14 @@ struct tlv_to_profile* find_tlv_hs2_profile(int tlv_id) {
         }
     }
     return NULL;
+}
+
+void attach_hs20_icons(char * buffer) {
+    int i;
+    for (i = 0; i < ARRAY_SIZE(hs20_icon); i++) {
+        strcat(buffer, hs20_icon[i]);
+    }
+    return;
 }
 
 #endif // _HS2_PROFILE

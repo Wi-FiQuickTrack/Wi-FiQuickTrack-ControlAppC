@@ -241,6 +241,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int has_owe = 0, enable_hs20 = 0;
     struct tlv_to_profile *profile = NULL;
     int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
+    int hs20_icons_attached = 0;
 
 
 #if HOSTAPD_SUPPORT_MBSSID
@@ -295,6 +296,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (profile) {
             char *hs2_config = 0;
             memcpy(buffer, tlv->value, tlv->len);
+
+            if (((tlv->id == TLV_OSU_PROVIDERS_LIST) || (tlv->id == TLV_OPERATOR_ICON_METADATA)) && (!hs20_icons_attached)) {
+                attach_hs20_icons(output);
+                hs20_icons_attached = 1;
+            }
 
             if (atoi(buffer) > profile->size) {
                 indigo_logger(LOG_LEVEL_ERROR, "profile index out of bound!: %d, array_size:%d", atoi(buffer), profile->size);
@@ -477,6 +483,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "manage_p2p=1\n");
         strcat(output, "allow_cross_connection=0\n");
         strcat(output, "bss_load_update_period=100\n");
+        strcat(output, "hs20_deauth_req_timeout=3\n");
     }
 
 #ifdef _WTS_OPENWRT_

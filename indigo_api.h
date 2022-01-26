@@ -208,7 +208,7 @@ struct indigo_api {
 #define TLV_SKIP_6G_BSS_SECURITY_CHECK          0x00a1
 #define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x00a2
 #define TLV_FREQ_LIST                           0x00a3
-#define TLV_SHORT_SSID                          0x00a4
+#define TLV_BSSID_FILTER_LIST                   0x00a4
 #define TLV_HE_BEACON_TX_SU_PPDU                0x00a5
 #define TLV_HE_6G_ONLY                          0x00a6
 #define TLV_HE_UNSOL_PR_RESP_CADENCE            0x00a7
