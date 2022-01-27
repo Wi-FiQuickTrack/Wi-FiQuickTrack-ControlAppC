@@ -560,4 +560,67 @@ void stop_dhcp_client()
 {
     system("killall dhclient 1>/dev/null 2>/dev/null");
 }
+
+wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
+    {
+        /*
+        * WPS OOB required. (Not-Configured OOB state)
+        * */
+        { WPS_OOB_SSID, "Openwrt-WPS-tp", WPS_OOB_ONLY }, /* ap broadcasts ssid */
+        { WPS_OOB_AUTH_TYPE, "WPA-PSK", WPS_OOB_ONLY }, /* authentication type */
+        { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
+        { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
+        { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        /*
+        * General
+        * */
+        { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
+        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_COMMON }, /* wps oob state */
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD, WPS_COMMON }, /* config methods */
+        { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
+        { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
+        { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
+        { WPS_MODEL_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* model name */
+        { WPS_MODEL_NUMBER, "Openwrt Wireless AP-001", WPS_COMMON }, /* model number */
+        { WPS_SERIAL_NUMBER, "OA14998888", WPS_COMMON }, /* serial number */
+    },
+    {
+        /*
+        * WPS OOB required. (Configured OOB state)
+        * */
+        { WPS_OOB_SSID, "Openwrt-WPS-tp", WPS_OOB_ONLY }, /* ap broadcasts ssid */
+        { WPS_OOB_AUTH_TYPE, "WPA-PSK", WPS_OOB_ONLY }, /* authentication type */
+        { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
+        { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
+        { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        /*
+        * General
+        * */
+        { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
+        { WPS_OOB_STATE, WPS_OOB_CONFIGURED, WPS_COMMON }, /* wps oob state */
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD, WPS_COMMON }, /* config methods */
+        { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
+        { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
+        { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
+        { WPS_MODEL_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* model name */
+        { WPS_MODEL_NUMBER, "Openwrt Wireless AP-001", WPS_COMMON }, /* model number */
+        { WPS_SERIAL_NUMBER, "OA14998888", WPS_COMMON }, /* serial number */
+    },
+};
+
+wps_setting wps_settings_sta[STA_SETTING_NUM] = {
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD, WPS_COMMON }, /* config methods */
+        { WPS_DEV_NAME, "Intel Wireless STA", WPS_COMMON }, /* device name  */
+        { WPS_MANUFACTURER, "Intel.com", WPS_COMMON }, /* manufacturer */
+        { WPS_MODEL_NAME, "Intel Wireless STA", WPS_COMMON }, /* model name */
+        { WPS_MODEL_NUMBER, "Intel Wireless STA-001", WPS_COMMON }, /* model number */
+};
+
+wps_setting* get_vendor_wps_settings(enum wps_device_role role)
+{
+    if (role == WPS_AP)
+        return wps_settings_ap[0];
+    else
+        return wps_settings_sta;
+}
 #endif /* _TEST_PLATFORM_ */

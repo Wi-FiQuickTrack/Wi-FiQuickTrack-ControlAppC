@@ -313,6 +313,42 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
+        /* wps settings */
+        if (tlv->id == TLV_WSC_OOB) {
+            int j;
+
+            memcpy(buffer, tlv->value, tlv->len);
+            wps_setting *s = get_vendor_wps_settings(WPS_AP);
+            if (atoi(buffer)) {
+                /* Use OOB */
+                for (j = 0; j < AP_SETTING_NUM; j++) {
+                    memset(cfg_item, 0, sizeof(cfg_item));
+                    sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                    strcat(output, cfg_item);
+                }
+            } else {
+                /* NOT use OOB: Configure manually. */
+                for (j = 0; j < AP_SETTING_NUM; j++) {
+                    memset(cfg_item, 0, sizeof(cfg_item));
+                    if (s[j].attr & WPS_COMMON) {
+                        if (strlen(s[j].wkey) == strlen(WPS_OOB_STATE) &&
+                            !(memcmp(s[j].wkey, WPS_OOB_STATE, strlen(WPS_OOB_STATE)))) {
+                            if (atoi(s[j].value) == atoi(WPS_OOB_NOT_CONFIGURED)) {
+                                /* Change wps oob state to Configured. */
+                                sprintf(cfg_item, "%s=%s\n", s[j].wkey, WPS_OOB_CONFIGURED);
+                            } else {
+                                indigo_logger(LOG_LEVEL_ERROR, "DUT OOB state Mismatch: 0x%s", s[j].value);
+                                continue;
+                            }
+                        } else {
+                            sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                        }
+                        strcat(output, cfg_item);
+                    }
+                }
+            }
+        }
+
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
@@ -1273,7 +1309,7 @@ done:
 static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[S_BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
+    char buffer[BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
     char ssid[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     int len, status = TLV_VALUE_STATUS_NOT_OK, i, ssid_len;
     size_t resp_len;
@@ -1322,6 +1358,25 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
                 memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
                 sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
                 strcat(buffer, cfg_item);
+            }
+        }
+
+        /* wps settings */
+        tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
+        if (tlv) {
+            int j;
+
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+
+            /* To get STA wps vendor info */
+            wps_setting *s = get_vendor_wps_settings(WPS_STA);
+            if (atoi(value)) {
+                for (j = 0; j < STA_SETTING_NUM; j++) {
+                    memset(cfg_item, 0, sizeof(cfg_item));
+                    sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                    strcat(buffer, cfg_item);
+                }
             }
         }
 
