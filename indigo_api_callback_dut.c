@@ -56,7 +56,6 @@ void register_apis() {
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
     register_api(API_STA_DISCONNECT, NULL, stop_sta_handler);
-    register_api(API_STA_START_UP, NULL, start_up_sta_handler);
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
     register_api(API_STA_REASSOCIATE, NULL, send_sta_reconnect_handler);
     register_api(API_STA_SET_PARAM, NULL, set_sta_parameter_handler);
@@ -2693,37 +2692,21 @@ done:
     return 0;
 }
 
-static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
-    char ssid[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i, ssid_len = 0;
+static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct wpa_ctrl *w = NULL;
+    char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
+    char pin_code[64], if_name[32];
     size_t resp_len;
-    char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
+    int i, len, status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
     struct tlv_hdr *tlv = NULL;
     struct tlv_to_config_name* cfg = NULL;
-#ifdef _OPENWRT_
-#else
-    system("rfkill unblock wlan");
-    sleep(1);
-#endif
-
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
-    system(buffer);
-    sleep(3);
-
-    tlv = find_wrapper_tlv_by_id(req, TLV_SSID);
-    memset(ssid, 0, sizeof(ssid));
-    if (tlv) {
-        memset(value, 0, sizeof(value));
-        memcpy(value, tlv->value, tlv->len);
-        ssid_len = sprintf(ssid, "network={\nssid=\"%s\"\nscan_ssid=1\nkey_mgmt=NONE\n}\n", value);
-    }
+    char value[TLV_VALUE_SIZE], cfg_item[2*S_BUFFER_LEN];
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
 
+    /* global config excepts wps */
     for (i = 0; i < req->tlv_num; i++) {
         cfg = find_wpas_global_config_name(req->tlv[i]->id);
         if (cfg) {
@@ -2737,77 +2720,31 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     /* wps settings */
     tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
     if (tlv) {
-        int j;
-
         memset(value, 0, sizeof(value));
         memcpy(value, tlv->value, tlv->len);
-
         /* To get STA wps vendor info */
         wps_setting *s = get_vendor_wps_settings(WPS_STA);
         if (atoi(value)) {
-            for (j = 0; j < STA_SETTING_NUM; j++) {
+            for (i = 0; i < STA_SETTING_NUM; i++) {
                 memset(cfg_item, 0, sizeof(cfg_item));
-                sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
                 strcat(buffer, cfg_item);
             }
         }
     }
 
-    if (ssid_len) {
-        strcat(buffer, ssid);
-    }
     len = strlen(buffer);
-
     if (len) {
         write_file(get_wpas_conf_file(), buffer, len);
     }
 
-    /* TLV: DEBUG_LEVEL */
-    tlv = find_wrapper_tlv_by_id(req, TLV_DEBUG_LEVEL);
-    memset(log_level, 0, sizeof(log_level));
-    if (tlv) {
-        memcpy(log_level, tlv->value, tlv->len);
-    }
-
-    if (strlen(log_level)) {
-        set_wpas_debug_level(get_debug_level(atoi(log_level)));
-    }
-
-    /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "%s -B -t -c %s %s -i %s -f %s",
+    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
         get_wpas_full_exec_path(),
         get_wpas_conf_file(),
-        get_wpas_debug_arguments(),
-        get_wireless_interface(),
-        WPAS_LOG_FILE);
+        get_wireless_interface());
     len = system(buffer);
     sleep(2);
-
-    len = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
-    if (len) {
-        status = TLV_VALUE_STATUS_OK;
-        message = TLV_VALUE_WPA_S_START_UP_OK;
-    } else {
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    }
-
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    return 0;
-}
-
-static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    struct wpa_ctrl *w = NULL;
-    char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
-    char pin_code[64], if_name[32];
-    size_t resp_len;
-    int status = TLV_VALUE_STATUS_NOT_OK;
-    char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
-    struct tlv_hdr *tlv = NULL;
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_PIN_CODE);
