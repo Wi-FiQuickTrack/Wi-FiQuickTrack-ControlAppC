@@ -270,6 +270,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups = 0;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
     int i, enable_ac = 0, enable_11h = 0, enable_hs20 = 0;
+    int enable_wps = 0, is_g_mode = 0, is_a_mode = 0, use_mbss = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     char band[64], value[16];
     char country[16];
@@ -308,6 +309,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         if (tlv->id == TLV_BSS_IDENTIFIER) {
+            use_mbss = 1;
             if (is_band_enabled(BAND_6GHZ) && !wlanp->mbssid_enable) {
                 strcat(output, "rnr=1\n");
             }
@@ -368,6 +370,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_WSC_OOB) {
             int j;
 
+            enable_wps = 1;
             memcpy(buffer, tlv->value, tlv->len);
             wps_setting *s = get_vendor_wps_settings(WPS_AP);
             if (atoi(buffer)) {
@@ -429,6 +432,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_HW_MODE) {
             memset(band, 0, sizeof(band));
             memcpy(band, tlv->value, tlv->len);
+            if (!strncmp(band, "a", 1)) {
+                is_a_mode = 1;
+            } else if (!(strncmp(band, "g", 1))) {
+                is_g_mode = 1;
+            }
         }
 
         if (tlv->id == TLV_CHANNEL) {
@@ -539,6 +547,20 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             memcpy(buffer, tlv->value, tlv->len);
             sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
             strcat(output, cfg_item);
+        }
+    }
+
+    /* add rf band according to TLV_BSS_IDENTIFIER/TLV_HW_MODE/TLV_WSC_OOB */
+    if (enable_wps) {
+        if (use_mbss) {
+            /* dual concurrent case */
+            strcat(output, "wps_rf_bands=ag\n");
+        } else {
+            if (is_a_mode) {
+                strcat(output, "wps_rf_bands=a\n");
+            } else if (is_g_mode) {
+                strcat(output, "wps_rf_bands=g\n");
+            }
         }
     }
 
