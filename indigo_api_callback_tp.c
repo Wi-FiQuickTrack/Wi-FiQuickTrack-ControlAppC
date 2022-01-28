@@ -242,6 +242,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     struct tlv_to_profile *profile = NULL;
     int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
     int hs20_icons_attached = 0;
+    int enable_wps = 0, is_g_mode = 0, is_a_mode = 0, use_mbss = 0;
 
 
 #if HOSTAPD_SUPPORT_MBSSID
@@ -281,6 +282,18 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
+        if (tlv->id == TLV_BSS_IDENTIFIER) {
+            use_mbss = 1;
+        }
+
+        if (tlv->id == TLV_HW_MODE && tlv->value) {
+            if (!strncmp(tlv->value, "a", 1)) {
+                is_a_mode = 1;
+            } else if (!(strncmp(tlv->value, "g", 1))) {
+                is_g_mode = 1;
+            }
+        }
+
         if (tlv->id == TLV_HESSID && strstr(tlv->value, "self")) {
             char mac_addr[64];
 
@@ -317,6 +330,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_WSC_OOB) {
             int j;
 
+            enable_wps = 1;
             memcpy(buffer, tlv->value, tlv->len);
             wps_setting *s = get_vendor_wps_settings(WPS_AP);
             if (atoi(buffer)) {
@@ -469,6 +483,21 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_HE_MU_EDCA)
             add_mu_edca_params(output);
     }
+
+    /* add rf band according to TLV_BSS_IDENTIFIER/TLV_HW_MODE/TLV_WSC_OOB */
+    if (enable_wps) {
+        if (use_mbss) {
+            /* The wps test for mbss should always be dual concurrent. */
+            strcat(output, "wps_rf_bands=ag\n");
+        } else {
+            if (is_a_mode) {
+                strcat(output, "wps_rf_bands=a\n");
+            } else if (is_g_mode) {
+                strcat(output, "wps_rf_bands=g\n");
+            }
+        }
+    }
+
     if (ctrl_iface == 0) {
         indigo_logger(LOG_LEVEL_ERROR, "No Remote UDP ctrl interface TLV for TP");
         return 0;
