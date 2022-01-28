@@ -487,7 +487,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     /* add rf band according to TLV_BSS_IDENTIFIER/TLV_HW_MODE/TLV_WSC_OOB */
     if (enable_wps) {
         if (use_mbss) {
-            /* dual concurrent case */
+            /* The wps test for mbss should always be dual concurrent. */
             strcat(output, "wps_rf_bands=ag\n");
         } else {
             if (is_a_mode) {
