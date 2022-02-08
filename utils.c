@@ -942,6 +942,18 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
     return NULL;
 }
 
+struct interface_info* get_first_configured_wireless_interface_info() {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
+            return &interfaces[i];
+        }
+    }
+
+    return NULL;
+}
+
 int get_debug_level(int value) {
     if (value == 0) {
         return DEBUG_LEVEL_DISABLE;

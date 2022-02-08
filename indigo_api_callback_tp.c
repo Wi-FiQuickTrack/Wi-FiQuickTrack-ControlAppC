@@ -1792,57 +1792,105 @@ done:
     return 0;
 }
 
+struct _cfg_cred {
+    char *key;
+    char *tok;
+    char val[S_BUFFER_LEN];
+    unsigned short tid;
+};
+
 static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_NOT_OK;
-    char *pos = NULL, *data = NULL;
-    int i, len, ret = -1, count = 0;
-    struct _cfg_cred {
-        char *key;
-        char *tok;
-        char val[S_BUFFER_LEN];
-        unsigned short tid;
-    } cfg_creds[] = {
-      {"ssid", "ssid=", {0}, TLV_WSC_SSID},
-      {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASS},
-      {"key_mgmt", "key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
-    };
+    char *pos = NULL, *data = NULL, value[16];
+    int i, len, ret = -1, count = 0, role = 0;
+    struct tlv_hdr *tlv = NULL;
+    struct _cfg_cred *p_cfg = NULL;
 
-    data = read_file(get_wpas_conf_file());
-    if (!data)
-        indigo_logger(LOG_LEVEL_ERROR, "Fail to read file: %s", get_wpas_conf_file());
+    memset(value, 0, sizeof(value));
+    tlv = find_wrapper_tlv_by_id(req, TLV_ROLE);
+    if (tlv) {
+            memcpy(value, tlv->value, tlv->len);
+            role = atoi(value);
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_ROLE");
+        goto done;
+    }
 
-    count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
+    if (role == DUT_TYPE_APUT) {
+        // Test Platform: STA
+        struct _cfg_cred cfg_creds[] = {
+            {"ssid", "ssid=", {0}, TLV_WSC_SSID},
+            {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASS},
+            {"key_mgmt", "key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
+        };
+        count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
+        p_cfg = cfg_creds;
+        data = read_file(get_wpas_conf_file());
+        if (!data) {
+            indigo_logger(LOG_LEVEL_ERROR, "Fail to read file: %s", get_wpas_conf_file());
+            goto done;
+        }
+    } else if (role == DUT_TYPE_STAUT) {
+        // Test Platform: AP
+        struct _cfg_cred cfg_creds[] = {
+            {"ssid", "ssid=", {0}, TLV_WSC_SSID},
+            {"wpa_passphrase", "wpa_passphrase=", {0}, TLV_WSC_WPA_PASSPHRASS},
+            {"wpa_key_mgmt", "wpa_key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
+        };
+        count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
+        p_cfg = cfg_creds;
+        tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
+        struct interface_info *wlan = NULL;
+        if (tlv) {
+            /* mbss: TBD */
+        } else {
+            /* single wlan  */
+            wlan = get_first_configured_wireless_interface_info();
+        }
+        if (!wlan)
+            goto done;
+        data = read_file(wlan->hapd_conf_file);
+        if (!data) {
+            indigo_logger(LOG_LEVEL_ERROR, "Fail to read file: %s", wlan->hapd_conf_file);
+            goto done;
+        }
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Invalid value in TLV_ROLE");
+        goto done;
+    }
+
     for (i = 0; i < count; i++) {
-        pos = strstr(data, cfg_creds[i].tok);
+        pos = strstr(data, p_cfg[i].tok);
         if (pos) {
-            pos += strlen(cfg_creds[i].tok);
+            pos += strlen(p_cfg[i].tok);
             if (*pos == '"') {
-                /* Handle with the format ssid/key="xxxxxxxx" */
+                /* Handle with the format aaaaa="xxxxxxxx" */
                 pos++;
                 len = strchr(pos, '"') - pos;
             } else {
-                /* Handle with the format key_mgmt=yyyyyyyy */
+                /* Handle with the format bbbbb=yyyyyyyy */
                 len = strchr(pos, '\n') - pos;
             }
-            memcpy(cfg_creds[i].val, pos, len);
-            indigo_logger(LOG_LEVEL_INFO, "Get %s: %s\n", cfg_creds[i].key, cfg_creds[i].val);
+            memcpy(p_cfg[i].val, pos, len);
+            indigo_logger(LOG_LEVEL_INFO, "Get %s: %s\n", p_cfg[i].key, p_cfg[i].val);
         } else {
-            indigo_logger(LOG_LEVEL_ERROR, "Cannot find the setting: %s\n", cfg_creds[i].key);
-            goto done;
+            indigo_logger(LOG_LEVEL_INFO, "Cannot find the setting: %s\n", p_cfg[i].key);
+            //goto done;
         }
     }
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
 
 done:
-    free(data);
+    if (data)
+        free(data);
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     if (status == TLV_VALUE_STATUS_OK) {
         for (i = 0; i < count; i++) {
-            fill_wrapper_tlv_bytes(resp, cfg_creds[i].tid, strlen(cfg_creds[i].val), cfg_creds[i].val);
+            fill_wrapper_tlv_bytes(resp, p_cfg[i].tid, strlen(p_cfg[i].val), p_cfg[i].val);
         }
     }
     return 0;

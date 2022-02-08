@@ -198,6 +198,7 @@ char* get_all_hapd_conf_files(int *swap_hostapd);
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
 struct interface_info* assign_wireless_interface_info(struct bss_identifier_info *bss);
 struct interface_info* get_wireless_interface_info(int band, int identifier);
+struct interface_info* get_first_configured_wireless_interface_info();
 int add_all_wireless_interface_to_bridge(char *br);
 void set_default_wireless_interface_info(int channel);
 int show_wireless_interface_info();
