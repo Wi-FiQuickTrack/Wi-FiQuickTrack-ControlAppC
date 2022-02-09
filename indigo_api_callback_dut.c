@@ -2566,6 +2566,9 @@ done:
     if (status == TLV_VALUE_STATUS_OK) {
         fill_wrapper_tlv_bytes(resp, TLV_WSC_PIN_CODE, strlen(response), response);
     }
+    if (w) {
+        wpa_ctrl_close(w);
+    }
     return 0;
 }
 
