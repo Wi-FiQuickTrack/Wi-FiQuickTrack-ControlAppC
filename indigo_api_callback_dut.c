@@ -133,11 +133,9 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         /* reset interfaces info */
         clear_interfaces_resource();
     } else if (atoi(role) == DUT_TYPE_P2PUT) {
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
-        system(buffer);
-        sleep(1);
-        //reset_interface_ip(get_wireless_interface());
+        /* If TP is P2P client, GO can't stop before client removes group monitor if */
+        // sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+        // reset_interface_ip(get_wireless_interface());
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
