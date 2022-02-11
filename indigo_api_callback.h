@@ -254,6 +254,8 @@ static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_
 static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_sta_hs2_associate_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_channel_width_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_wrapper *resp);

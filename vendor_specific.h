@@ -66,6 +66,8 @@
 #define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
 #define WPAS_LOG_FILE                               "/var/log/supplicant.log"
 
+#define HS20_OSU_CLIENT "/usr/local/bin/WFA-Hostapd-Supplicant/hs20-osu-client"
+
 #define WIRELESS_INTERFACE_DEFAULT                  "wlan0"
 #define SERVICE_PORT_DEFAULT                        9004
 
