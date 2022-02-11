@@ -18,6 +18,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/stat.h>
+#include <arpa/inet.h>
 
 #include "indigo_api.h"
 #include "vendor_specific.h"
@@ -28,6 +30,7 @@
 
 static char pac_file_path[S_BUFFER_LEN] = {0};
 struct interface_info* band_transmitter[16];
+extern struct sockaddr_in *tool_addr;
 
 
 void register_apis() {
@@ -64,6 +67,8 @@ void register_apis() {
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_SCAN, NULL, send_sta_scan_handler);
     register_api(API_STA_START_WPS, NULL, start_wps_sta_handler);
+    register_api(API_STA_HS2_ASSOCIATE, NULL, set_sta_hs2_associate_handler);
+    register_api(API_STA_INSTALL_PPSMO, NULL, set_sta_install_ppsmo_handler);
     /* TODO: Add the handlers */
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
     register_api(API_STA_POWER_SAVE, NULL, NULL);
@@ -77,6 +82,12 @@ void register_apis() {
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    char ipAddress[INET_ADDRSTRLEN];
+    if (tool_addr) {
+        inet_ntop(AF_INET, &(tool_addr->sin_addr), ipAddress, INET_ADDRSTRLEN);
+        indigo_logger(LOG_LEVEL_DEBUG, "Tool Control IP address on DUT network path: %s", ipAddress);
+    }
+
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
@@ -2384,6 +2395,177 @@ done:
     if (w) {
         wpa_ctrl_close(w);
     }
+    return 0;
+}
+
+static int set_sta_hs2_associate_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
+    char *message = TLV_VALUE_WPA_S_ASSOC_NOT_OK;
+    char buffer[BUFFER_LEN];
+    char response[BUFFER_LEN];
+    char bssid[256];
+    struct tlv_hdr *tlv = NULL;
+    struct wpa_ctrl *w = NULL;
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+
+    memset(bssid, 0, sizeof(bssid));
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
+    if (tlv) {
+        memset(bssid, 0, sizeof(bssid));
+        memcpy(bssid, tlv->value, tlv->len);
+        memset(buffer, 0, sizeof(buffer));
+        snprintf(buffer, sizeof(buffer), "INTERWORKING_CONNECT %s", bssid);
+    } else {
+        memset(buffer, 0, sizeof(buffer));
+        snprintf(buffer, sizeof(buffer), "INTERWORKING_SELECT auto");
+    }
+
+    /* Send command to wpa_supplicant UDS socket */
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    /* Check response */
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command %s.\n Response: %s", buffer, response);
+        goto done;
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+
+static int run_hs20_osu_client(const char *params)
+{
+	char buf[BUFFER_LEN], cmd[S_BUFFER_LEN];
+	int res;
+
+	res = snprintf(cmd, sizeof(cmd),
+		       "%s -w \"%s\" -r hs20-osu-client.res -dddKt -f /var/log/hs20-osu-client.log",
+		       HS20_OSU_CLIENT,
+		       WPAS_CTRL_PATH_DEFAULT "/");
+	if (res < 0 || res >= (int) sizeof(cmd))
+		return -1;
+
+	res = snprintf(buf, sizeof(buf), "%s %s", cmd, params);
+	if (res < 0 || res >= (int) sizeof(buf))
+		return -1;
+
+    indigo_logger(LOG_LEVEL_DEBUG, "Run: %s", buf);
+
+	if (system(buf) != 0) {
+		indigo_logger(LOG_LEVEL_ERROR, "Failed to run: %s", buf);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_HS2_INSTALL_PPSMO_NOT_OK;
+    int len, i;
+    char buffer[L_BUFFER_LEN], ppsmo_file[S_BUFFER_LEN];
+    struct tlv_hdr *tlv;
+    char *fqdn = NULL;
+    char fqdn_buf[S_BUFFER_LEN];
+
+    memset(buffer, 0, sizeof(buffer));
+    snprintf(buffer, sizeof(buffer), "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
+    
+    len = strlen(buffer);
+    if (len) {
+        write_file(get_wpas_conf_file(), buffer, len);
+    }
+
+    snprintf(buffer, sizeof(buffer), "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
+            get_wpas_full_exec_path(),
+            get_wpas_conf_file(),
+            get_wireless_interface());
+    if (system(buffer)) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to run wpa_supplicant.");
+        goto done;
+    }
+    sleep(2);
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_PPSMO_FILE);
+    if (tlv) {
+        memset(ppsmo_file, 0, sizeof(ppsmo_file));
+        memcpy(ppsmo_file, tlv->value, tlv->len);
+    } else {
+        goto done;
+    }
+
+    unlink("pps-tnds.xml");
+    snprintf(buffer, sizeof(buffer), "wget -T 10 -t 3 -O pps-tnds.xml '%s'", ppsmo_file);
+    indigo_logger(LOG_LEVEL_DEBUG, "RUN: %s\n", buffer);
+    if (system(buffer) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to download PPS MO from %s\n", ppsmo_file);
+        goto done;
+    }
+
+    snprintf(buffer, sizeof(buffer), "from_tnds pps-tnds.xml pps.xml");
+    if (run_hs20_osu_client(buffer) < 0)
+        goto done;
+    sleep(2);
+
+    memset(fqdn_buf, 0, sizeof(fqdn_buf));
+    if (run_hs20_osu_client("get_fqdn pps.xml") == 0) {
+		FILE *f = fopen("pps-fqdn", "r");
+		if (f) {
+			if (fgets(fqdn_buf, sizeof(fqdn_buf), f)) {
+				fqdn_buf[sizeof(fqdn_buf) - 1] = '\0';
+				fqdn = fqdn_buf;
+                if (fqdn)
+                    indigo_logger(LOG_LEVEL_DEBUG, "FQDN: %s", fqdn);
+                else {
+                    indigo_logger(LOG_LEVEL_ERROR, "Get FQDN ERROR" );
+                    goto done;
+                }
+            }
+			fclose(f);
+		}
+	}
+
+    mkdir("SP", S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+	snprintf(buffer, sizeof(buffer), "SP/%s", fqdn);
+	mkdir(buffer, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+
+    snprintf(buffer, sizeof(buffer), "dl_aaa_ca pps.xml SP/%s/aaa-ca.pem", fqdn);
+    if (run_hs20_osu_client(buffer) < 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to download AAA CA cert");
+        goto done;
+    }
+
+    snprintf(buffer, sizeof(buffer), "set_pps pps.xml");
+	if (run_hs20_osu_client(buffer) < 0) {
+		indigo_logger(LOG_LEVEL_ERROR,
+			  "errorCode,Failed to configure credential from PPSMO");
+        goto done;
+	}
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_HS2_INSTALL_PPSMO_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
     return 0;
 }
 

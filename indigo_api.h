@@ -74,6 +74,7 @@ struct indigo_api {
 #define API_STA_SCAN                            0x2014
 #define API_P2P_GET_INTENT_VALUE                0x2015
 #define API_STA_START_WPS                       0x2016
+#define API_STA_INSTALL_PPSMO                   0x2017
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -332,6 +333,9 @@ struct indigo_api {
 #define TLV_VALUE_P2P_ADD_GROUP_NOT_OK          "Failed to add P2P group"
 #define TLV_VALUE_P2P_START_WPS_NOT_OK          "Failed to start WPS on GO interface"
 #define TLV_VALUE_P2P_CONNECT_NOT_OK            "Failed to trigger P2P connect"
+
+#define TLV_VALUE_HS2_INSTALL_PPSMO_OK          "PPSMO file is installed"
+#define TLV_VALUE_HS2_INSTALL_PPSMO_NOT_OK      "Failed to install PPSMO file"
 
 #define TLV_VALUE_AP_START_WPS_NOT_OK           "Failed to start WPS on AP interface"
 
