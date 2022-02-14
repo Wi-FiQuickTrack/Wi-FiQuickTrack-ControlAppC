@@ -2769,7 +2769,10 @@ static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     if (tlv) {
         memset(pin_code, 0, sizeof(pin_code));
         memcpy(pin_code, tlv->value, tlv->len);
-        sprintf(buffer, "WPS_PIN any %s", pin_code);
+        if (strlen(pin_code) == 1 && atoi(pin_code) == 0)
+            sprintf(buffer, "WPS_PIN any");
+        else
+            sprintf(buffer, "WPS_PIN any %s", pin_code);
     } else {
         sprintf(buffer, "WPS_PBC");
     }
@@ -2798,6 +2801,9 @@ done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (status == TLV_VALUE_STATUS_OK) {
+        fill_wrapper_tlv_bytes(resp, TLV_WSC_PIN_CODE, strlen(response), response);
+    }
     if (w) {
         wpa_ctrl_close(w);
     }
