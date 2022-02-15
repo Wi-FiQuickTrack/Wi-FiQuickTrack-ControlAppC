@@ -362,11 +362,17 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                 }
             }
         }
-
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
             continue;
+        }
+
+        /* wps eap fragment size */
+        if (tlv->id == TLV_EAP_FRAG_SIZE) {
+            memcpy(buffer, tlv->value, tlv->len);
+            sprintf(cfg_item, "%s=%s\n", cfg->config_name, buffer);
+            strcat(output, cfg_item);
         }
 
 #ifdef _WTS_OPENWRT_
