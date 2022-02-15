@@ -240,6 +240,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_HS20_OPERATING_CLASS_INDICATION, "HS20_OPERATING_CLASS_INDICATION"},
     { TLV_WSC_OOB, "WSC_OOB" },
     { TLV_UPDATE_CONFIG, "UPDATE_CONFIG" },
+    { TLV_EAP_FRAG_SIZE, "EAP_FRAG_SIZE" },
 };
 
 /* Find the type of the API stucture by the ID from the list */

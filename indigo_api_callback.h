@@ -129,7 +129,10 @@ struct tlv_to_config_name maps[] = {
     { TLV_BSSID, "bssid", 0 },
     { TLV_REALM, "realm", 0 },
     { TLV_IMSI, "imsi", 0 },    
-    { TLV_MILENAGE, "milenage", 0 },  
+    { TLV_MILENAGE, "milenage", 0 },
+
+    /* hapd + wpas */
+    { TLV_EAP_FRAG_SIZE, "fragment_size", 0 },
 };
 
 struct tlv_to_config_name semicolon_list[] = {
