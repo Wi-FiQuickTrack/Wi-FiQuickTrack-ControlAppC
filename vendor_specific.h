@@ -127,7 +127,7 @@ enum wps_device_role {
     WPS_STA
 };
 
-#define GROUP_NUM (2)
+#define GROUP_NUM (3)
 #define AP_SETTING_NUM (14)
 #define STA_SETTING_NUM (5)
 
