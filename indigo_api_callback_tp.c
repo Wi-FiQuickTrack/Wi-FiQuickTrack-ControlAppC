@@ -37,6 +37,7 @@ int rrm = 0, he_mu_edca = 0;
 #endif
 
 extern struct sockaddr_in *tool_addr;
+extern wps_setting* get_vendor_wps_settings_for_ie_frag_test(enum wps_device_role role);
 
 void register_apis() {
     /* Basic */
@@ -243,6 +244,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
     int hs20_icons_attached = 0;
     int enable_wps = 0, is_g_mode = 0, is_a_mode = 0, use_mbss = 0;
+    int perform_wps_ie_frag = 0;
 
 
 #if HOSTAPD_SUPPORT_MBSSID
@@ -327,12 +329,25 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         /* wps settings */
+        if (tlv->id == TLV_PERFORM_WPS_IE_FRAG) {
+            perform_wps_ie_frag = 1;
+        }
+
+        /* wps settings */
         if (tlv->id == TLV_WSC_OOB) {
             int j;
+            wps_setting *s = NULL;
 
             enable_wps = 1;
             memcpy(buffer, tlv->value, tlv->len);
-            wps_setting *s = get_vendor_wps_settings(WPS_AP);
+            if (perform_wps_ie_frag == 1)
+                s = get_vendor_wps_settings_for_ie_frag_test(WPS_AP);
+            else
+                s = get_vendor_wps_settings(WPS_AP);
+            if (!s) {
+                indigo_logger(LOG_LEVEL_ERROR, "Failed to get vendor wps settings.");
+                continue;
+            }
             if (atoi(buffer)) {
                 /* Use OOB */
                 for (j = 0; j < AP_SETTING_NUM; j++) {
