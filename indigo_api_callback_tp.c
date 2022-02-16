@@ -243,7 +243,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
     int hs20_icons_attached = 0;
     int enable_wps = 0, is_g_mode = 0, is_a_mode = 0, use_mbss = 0;
-
+    int bss_load_tlv = 0;
 
 #if HOSTAPD_SUPPORT_MBSSID
     if (wlanp->mbssid_enable && !wlanp->transmitter)
@@ -313,6 +313,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             if (((tlv->id == TLV_OSU_PROVIDERS_LIST) || (tlv->id == TLV_OPERATOR_ICON_METADATA)) && (!hs20_icons_attached)) {
                 attach_hs20_icons(output);
                 hs20_icons_attached = 1;
+            }
+
+            if (tlv->id == TLV_BSSLOAD_ENABLE) {
+                bss_load_tlv = 1;
             }
 
             if (atoi(buffer) > profile->size) {
@@ -517,8 +521,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "hs20_release=3\n");
         strcat(output, "manage_p2p=1\n");
         strcat(output, "allow_cross_connection=0\n");
-        strcat(output, "bss_load_update_period=100\n");
         strcat(output, "hs20_deauth_req_timeout=3\n");
+        if (bss_load_tlv == 0) {
+            strcat(output, "bss_load_update_period=100\n");
+        }
     }
 
 #ifdef _WTS_OPENWRT_
