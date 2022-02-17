@@ -1633,7 +1633,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     int transition_mode_enabled = 0;
     int owe_configured = 0;
     int sae_only = 0;
-
+    struct tlv_hdr *tlv = NULL;
     struct tlv_to_config_name* cfg = NULL;
 
     sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
@@ -1647,80 +1647,98 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             strcat(buffer, cfg_item);
         }
     }
-    strcat(buffer, "network={\n");
+
+    /* wps settings */
+    tlv = find_wrapper_tlv_by_id(wrapper, TLV_WSC_OOB);
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        /* To get STA wps vendor info */
+        wps_setting *s = get_vendor_wps_settings(WPS_STA);
+        if (atoi(value)) {
+            for (i = 0; i < STA_SETTING_NUM; i++) {
+                memset(cfg_item, 0, sizeof(cfg_item));
+                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
+                strcat(buffer, cfg_item);
+            }
+        }
+    } else {
+        /* Configure network profile only for Non-WPS case */
+
+        strcat(buffer, "network={\n");
 
 #ifdef _RESERVED_
-    /* The function is reserved for the defeault wpas config */
-    append_wpas_network_default_config(wrapper);
+        /* The function is reserved for the defeault wpas config */
+        append_wpas_network_default_config(wrapper);
 #endif /* _RESERVED_ */
 
-    for (i = 0; i < wrapper->tlv_num; i++) {
-        cfg = find_tlv_config(wrapper->tlv[i]->id);
-        if (cfg && find_wpas_global_config_name(wrapper->tlv[i]->id) == NULL) {
-            memset(value, 0, sizeof(value));
-            memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
+        for (i = 0; i < wrapper->tlv_num; i++) {
+            cfg = find_tlv_config(wrapper->tlv[i]->id);
+            if (cfg && find_wpas_global_config_name(wrapper->tlv[i]->id) == NULL) {
+                memset(value, 0, sizeof(value));
+                memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
 
-            if ((wrapper->tlv[i]->id == TLV_IEEE80211_W) || (wrapper->tlv[i]->id == TLV_STA_IEEE80211_W)) {
-                ieee80211w_configured = 1;
-            } else if (wrapper->tlv[i]->id == TLV_KEY_MGMT) {
-                if (strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
-                    transition_mode_enabled = 1;
-                }
-                if (!strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
-                    sae_only = 1;
+                if ((wrapper->tlv[i]->id == TLV_IEEE80211_W) || (wrapper->tlv[i]->id == TLV_STA_IEEE80211_W)) {
+                    ieee80211w_configured = 1;
+                } else if (wrapper->tlv[i]->id == TLV_KEY_MGMT) {
+                    if (strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
+                        transition_mode_enabled = 1;
+                    }
+                    if (!strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
+                        sae_only = 1;
+                    }
+
+                    if (strstr(value, "OWE")) {
+                        owe_configured = 1;
+                    }
+                } else if ((wrapper->tlv[i]->id == TLV_CA_CERT) && strcmp("DEFAULT", value) == 0) {
+                    sprintf(value, "/etc/ssl/certs/ca-certificates.crt");
+                } else if ((wrapper->tlv[i]->id == TLV_PAC_FILE)) {
+                    memset(pac_file_path, 0, sizeof(pac_file_path));
+                    snprintf(pac_file_path, sizeof(pac_file_path), "%s", value);
+                } else if (wrapper->tlv[i]->id == TLV_SERVER_CERT) {
+                    memset(buf, 0, sizeof(buf));
+                    get_server_cert_hash(value, buf);
+                    memcpy(value, buf, sizeof(buf));
                 }
 
-                if (strstr(value, "OWE")) {
-                    owe_configured = 1;
+                if (cfg->quoted) {
+                    sprintf(cfg_item, "%s=\"%s\"\n", cfg->config_name, value);
+                    strcat(buffer, cfg_item);
+                } else {
+                    sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+                    strcat(buffer, cfg_item);
                 }
-            } else if ((wrapper->tlv[i]->id == TLV_CA_CERT) && strcmp("DEFAULT", value) == 0) {
-                sprintf(value, "/etc/ssl/certs/ca-certificates.crt");
-            } else if ((wrapper->tlv[i]->id == TLV_PAC_FILE)) {
-                memset(pac_file_path, 0, sizeof(pac_file_path));
-                snprintf(pac_file_path, sizeof(pac_file_path), "%s", value);
-            } else if (wrapper->tlv[i]->id == TLV_SERVER_CERT) {
-                memset(buf, 0, sizeof(buf));
-                get_server_cert_hash(value, buf);
-                memcpy(value, buf, sizeof(buf));
             }
-
-            if (cfg->quoted) {
-                sprintf(cfg_item, "%s=\"%s\"\n", cfg->config_name, value);
-                strcat(buffer, cfg_item);
-            } else {
-                sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
-                strcat(buffer, cfg_item);
-            }
-        }        
-    }
-
-    if (ieee80211w_configured == 0) {
-        if (transition_mode_enabled) {
-            strcat(buffer, "ieee80211w=1\n");
-        } else if (sae_only) {
-            strcat(buffer, "ieee80211w=2\n");
-        } else if (owe_configured) {
-            strcat(buffer, "ieee80211w=2\n");
         }
+
+        if (ieee80211w_configured == 0) {
+            if (transition_mode_enabled) {
+                strcat(buffer, "ieee80211w=1\n");
+            } else if (sae_only) {
+                strcat(buffer, "ieee80211w=2\n");
+            } else if (owe_configured) {
+                strcat(buffer, "ieee80211w=2\n");
+            }
+        }
+
+        /* TODO: merge another file */
+        /* python source code:
+            if merge_config_file:
+            appended_supplicant_conf_str = ""
+            existing_conf = StaCommandHelper.get_existing_supplicant_conf()
+            wpa_supplicant_dict = StaCommandHelper.__convert_config_str_to_dict(config = wps_config)
+            for each_key in existing_conf:
+                if each_key not in wpa_supplicant_dict:
+                    wpa_supplicant_dict[each_key] = existing_conf[each_key]
+
+            for each_supplicant_conf in wpa_supplicant_dict:
+                appended_supplicant_conf_str += each_supplicant_conf + "=" + wpa_supplicant_dict[each_supplicant_conf] + "\n"
+            wps_config = appended_supplicant_conf_str.rstrip()
+        */
+
+        strcat(buffer, "}\n");
     }
-
-    /* TODO: merge another file */
-    /* python source code:
-        if merge_config_file:
-        appended_supplicant_conf_str = ""
-        existing_conf = StaCommandHelper.get_existing_supplicant_conf()
-        wpa_supplicant_dict = StaCommandHelper.__convert_config_str_to_dict(config = wps_config)
-        for each_key in existing_conf:
-            if each_key not in wpa_supplicant_dict:
-                wpa_supplicant_dict[each_key] = existing_conf[each_key]
-
-        for each_supplicant_conf in wpa_supplicant_dict:
-            appended_supplicant_conf_str += each_supplicant_conf + "=" + wpa_supplicant_dict[each_supplicant_conf] + "\n"
-        wps_config = appended_supplicant_conf_str.rstrip()
-    */
-
-    strcat(buffer, "}\n");
-
     return strlen(buffer);
 }
 
@@ -2898,53 +2916,16 @@ static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     char pin_code[64], if_name[32];
     size_t resp_len;
-    int i, len, status = TLV_VALUE_STATUS_NOT_OK;
+    int i, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
     struct tlv_hdr *tlv = NULL;
-    struct tlv_to_config_name* cfg = NULL;
-    char value[TLV_VALUE_SIZE], cfg_item[2*S_BUFFER_LEN];
-
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
-
-    /* global config excepts wps */
-    for (i = 0; i < req->tlv_num; i++) {
-        cfg = find_wpas_global_config_name(req->tlv[i]->id);
-        if (cfg) {
-            memset(value, 0, sizeof(value));
-            memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
-            sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
-            strcat(buffer, cfg_item);
-        }
-    }
-
-    /* wps settings */
-    tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
-    if (tlv) {
-        memset(value, 0, sizeof(value));
-        memcpy(value, tlv->value, tlv->len);
-        /* To get STA wps vendor info */
-        wps_setting *s = get_vendor_wps_settings(WPS_STA);
-        if (atoi(value)) {
-            for (i = 0; i < STA_SETTING_NUM; i++) {
-                memset(cfg_item, 0, sizeof(cfg_item));
-                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
-                strcat(buffer, cfg_item);
-            }
-        }
-    }
-
-    len = strlen(buffer);
-    if (len) {
-        write_file(get_wpas_conf_file(), buffer, len);
-    }
 
     memset(buffer, 0 ,sizeof(buffer));
     sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
         get_wpas_full_exec_path(),
         get_wpas_conf_file(),
         get_wireless_interface());
-    len = system(buffer);
+    system(buffer);
     sleep(2);
 
     memset(buffer, 0, sizeof(buffer));
