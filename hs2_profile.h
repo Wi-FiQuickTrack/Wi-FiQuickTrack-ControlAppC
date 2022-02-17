@@ -65,7 +65,7 @@ const char * hs20_wan_metrics[] = {
     "hs20_wan_metrics=01:2500:384:0:0:10\n",
     "",
     "hs20_wan_metrics=01:2000:1000:20:20:10\n",
-    "",
+    "hs20_wan_metrics=01:8000:1000:20:20:10\n",
     "",
 };
 

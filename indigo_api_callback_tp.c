@@ -772,6 +772,7 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     struct tlv_hdr *tlv = NULL;
     char *ifname = NULL;
     char *message = TLV_VALUE_ASSIGN_STATIC_IP_OK;
+    char message_buf[S_BUFFER_LEN];
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_STATIC_IP);
@@ -794,9 +795,12 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     control_interface(ifname, "up");
     /* Set IP address with network mask */
     strcat(buffer, "/24");
-    len = set_interface_ip(get_wireless_interface(), buffer);
+    len = set_interface_ip(ifname, buffer);
     if (len) {
         message = TLV_VALUE_ASSIGN_STATIC_IP_NOT_OK;
+    } else {
+        snprintf(message_buf, sizeof(message_buf), "Static IP successfully assigned to interface %s", ifname);
+        message = message_buf;
     }
 
     response:
@@ -820,8 +824,6 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_NOT_OK;
     char role[16];
-
-    printf("req->tlv_num %d\n", req->tlv_num); //remove me
 
     memset(&bss_info, 0, sizeof(bss_info));
     tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
