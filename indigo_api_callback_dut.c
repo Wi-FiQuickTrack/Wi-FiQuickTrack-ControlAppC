@@ -1662,83 +1662,85 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
                 strcat(buffer, cfg_item);
             }
         }
-    } else {
-        /* Configure network profile only for Non-WPS case */
+        /* WPS: no network profile configuration and return. */
+        goto done;
+    }
 
-        strcat(buffer, "network={\n");
+    strcat(buffer, "network={\n");
 
 #ifdef _RESERVED_
-        /* The function is reserved for the defeault wpas config */
-        append_wpas_network_default_config(wrapper);
+    /* The function is reserved for the defeault wpas config */
+    append_wpas_network_default_config(wrapper);
 #endif /* _RESERVED_ */
 
-        for (i = 0; i < wrapper->tlv_num; i++) {
-            cfg = find_tlv_config(wrapper->tlv[i]->id);
-            if (cfg && find_wpas_global_config_name(wrapper->tlv[i]->id) == NULL) {
-                memset(value, 0, sizeof(value));
-                memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
+    for (i = 0; i < wrapper->tlv_num; i++) {
+        cfg = find_tlv_config(wrapper->tlv[i]->id);
+        if (cfg && find_wpas_global_config_name(wrapper->tlv[i]->id) == NULL) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, wrapper->tlv[i]->value, wrapper->tlv[i]->len);
 
-                if ((wrapper->tlv[i]->id == TLV_IEEE80211_W) || (wrapper->tlv[i]->id == TLV_STA_IEEE80211_W)) {
-                    ieee80211w_configured = 1;
-                } else if (wrapper->tlv[i]->id == TLV_KEY_MGMT) {
-                    if (strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
-                        transition_mode_enabled = 1;
-                    }
-                    if (!strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
-                        sae_only = 1;
-                    }
-
-                    if (strstr(value, "OWE")) {
-                        owe_configured = 1;
-                    }
-                } else if ((wrapper->tlv[i]->id == TLV_CA_CERT) && strcmp("DEFAULT", value) == 0) {
-                    sprintf(value, "/etc/ssl/certs/ca-certificates.crt");
-                } else if ((wrapper->tlv[i]->id == TLV_PAC_FILE)) {
-                    memset(pac_file_path, 0, sizeof(pac_file_path));
-                    snprintf(pac_file_path, sizeof(pac_file_path), "%s", value);
-                } else if (wrapper->tlv[i]->id == TLV_SERVER_CERT) {
-                    memset(buf, 0, sizeof(buf));
-                    get_server_cert_hash(value, buf);
-                    memcpy(value, buf, sizeof(buf));
+            if ((wrapper->tlv[i]->id == TLV_IEEE80211_W) || (wrapper->tlv[i]->id == TLV_STA_IEEE80211_W)) {
+                ieee80211w_configured = 1;
+            } else if (wrapper->tlv[i]->id == TLV_KEY_MGMT) {
+                if (strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
+                    transition_mode_enabled = 1;
+                }
+                if (!strstr(value, "WPA-PSK") && strstr(value, "SAE")) {
+                    sae_only = 1;
                 }
 
-                if (cfg->quoted) {
-                    sprintf(cfg_item, "%s=\"%s\"\n", cfg->config_name, value);
-                    strcat(buffer, cfg_item);
-                } else {
-                    sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
-                    strcat(buffer, cfg_item);
+                if (strstr(value, "OWE")) {
+                    owe_configured = 1;
                 }
+            } else if ((wrapper->tlv[i]->id == TLV_CA_CERT) && strcmp("DEFAULT", value) == 0) {
+                sprintf(value, "/etc/ssl/certs/ca-certificates.crt");
+            } else if ((wrapper->tlv[i]->id == TLV_PAC_FILE)) {
+                memset(pac_file_path, 0, sizeof(pac_file_path));
+                snprintf(pac_file_path, sizeof(pac_file_path), "%s", value);
+            } else if (wrapper->tlv[i]->id == TLV_SERVER_CERT) {
+                memset(buf, 0, sizeof(buf));
+                get_server_cert_hash(value, buf);
+                memcpy(value, buf, sizeof(buf));
+            }
+
+            if (cfg->quoted) {
+                sprintf(cfg_item, "%s=\"%s\"\n", cfg->config_name, value);
+                strcat(buffer, cfg_item);
+            } else {
+                sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+                strcat(buffer, cfg_item);
             }
         }
-
-        if (ieee80211w_configured == 0) {
-            if (transition_mode_enabled) {
-                strcat(buffer, "ieee80211w=1\n");
-            } else if (sae_only) {
-                strcat(buffer, "ieee80211w=2\n");
-            } else if (owe_configured) {
-                strcat(buffer, "ieee80211w=2\n");
-            }
-        }
-
-        /* TODO: merge another file */
-        /* python source code:
-            if merge_config_file:
-            appended_supplicant_conf_str = ""
-            existing_conf = StaCommandHelper.get_existing_supplicant_conf()
-            wpa_supplicant_dict = StaCommandHelper.__convert_config_str_to_dict(config = wps_config)
-            for each_key in existing_conf:
-                if each_key not in wpa_supplicant_dict:
-                    wpa_supplicant_dict[each_key] = existing_conf[each_key]
-
-            for each_supplicant_conf in wpa_supplicant_dict:
-                appended_supplicant_conf_str += each_supplicant_conf + "=" + wpa_supplicant_dict[each_supplicant_conf] + "\n"
-            wps_config = appended_supplicant_conf_str.rstrip()
-        */
-
-        strcat(buffer, "}\n");
     }
+
+    if (ieee80211w_configured == 0) {
+        if (transition_mode_enabled) {
+            strcat(buffer, "ieee80211w=1\n");
+        } else if (sae_only) {
+            strcat(buffer, "ieee80211w=2\n");
+        } else if (owe_configured) {
+            strcat(buffer, "ieee80211w=2\n");
+        }
+    }
+
+    /* TODO: merge another file */
+    /* python source code:
+        if merge_config_file:
+        appended_supplicant_conf_str = ""
+        existing_conf = StaCommandHelper.get_existing_supplicant_conf()
+        wpa_supplicant_dict = StaCommandHelper.__convert_config_str_to_dict(config = wps_config)
+        for each_key in existing_conf:
+            if each_key not in wpa_supplicant_dict:
+                wpa_supplicant_dict[each_key] = existing_conf[each_key]
+
+        for each_supplicant_conf in wpa_supplicant_dict:
+            appended_supplicant_conf_str += each_supplicant_conf + "=" + wpa_supplicant_dict[each_supplicant_conf] + "\n"
+        wps_config = appended_supplicant_conf_str.rstrip()
+    */
+
+    strcat(buffer, "}\n");
+
+done:
     return strlen(buffer);
 }
 
