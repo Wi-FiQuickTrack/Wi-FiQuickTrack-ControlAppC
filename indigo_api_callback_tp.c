@@ -244,6 +244,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
     int hs20_icons_attached = 0;
     int enable_wps = 0, is_g_mode = 0, is_a_mode = 0, use_mbss = 0;
+    int bss_load_tlv = 0;
     int perform_wps_ie_frag = 0;
 
 
@@ -315,6 +316,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             if (((tlv->id == TLV_OSU_PROVIDERS_LIST) || (tlv->id == TLV_OPERATOR_ICON_METADATA)) && (!hs20_icons_attached)) {
                 attach_hs20_icons(output);
                 hs20_icons_attached = 1;
+            }
+
+            if (tlv->id == TLV_BSSLOAD_ENABLE) {
+                bss_load_tlv = 1;
             }
 
             if (atoi(buffer) > profile->size) {
@@ -532,8 +537,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         strcat(output, "hs20_release=3\n");
         strcat(output, "manage_p2p=1\n");
         strcat(output, "allow_cross_connection=0\n");
-        strcat(output, "bss_load_update_period=100\n");
         strcat(output, "hs20_deauth_req_timeout=3\n");
+        if (bss_load_tlv == 0) {
+            strcat(output, "bss_load_update_period=100\n");
+        }
     }
 
 #ifdef _WTS_OPENWRT_
@@ -781,6 +788,7 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     struct tlv_hdr *tlv = NULL;
     char *ifname = NULL;
     char *message = TLV_VALUE_ASSIGN_STATIC_IP_OK;
+    char message_buf[S_BUFFER_LEN];
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_STATIC_IP);
@@ -803,9 +811,12 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     control_interface(ifname, "up");
     /* Set IP address with network mask */
     strcat(buffer, "/24");
-    len = set_interface_ip(get_wireless_interface(), buffer);
+    len = set_interface_ip(ifname, buffer);
     if (len) {
         message = TLV_VALUE_ASSIGN_STATIC_IP_NOT_OK;
+    } else {
+        snprintf(message_buf, sizeof(message_buf), "Static IP successfully assigned to interface %s", ifname);
+        message = message_buf;
     }
 
     response:
@@ -829,8 +840,6 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_NOT_OK;
     char role[16];
-
-    printf("req->tlv_num %d\n", req->tlv_num); //remove me
 
     memset(&bss_info, 0, sizeof(bss_info));
     tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);

@@ -482,7 +482,9 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
     }
-    if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
+    if (is_bridge_created()) {
+        snprintf(ifname, sizeof(ifname), "%s", get_wlans_bridge());
+    } else if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
         snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
     const int len = strnlen(ifname, IFNAMSIZ);
     if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
