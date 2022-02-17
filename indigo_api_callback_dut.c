@@ -1633,7 +1633,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     int transition_mode_enabled = 0;
     int owe_configured = 0;
     int sae_only = 0;
-
+    struct tlv_hdr *tlv = NULL;
     struct tlv_to_config_name* cfg = NULL;
 
     sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
@@ -1647,6 +1647,25 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             strcat(buffer, cfg_item);
         }
     }
+
+    /* wps settings */
+    tlv = find_wrapper_tlv_by_id(wrapper, TLV_WSC_OOB);
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        /* To get STA wps vendor info */
+        wps_setting *s = get_vendor_wps_settings(WPS_STA);
+        if (atoi(value)) {
+            for (i = 0; i < STA_SETTING_NUM; i++) {
+                memset(cfg_item, 0, sizeof(cfg_item));
+                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
+                strcat(buffer, cfg_item);
+            }
+        }
+        /* WPS: no network profile configuration and return. */
+        goto done;
+    }
+
     strcat(buffer, "network={\n");
 
 #ifdef _RESERVED_
@@ -1691,7 +1710,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
                 sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
                 strcat(buffer, cfg_item);
             }
-        }        
+        }
     }
 
     if (ieee80211w_configured == 0) {
@@ -1721,6 +1740,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 
     strcat(buffer, "}\n");
 
+done:
     return strlen(buffer);
 }
 
@@ -2898,53 +2918,16 @@ static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     char pin_code[64], if_name[32];
     size_t resp_len;
-    int i, len, status = TLV_VALUE_STATUS_NOT_OK;
+    int i, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
     struct tlv_hdr *tlv = NULL;
-    struct tlv_to_config_name* cfg = NULL;
-    char value[TLV_VALUE_SIZE], cfg_item[2*S_BUFFER_LEN];
-
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
-
-    /* global config excepts wps */
-    for (i = 0; i < req->tlv_num; i++) {
-        cfg = find_wpas_global_config_name(req->tlv[i]->id);
-        if (cfg) {
-            memset(value, 0, sizeof(value));
-            memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
-            sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
-            strcat(buffer, cfg_item);
-        }
-    }
-
-    /* wps settings */
-    tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
-    if (tlv) {
-        memset(value, 0, sizeof(value));
-        memcpy(value, tlv->value, tlv->len);
-        /* To get STA wps vendor info */
-        wps_setting *s = get_vendor_wps_settings(WPS_STA);
-        if (atoi(value)) {
-            for (i = 0; i < STA_SETTING_NUM; i++) {
-                memset(cfg_item, 0, sizeof(cfg_item));
-                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
-                strcat(buffer, cfg_item);
-            }
-        }
-    }
-
-    len = strlen(buffer);
-    if (len) {
-        write_file(get_wpas_conf_file(), buffer, len);
-    }
 
     memset(buffer, 0 ,sizeof(buffer));
     sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
         get_wpas_full_exec_path(),
         get_wpas_conf_file(),
         get_wireless_interface());
-    len = system(buffer);
+    system(buffer);
     sleep(2);
 
     memset(buffer, 0, sizeof(buffer));

@@ -241,6 +241,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_WSC_OOB, "WSC_OOB" },
     { TLV_UPDATE_CONFIG, "UPDATE_CONFIG" },
     { TLV_EAP_FRAG_SIZE, "EAP_FRAG_SIZE" },
+    { TLV_PERFORM_WPS_IE_FRAG, "PERFORM_WPS_IE_FRAG" },
 };
 
 /* Find the type of the API stucture by the ID from the list */
