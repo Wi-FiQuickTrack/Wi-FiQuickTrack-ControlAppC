@@ -51,7 +51,7 @@ const char * venue_name[] = {
 
 const char * network_auth_type[] = {
     "",
-    "network_auth_type=00https://tandc-server.wi-fi.org/\n",
+    "network_auth_type=00https://tandc-server.wi-fi.org\n",
     "network_auth_type=01\n",
 };
 
