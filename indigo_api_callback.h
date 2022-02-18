@@ -130,6 +130,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_REALM, "realm", 0 },
     { TLV_IMSI, "imsi", 0 },    
     { TLV_MILENAGE, "milenage", 0 },
+    { TLV_BSSID_FILTER_LIST, "bssid_filter", 0 },
 
     /* hapd + wpas */
     { TLV_EAP_FRAG_SIZE, "fragment_size", 0 },
