@@ -229,6 +229,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_REALM, "REALM" },
     { TLV_IMSI, "IMSI" },
     { TLV_MILENAGE, "MILENAGE" },
+    { TLV_BSSID_FILTER_LIST, "BSSID_FILTER_LIST" },
     { TLV_PPSMO_FILE, "PPSMO_FILE" },
     { TLV_OSU_SERVER_URI, "OSU_SERVER_URI" },
     { TLV_OSU_METHOD, "OSU_METHOD" },

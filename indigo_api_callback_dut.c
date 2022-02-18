@@ -1876,7 +1876,7 @@ done:
 }
 
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK, i;
     size_t resp_len;
     char *message = NULL;
     char buffer[BUFFER_LEN];
@@ -1895,29 +1895,27 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
         goto done;
     }
 
-    /* Example: Use TLV_STA_IEEE80211_W. Change to corresponding TLV from Tool */
-    memset(param_value, 0, sizeof(param_value));
-    tlv = find_wrapper_tlv_by_id(req, TLV_STA_IEEE80211_W);
-    if (tlv && find_tlv_config_name(tlv->id) != NULL) {
+    for (i = 0; i < req->tlv_num; i++) {
+        memset(param_name, 0, sizeof(param_name));
+        memset(param_value, 0, sizeof(param_value));
+        tlv = req->tlv[i];
         strcpy(param_name, find_tlv_config_name(tlv->id));
         memcpy(param_value, tlv->value, tlv->len);
-    } else {
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_INSUFFICIENT_TLV;
-        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: STA_IEEE80211_W");
-        goto done;
+
+        /* Assemble wpa_supplicant command */
+        memset(buffer, 0, sizeof(buffer));
+        snprintf(buffer, sizeof(buffer), "SET %s %s", param_name, param_value);
+        /* Send command to wpa_supplicant UDS socket */
+        resp_len = sizeof(response) - 1;
+        wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+        /* Check response */
+        if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+            message = TLV_VALUE_WPA_SET_PARAMETER_NO_OK;
+            goto done;
+        }
     }
-    /* Assemble wpa_supplicant command */
-    memset(buffer, 0, sizeof(buffer));
-    snprintf(buffer, sizeof(buffer), "SET %s %s", param_name, param_value);
-    /* Send command to wpa_supplicant UDS socket */
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        goto done;
-    }
+  
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
 done:
