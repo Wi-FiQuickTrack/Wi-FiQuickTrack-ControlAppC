@@ -73,8 +73,8 @@ const char * hs20_conn_capab[] = {
     "",
     "hs20_conn_capab=6:20:1\nhs20_conn_capab=6:80:1\nhs20_conn_capab=6:443:1\nhs20_conn_capab=50:0:1\n",
     "",
-    "",
-    "",
+    "hs20_conn_capab=6:80:1\nhs20_conn_capab=6:443:1\n",
+    "hs20_conn_capab=6:80:1\nhs20_conn_capab=6:443:1\nhs20_conn_capab=6:5060:1\nhs20_conn_capab=17:5060:1\n",
     "",
 };
 
