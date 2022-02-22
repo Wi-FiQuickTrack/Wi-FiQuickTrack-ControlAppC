@@ -587,13 +587,16 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         timeout.tv_usec = 0;
     }
 
-    if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
+    if (is_bridge_created()) {
+        snprintf(ifname, sizeof(ifname), "%s", get_wlans_bridge());
+    } else if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
         snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
     const int len = strnlen(ifname, IFNAMSIZ);
     if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
         return -1;
     }
+    indigo_logger(LOG_LEVEL_DEBUG, "Bind the interface %s", ifname);
 
     setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
