@@ -104,9 +104,9 @@ const char * osu_providers_nai_list[] = {
 
 const char * bss_load[] = {
     "",
-    "",
-    "",
-    "",
+    "bss_load_test=1:50:65535\n",
+    "bss_load_test=1:200:65535\n",
+    "bss_load_test=1:75:65535\n",
 };
 
 const char * venue_url[] = {
