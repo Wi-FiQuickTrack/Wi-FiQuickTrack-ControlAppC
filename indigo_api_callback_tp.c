@@ -130,10 +130,10 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     stop_loopback_data(NULL);
 
-    /* reset interfaces info */
-    clear_interfaces_resource();
-
     if (reset == RESET_TYPE_INIT) {
+        /* reset interfaces info */
+        clear_interfaces_resource();
+
         len = unlink(get_hapd_conf_file());
         if (len) {
             indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
@@ -717,6 +717,10 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     int len;
     struct tlv_hdr *tlv;
     int swap_hostapd = 0;
+    struct bss_identifier_info bss_info;
+    char bss_identifier_str[16];
+    int bss_identifier = 0;
+    struct interface_info* wlan = NULL;
 
     sprintf(g_ctrl_iface, "%s", get_hapd_global_ctrl_path());
 
@@ -725,6 +729,21 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     memset(log_level, 0, sizeof(log_level));
     if (tlv) {
         memcpy(log_level, tlv->value, tlv->len);
+    }
+
+    memset(&bss_info, 0, sizeof(bss_info));
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
+    if (tlv) {
+        memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
+        memcpy(bss_identifier_str, tlv->value, tlv->len);
+        bss_identifier = atoi(bss_identifier_str);
+        parse_bss_identifier(bss_identifier, &bss_info);
+
+        indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x identifier %d band %d\n",
+               bss_identifier,
+               bss_info.identifier,
+               bss_info.band);
+        wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
     }
 
     if (strlen(log_level)) {
@@ -769,7 +788,8 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
         g_ctrl_iface,
         get_hostapd_debug_arguments(),
         HAPD_LOG_FILE,
-        get_all_hapd_conf_files(&swap_hostapd));
+        wlan ? wlan->hapd_conf_file :get_all_hapd_conf_files(&swap_hostapd));
+    indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
     len = system(buffer);
     sleep(1);
 
