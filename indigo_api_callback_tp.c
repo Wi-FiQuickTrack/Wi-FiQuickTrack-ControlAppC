@@ -81,6 +81,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     char buffer[S_BUFFER_LEN], reset_type[16];
     char *parameter[] = {"pidof", get_hapd_exec_file(), NULL};
     char *message = NULL;
+    int status = TLV_VALUE_STATUS_NOT_OK;
     struct tlv_hdr *tlv = NULL;
 
     /* TLV: RESET_TYPE */
@@ -109,6 +110,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         message = TLV_VALUE_HOSTAPD_STOP_NOT_OK;
     } else {
         message = TLV_VALUE_HOSTAPD_STOP_OK;
+        status = TLV_VALUE_STATUS_OK;
     }
 
     /* Test case teardown case */
@@ -156,7 +158,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
    
     return 0;
