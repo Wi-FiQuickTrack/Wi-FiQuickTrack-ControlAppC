@@ -79,6 +79,7 @@ void register_apis() {
     register_api(API_P2P_START_WPS, NULL, start_wps_p2p_handler);
     register_api(API_P2P_CONNECT, NULL, connect_p2p_handler);
     register_api(API_P2P_GET_INTENT_VALUE, NULL, get_intent_value_p2p_handler);
+    register_api(API_P2P_INVITE, NULL, invite_p2p_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -3074,6 +3075,63 @@ done:
         for (i = 0; i < count; i++) {
             fill_wrapper_tlv_bytes(resp, p_cfg[i].tid, strlen(p_cfg[i].val), p_cfg[i].val);
         }
+    }
+    return 0;
+}
+
+static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct wpa_ctrl *w = NULL;
+    char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
+    char addr[32], if_name[16];
+    size_t resp_len;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_P2P_INVITE_NOT_OK;
+    struct tlv_hdr *tlv = NULL;
+
+    memset(addr, 0, sizeof(addr));
+    /* TLV_ADDRESS (required) */
+    tlv = find_wrapper_tlv_by_id(req, TLV_ADDRESS);
+    if (tlv) {
+        memcpy(addr, tlv->value, tlv->len);
+    } else {
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_INSUFFICIENT_TLV;
+        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_ADDRESS");
+        goto done;
+    }
+    if (get_p2p_group_if(if_name, sizeof(if_name)) != 0) {
+        message = "Failed to get P2P Group Interface";
+        goto done;
+    }
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+
+    memset(buffer, 0, sizeof(buffer));
+    memset(response, 0, sizeof(response));
+    sprintf(buffer, "P2P_INVITE group=%s peer=%s", if_name, addr);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    /* Check response */
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
     }
     return 0;
 }
