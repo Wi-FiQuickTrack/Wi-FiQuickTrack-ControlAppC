@@ -3099,7 +3099,10 @@ static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper 
         indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_ADDRESS");
         goto done;
     }
-    get_p2p_group_if(if_name, sizeof(if_name));
+    if (get_p2p_group_if(if_name, sizeof(if_name)) != 0) {
+        message = "Failed to get P2P Group Interface";
+        goto done;
+    }
 
     /* Open wpa_supplicant UDS socket */
     w = wpa_ctrl_open(get_wpas_ctrl_path());
