@@ -282,7 +282,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
     int i, enable_ac = 0, enable_11h = 0, enable_hs20 = 0;
     int enable_wps = 0, use_mbss = 0;
-    char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
+    char buffer[S_BUFFER_LEN], cfg_item[2*BUFFER_LEN];
     char band[64], value[16];
     char country[16];
     struct tlv_to_config_name* cfg = NULL;

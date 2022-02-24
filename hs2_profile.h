@@ -26,6 +26,37 @@ struct tlv_to_profile {
     int size;
 };
 
+#define ADVICE_OF_CHARGE_1 \
+"bc01000000d200454e475553443c3f786d6c2076657273696f6e3d22312e30222065" \
+"6e636f64696e673d225554462d38223f3e3c506c616e20786d6c6e733d22687474703a2f2f77" \
+"77772e77692d66692e6f72672f73706563696669636174696f6e732f686f7473706f7432646f" \
+"74302f76312e302f616f637069223e3c4465736372697074696f6e3e57692d46692061636365" \
+"737320666f72203120686f75722c207768696c6520796f752077616974206174207468652067" \
+"6174652c2024302e39393c2f4465736372697074696f6e3e3c2f506c616e3ee3004652414341" \
+"443c3f786d6c2076657273696f6e3d22312e302220656e636f64696e673d225554462d38223f" \
+"3e3c506c616e20786d6c6e733d22687474703a2f2f7777772e77692d66692e6f72672f737065" \
+"63696669636174696f6e732f686f7473706f7432646f74302f76312e302f616f637069223e3c" \
+"4465736372697074696f6e3e416363c3a8732057692d46692070656e64616e74203120686575" \
+"72652c2070656e64616e742071756520766f757320617474656e64657a20c3a0206c6120706f" \
+"7274652c20302c393920243c2f4465736372697074696f6e3e3c2f506c616e3ea101010000c7" \
+"00454e475553443c3f786d6c2076657273696f6e3d22312e302220656e636f64696e673d2255" \
+"54462d38223f3e3c506c616e20786d6c6e733d22687474703a2f2f7777772e77692d66692e6f" \
+"72672f73706563696669636174696f6e732f686f7473706f7432646f74302f76312e302f616f" \
+"637069223e3c4465736372697074696f6e3e446f776e6c6f616420766964656f7320666f7220" \
+"796f757220666c696768742c2024322e393920666f7220313047423c2f446573637269707469" \
+"6f6e3e3c2f506c616e3ed3004652414341443c3f786d6c2076657273696f6e3d22312e302220" \
+"656e636f64696e673d225554462d38223f3e3c506c616e20786d6c6e733d22687474703a2f2f" \
+"7777772e77692d66692e6f72672f73706563696669636174696f6e732f686f7473706f743264" \
+"6f74302f76312e302f616f637069223e3c4465736372697074696f6e3e54c3a96cc3a9636861" \
+"7267657a2064657320766964c3a96f7320706f757220766f74726520766f6c2c20322c393920" \
+"2420706f757220313020476f3c2f4465736372697074696f6e3e3c2f506c616e3ee40003002b" \
+"736572766963652d70726f76696465722e636f6d3b66656465726174696f6e2e6578616d706c" \
+"652e636f6db400454e475553443c3f786d6c2076657273696f6e3d22312e302220656e636f64" \
+"696e673d225554462d38223f3e3c506c616e20786d6c6e733d22687474703a2f2f7777772e77" \
+"692d66692e6f72672f73706563696669636174696f6e732f686f7473706f7432646f74302f76" \
+"312e302f616f637069223e3c4465736372697074696f6e3e46726565207769746820796f7572" \
+"20737562736372697074696f6e213c2f4465736372697074696f6e3e3c2f506c616e3e"
+
 const char * nai_realm[] = {
     "",
     "nai_realm=0,mail.example.com,21[2:4][5:7]\nnai_realm=0,cisco.com,21[2:4][5:7]\nnai_realm=0,wi-fi.org,13[5:6],21[2:4][5:7]\nnai_realm=0,example.com,13[5:6]\n",
@@ -96,7 +127,7 @@ const char * osu_providers_list[] = {
 
 const char * osu_providers_nai_list[] = {
     "",
-    "",
+    "osu_nai2=anonymous@hotspot.net\n",
     "",
     "",
     "",
@@ -111,18 +142,23 @@ const char * bss_load[] = {
 
 const char * venue_url[] = {
     "",
-    "venue_url=1:https://venue-server.r2m-testbed.wi-fi.org/floorplans/index.html\nvenue_url=2:https://venue-server.r2m-testbed.wi-fi.org/directory/index.html\n",
+    "venue_url=1:https://venue-server.r2m-testbed.wi-fi.org/floorplans/index.html\nvenue_url=1:https://venue-server.r2m-testbed.wi-fi.org/directory/index.html\n",
     "",
 };
 
 const char * operator_icon_metadata[] = {
     "",
-    "operator_icon=icon_red_eng\n",
+    "operator_icon=icon_red_eng.png\n",
+};
+
+const char * advice_of_charge[] = {
+    "",
+    "anqp_elem=278:" ADVICE_OF_CHARGE_1 "\n",
 };
 
 // <Icon Width>:<Icon Height>:<Language code>:<Icon Type>:<Name>:<file path>
 const char * hs20_icon[] = {
-    "hs20_icon=160:76:eng:image/png:icon_red_eng:/overlay/icon_red_eng.png\n",
+    "hs20_icon=160:76:eng:image/png:icon_red_eng.png:/overlay/icon_red_eng.png\n",
 };
 
 struct tlv_to_profile hs2_profile[] = {
@@ -139,6 +175,7 @@ struct tlv_to_profile hs2_profile[] = {
     { TLV_BSSLOAD_ENABLE, bss_load, ARRAY_SIZE(bss_load) },
     { TLV_OPERATOR_ICON_METADATA, operator_icon_metadata, ARRAY_SIZE(operator_icon_metadata) },
     { TLV_HS20_OPERATING_CLASS_INDICATION, operating_class_indication, ARRAY_SIZE(operating_class_indication) },
+    { TLV_ADVICE_OF_CHARGE, advice_of_charge, ARRAY_SIZE(advice_of_charge) },
 };
 
 struct tlv_to_profile* find_tlv_hs2_profile(int tlv_id) {
