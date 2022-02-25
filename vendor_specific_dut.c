@@ -380,6 +380,23 @@ void stop_dhcp_client()
     system("killall dhclient 1>/dev/null 2>/dev/null");
 }
 
+conf_method_map CM_map[13] = {
+    {0x0001, "usba"},
+    {0x0002, "ethernet"},
+    {0x0004, "label"},
+    {0x0008, "display"},
+    {0x0010, "ext_nfc_token"},
+    {0x0020, "int_nfc_token"},
+    {0x0040, "nfc_interface"},
+    {0x0080, "pushbutton"},
+    {0x0100, "keypad"},
+    {0x0200, "virtual_pushbutton"},
+    {0x0400, "physical_pushbutton"},
+    {0x2000, "virtual_display"},
+    {0x4000, "physical_display"},
+
+};
+
 wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
     {
         /*
@@ -395,7 +412,7 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
         * */
         { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
         { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_COMMON }, /* wps oob state */
-        { WPS_CONFIG, SUPPORTED_CONF_METHOD, WPS_COMMON }, /* config methods */
+        { WPS_CONFIG, "", WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
         { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
         { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
@@ -417,7 +434,7 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
         * */
         { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
         { WPS_OOB_STATE, WPS_OOB_CONFIGURED, WPS_COMMON }, /* wps oob state */
-        { WPS_CONFIG, SUPPORTED_CONF_METHOD, WPS_COMMON }, /* config methods */
+        { WPS_CONFIG, "", WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
         { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
         { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
@@ -428,7 +445,7 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
 };
 
 wps_setting wps_settings_sta[STA_SETTING_NUM] = {
-        { WPS_CONFIG, SUPPORTED_CONF_METHOD, WPS_COMMON }, /* config methods */
+        { WPS_CONFIG, "", WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Intel Wireless STA", WPS_COMMON }, /* device name  */
         { WPS_MANUFACTURER, "Intel.com", WPS_COMMON }, /* manufacturer */
         { WPS_MODEL_NAME, "Intel Wireless STA", WPS_COMMON }, /* model name */
