@@ -191,7 +191,7 @@ static void print_welcome() {
 /* Parse the commandline parameters */
 static int parse_parameters(int argc, char *argv[]) {
     int c, ifs_configured = 0, bridge_configured = 0;
-    char buf[128];
+    char buf[256];
 
 #ifdef _VERSION_
     while ((c = getopt(argc, argv, "a:b:s:i:hp:dcv")) != -1) {

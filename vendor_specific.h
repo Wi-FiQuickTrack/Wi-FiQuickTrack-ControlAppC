@@ -43,8 +43,8 @@
 #define WPAS_CONF_FILE_DEFAULT                      "/tmp/wpa_supplicant.conf"
 // 2(2.4G): first interface ath1, second interface ath11
 // 5(5G): first interface ath0, second interface ath01
-#define DEFAULT_APP_INTERFACES_PARAMS               "2:ath1,2:ath11,5:ath0,5:ath01"
-#define DEFAULT_APP_6E_INTERFACES_PARAMS            "6:ath0,6:ath01,5:ath1,5:ath11,2:ath2,2:ath21"
+#define DEFAULT_APP_INTERFACES_PARAMS               "2:ath1,2:ath11,2:ath12,2:ath13,5:ath0,5:ath01,5:ath02,5:ath03"
+#define DEFAULT_APP_6E_INTERFACES_PARAMS            "6:ath0,6:ath01,6:ath02,6:ath03,5:ath1,5:ath11,5:ath12,5:ath13,2:ath2,2:ath21,2:ath22,2:ath23"
 
 #else
 #define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"

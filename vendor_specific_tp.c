@@ -114,7 +114,6 @@ void interfaces_init() {
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
     int third_radio = 0;
-    
 
     third_radio = detect_third_radio();
     memset(buffer, 0, sizeof(buffer));
@@ -122,14 +121,26 @@ void interfaces_init() {
     system(buffer);
     sprintf(buffer, "iw phy phy1 interface add ath11 type managed >/dev/null 2>/dev/null");
     system(buffer);
+    sprintf(buffer, "iw phy phy1 interface add ath12 type managed >/dev/null 2>/dev/null");
+    system(buffer);
+    sprintf(buffer, "iw phy phy1 interface add ath13 type managed >/dev/null 2>/dev/null");
+    system(buffer);
     sprintf(buffer, "iw phy phy0 interface add ath0 type managed >/dev/null 2>/dev/null");
     system(buffer);
     sprintf(buffer, "iw phy phy0 interface add ath01 type managed >/dev/null 2>/dev/null");
+    system(buffer);
+    sprintf(buffer, "iw phy phy0 interface add ath02 type managed >/dev/null 2>/dev/null");
+    system(buffer);
+    sprintf(buffer, "iw phy phy0 interface add ath03 type managed >/dev/null 2>/dev/null");
     system(buffer);
     if (third_radio == 1) {
         sprintf(buffer, "iw phy phy2 interface add ath2 type managed >/dev/null 2>/dev/null");
         system(buffer);
         sprintf(buffer, "iw phy phy2 interface add ath21 type managed >/dev/null 2>/dev/null");
+        system(buffer);
+        sprintf(buffer, "iw phy phy2 interface add ath22 type managed >/dev/null 2>/dev/null");
+        system(buffer);
+        sprintf(buffer, "iw phy phy2 interface add ath23 type managed >/dev/null 2>/dev/null");
         system(buffer);
     }
 
@@ -143,6 +154,14 @@ void interfaces_init() {
     mac_addr[16] = (char)'1';
     set_mac_address("ath11", mac_addr);
 
+    control_interface("ath12", "down");
+    mac_addr[16] = (char)'2';
+    set_mac_address("ath12", mac_addr);
+
+    control_interface("ath13", "down");
+    mac_addr[16] = (char)'3';
+    set_mac_address("ath13", mac_addr);
+
     memset(mac_addr, 0, sizeof(mac_addr));
     get_mac_address(mac_addr, sizeof(mac_addr), "ath0");
     control_interface("ath0", "down");
@@ -152,6 +171,14 @@ void interfaces_init() {
     control_interface("ath01", "down");
     mac_addr[16] = (char)'1';
     set_mac_address("ath01", mac_addr);
+
+    control_interface("ath02", "down");
+    mac_addr[16] = (char)'2';
+    set_mac_address("ath02", mac_addr);
+
+    control_interface("ath03", "down");
+    mac_addr[16] = (char)'3';
+    set_mac_address("ath03", mac_addr);
 
     if (third_radio == 1) {
         memset(mac_addr, 0, sizeof(mac_addr));
@@ -163,6 +190,14 @@ void interfaces_init() {
         control_interface("ath21", "down");
         mac_addr[16] = (char)'9';
         set_mac_address("ath21", mac_addr);
+
+        control_interface("ath22", "down");
+        mac_addr[16] = (char)'A';
+        set_mac_address("ath22", mac_addr);
+
+        control_interface("ath23", "down");
+        mac_addr[16] = (char)'B';
+        set_mac_address("ath23", mac_addr);
     }
     sleep(1);
 #endif
