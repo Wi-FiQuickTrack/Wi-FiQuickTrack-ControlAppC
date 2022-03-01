@@ -51,7 +51,7 @@ int syslog_level = LOG_LEVEL_INFO;
 /* multiple VAPs */
 int interface_count = 0;
 int configured_interface_count = 0;
-struct interface_info interfaces[8];
+struct interface_info interfaces[16];
 int band_mbssid_cnt[16];
 struct interface_info* default_interface;
 static struct loopback_info loopback = {};
