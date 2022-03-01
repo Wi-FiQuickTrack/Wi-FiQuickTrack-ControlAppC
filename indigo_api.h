@@ -255,6 +255,7 @@ struct indigo_api {
 #define TLV_EAP_FRAG_SIZE                       0x00ce
 #define TLV_PERFORM_WPS_IE_FRAG                 0x00cf
 #define TLV_ADVICE_OF_CHARGE                    0x00d0
+#define TLV_WSC_CONFIG_METHOD                   0x00d1
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
