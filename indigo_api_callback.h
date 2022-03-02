@@ -269,6 +269,7 @@ static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrappe
 static int find_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int listen_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int add_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int stop_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_wps_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_intent_value_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);

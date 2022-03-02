@@ -328,6 +328,11 @@ int get_p2p_group_if(char *if_name, size_t size) {
     return error;
 }
 
+int get_p2p_dev_if(char *if_name, size_t size) {
+    snprintf(if_name, size, "p2p-dev-%s", get_wireless_interface());
+
+    return 0;
+}
 
 void start_dhcp_server(char *if_name, char *ip_addr)
 {

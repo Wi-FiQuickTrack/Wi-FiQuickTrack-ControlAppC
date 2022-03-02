@@ -76,6 +76,7 @@ struct indigo_api {
 #define API_STA_START_WPS                       0x2016
 #define API_STA_INSTALL_PPSMO                   0x2017
 #define API_P2P_INVITE                          0x2018
+#define API_P2P_STOP_GROUP                      0x2019
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -256,6 +257,7 @@ struct indigo_api {
 #define TLV_PERFORM_WPS_IE_FRAG                 0x00cf
 #define TLV_ADVICE_OF_CHARGE                    0x00d0
 #define TLV_WSC_CONFIG_METHOD                   0x00d1
+#define TLV_PERSISTENT                          0x00d2
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
