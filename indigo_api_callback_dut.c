@@ -80,6 +80,7 @@ void register_apis() {
     register_api(API_P2P_CONNECT, NULL, connect_p2p_handler);
     register_api(API_P2P_GET_INTENT_VALUE, NULL, get_intent_value_p2p_handler);
     register_api(API_P2P_INVITE, NULL, invite_p2p_handler);
+    register_api(API_P2P_STOP_GROUP, NULL, stop_group_p2p_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -2333,6 +2334,86 @@ done:
     return 0;
 }
 
+static int stop_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct wpa_ctrl *w = NULL;
+    char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
+    int persist = 0;
+    size_t resp_len;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_P2P_ADD_GROUP_NOT_OK;
+    struct tlv_hdr *tlv = NULL;
+    char if_name[32], p2p_dev_if[32];
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_PERSISTENT);
+    if (tlv) {
+        persist = 1;
+    }
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+
+    if (get_p2p_group_if(if_name, sizeof(if_name)) != 0) {
+        message = "Failed to get P2P Group Interface";
+        goto done;
+    }
+    memset(buffer, 0, sizeof(buffer));
+    memset(response, 0, sizeof(response));
+    sprintf(buffer, "P2P_GROUP_REMOVE %s", if_name);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    /* Check response */
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+    if (w) {
+        wpa_ctrl_close(w);
+        w = NULL;
+    }
+
+    if (persist == 1) {
+        get_p2p_dev_if(p2p_dev_if, sizeof(p2p_dev_if));
+        indigo_logger(LOG_LEVEL_DEBUG, "P2P Dev IF: %s", p2p_dev_if);
+        /* Open wpa_supplicant UDS socket */
+        w = wpa_ctrl_open(get_wpas_if_ctrl_path(p2p_dev_if));
+        if (!w) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+            status = TLV_VALUE_STATUS_NOT_OK;
+            message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+            goto done;
+        }
+
+        /* Clear the persistent group */
+        memset(buffer, 0, sizeof(buffer));
+        memset(response, 0, sizeof(response));
+        sprintf(buffer, "REMOVE_NETWORK 0");
+        resp_len = sizeof(response) - 1;
+        wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+        /* Check response */
+        if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+            goto done;
+        }
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+
 static int start_wps_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
@@ -2644,7 +2725,7 @@ static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_P2P_CONNECT_NOT_OK;
     struct tlv_hdr *tlv = NULL;
-    char go_intent[32], he[16];
+    char go_intent[32], he[16], persist[32];
     int intent_value = P2P_GO_INTENT;
 
     memset(buffer, 0, sizeof(buffer));
@@ -2652,6 +2733,7 @@ static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper
     memset(method, 0, sizeof(method));
     memset(type, 0, sizeof(type));
     memset(he, 0, sizeof(he));
+    memset(persist, 0, sizeof(persist));
     tlv = find_wrapper_tlv_by_id(req, TLV_ADDRESS);
     if (tlv) {
         memcpy(mac, tlv->value, tlv->len);
@@ -2682,6 +2764,10 @@ static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper
     if (tlv) {
             snprintf(he, sizeof(he), " he");
     }
+    tlv = find_wrapper_tlv_by_id(req, TLV_PERSISTENT);
+    if (tlv) {
+            snprintf(persist, sizeof(persist), " persistent");
+    }
     tlv = find_wrapper_tlv_by_id(req, TLV_PIN_CODE);
     if (tlv) {
         memset(pin_code, 0, sizeof(pin_code));
@@ -2692,7 +2778,7 @@ static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper
         } else {
             indigo_logger(LOG_LEVEL_ERROR, "Missed TLV PIN_METHOD???");
         }
-        sprintf(buffer, "P2P_CONNECT %s %s %s%s%s%s", mac, pin_code, method, type, go_intent, he);
+        sprintf(buffer, "P2P_CONNECT %s %s %s%s%s%s%s", mac, pin_code, method, type, go_intent, he, persist);
     } else {
         tlv = find_wrapper_tlv_by_id(req, TLV_WSC_METHOD);
         if (tlv) {
@@ -2700,7 +2786,7 @@ static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper
         } else {
             indigo_logger(LOG_LEVEL_ERROR, "Missed TLV WSC_METHOD");
         }
-        sprintf(buffer, "P2P_CONNECT %s %s%s%s%s", mac, method, type, go_intent, he);
+        sprintf(buffer, "P2P_CONNECT %s %s%s%s%s%s", mac, method, type, go_intent, he, persist);
     }
     indigo_logger(LOG_LEVEL_DEBUG, "Command: %s", buffer);
 
@@ -2795,7 +2881,8 @@ static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *
     if (tlv) {
         memcpy(role, tlv->value, tlv->len);
         if (atoi(role) == DUT_TYPE_P2PUT) {
-            get_p2p_group_if(if_name, sizeof(if_name));
+            if (!get_p2p_group_if(if_name, sizeof(if_name)))
+                reset_interface_ip(if_name);
         } else {
             indigo_logger(LOG_LEVEL_ERROR, "DHCP only supports in P2PUT");
             goto done;
@@ -2812,7 +2899,7 @@ static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *
     } else { /* DHCP Client */
         stop_dhcp_client();
     }
-    reset_interface_ip(if_name);
+
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
 
@@ -3129,7 +3216,7 @@ done:
 static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
-    char addr[32], if_name[16];
+    char addr[32], if_name[16], persist[32], p2p_dev_if[32];
     size_t resp_len;
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_P2P_INVITE_NOT_OK;
@@ -3146,13 +3233,20 @@ static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper 
         indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_ADDRESS");
         goto done;
     }
-    if (get_p2p_group_if(if_name, sizeof(if_name)) != 0) {
+
+    memset(persist, 0, sizeof(persist));
+    tlv = find_wrapper_tlv_by_id(req, TLV_PERSISTENT);
+    if (tlv) {
+            snprintf(persist, sizeof(persist), "persistent=0");
+    } else if (get_p2p_group_if(if_name, sizeof(if_name)) != 0) {
         message = "Failed to get P2P Group Interface";
         goto done;
     }
 
+    get_p2p_dev_if(p2p_dev_if, sizeof(p2p_dev_if));
+    indigo_logger(LOG_LEVEL_DEBUG, "P2P Dev IF: %s", p2p_dev_if);
     /* Open wpa_supplicant UDS socket */
-    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    w = wpa_ctrl_open(get_wpas_if_ctrl_path(p2p_dev_if));
     if (!w) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
         status = TLV_VALUE_STATUS_NOT_OK;
@@ -3162,7 +3256,11 @@ static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper 
 
     memset(buffer, 0, sizeof(buffer));
     memset(response, 0, sizeof(response));
-    sprintf(buffer, "P2P_INVITE group=%s peer=%s", if_name, addr);
+    if (persist[0] != 0)
+        sprintf(buffer, "P2P_INVITE %s peer=%s", persist, addr);
+    else
+        sprintf(buffer, "P2P_INVITE group=%s peer=%s", if_name, addr);
+    indigo_logger(LOG_LEVEL_DEBUG, "Command: %s", buffer);
     resp_len = sizeof(response) - 1;
     wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */

@@ -1816,7 +1816,8 @@ static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *
     if (tlv) {
         memcpy(role, tlv->value, tlv->len);
         if (atoi(role) == DUT_TYPE_P2PUT) {
-            get_p2p_group_if(if_name, sizeof(if_name));
+            if (get_p2p_group_if(if_name, sizeof(if_name)))
+                reset_interface_ip(if_name);
         } else {
         }
     } else {
@@ -1831,7 +1832,6 @@ static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *
     } else { /* DHCP Client */
         stop_dhcp_client();
     }
-    reset_interface_ip(if_name);
 
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
