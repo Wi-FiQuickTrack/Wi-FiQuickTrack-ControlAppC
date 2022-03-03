@@ -127,10 +127,13 @@ struct tlv_to_config_name maps[] = {
     { TLV_PAC_FILE, "pac_file", 1 },
     { TLV_STA_OWE_GROUP, "owe_group", 0 },
     { TLV_BSSID, "bssid", 0 },
-    { TLV_REALM, "realm", 0 },
-    { TLV_IMSI, "imsi", 0 },    
-    { TLV_MILENAGE, "milenage", 0 },
+    { TLV_REALM, "realm", 1 },
+    { TLV_IMSI, "imsi", 1 },    
+    { TLV_MILENAGE, "milenage", 1 },
     { TLV_BSSID_FILTER_LIST, "bssid_filter", 0 },
+    { TLV_USERNAME, "username", 1 },
+    { TLV_HOME_FQDN, "domain", 1 },
+    { TLV_PREFER, "priority", 0 },
 
     /* hapd + wpas */
     { TLV_EAP_FRAG_SIZE, "fragment_size", 0 },
@@ -256,9 +259,10 @@ static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet
 static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_hs2_associate_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int sta_add_credential_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_channel_width_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
