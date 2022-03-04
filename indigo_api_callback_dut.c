@@ -3018,11 +3018,9 @@ static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         #define WPS_PIN_VALIDATION_FILE "/tmp/pin_checksum.sh"
         int len = 0, is_valid = 0;
         char pipebuf[S_BUFFER_LEN];
-        FILE *fp = NULL;
         char *parameter[] = {"sh", WPS_PIN_VALIDATION_FILE, pin_code, NULL};
         memset(pipebuf, 0, sizeof(pipebuf));
-        fp = fopen(WPS_PIN_VALIDATION_FILE, "r");
-        if (fp) {
+        if (0 == access(WPS_PIN_VALIDATION_FILE, F_OK)) {
             len = pipe_command(pipebuf, sizeof(pipebuf), "/bin/sh", parameter);
             if (len && atoi(pipebuf)) {
                 indigo_logger(LOG_LEVEL_INFO, "Valid PIN Code: %s", pin_code);
