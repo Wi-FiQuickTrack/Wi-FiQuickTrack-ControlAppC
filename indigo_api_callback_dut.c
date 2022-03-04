@@ -32,6 +32,8 @@ static char pac_file_path[S_BUFFER_LEN] = {0};
 struct interface_info* band_transmitter[16];
 extern struct sockaddr_in *tool_addr;
 extern conf_method_map CM_map[13];
+int sta_configured = 0;
+int sta_started = 0;
 
 void register_apis() {
     /* Basic */
@@ -65,9 +67,10 @@ void register_apis() {
     register_api(API_STA_SET_PARAM, NULL, set_sta_parameter_handler);
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
-    register_api(API_STA_SCAN, NULL, send_sta_scan_handler);
+    register_api(API_STA_SCAN, NULL, sta_scan_handler);
     register_api(API_STA_START_WPS, NULL, start_wps_sta_handler);
     register_api(API_STA_HS2_ASSOCIATE, NULL, set_sta_hs2_associate_handler);
+    register_api(API_STA_ADD_CREDENTIAL, NULL, sta_add_credential_handler);
     register_api(API_STA_INSTALL_PPSMO, NULL, set_sta_install_ppsmo_handler);
     /* TODO: Add the handlers */
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
@@ -135,6 +138,8 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         if (strlen(log_level)) {
             set_wpas_debug_level(get_debug_level(atoi(log_level)));
         }
+        sta_configured = 0;
+        sta_started = 0;
     } else if (atoi(role) == DUT_TYPE_APUT) {
         /* stop the hostapd and release IP address */
         memset(buffer, 0, sizeof(buffer));
@@ -1589,6 +1594,8 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
     system(buffer);
     sleep(2);
+    sta_configured = 0;
+    sta_started = 0;
 
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
@@ -1802,6 +1809,7 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     memset(buffer, 0, sizeof(buffer));
     len = generate_wpas_config(buffer, sizeof(buffer), req);
     if (len) {
+        sta_configured = 1;
         write_file(get_wpas_conf_file(), buffer, len);
     }
 
@@ -2468,7 +2476,7 @@ done:
     return 0;
 }
 
-static int send_sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
     char *message = TLV_VALUE_WPA_S_SCAN_NOT_OK;
     char buffer[1024];
@@ -2593,6 +2601,107 @@ done:
     if (w) {
         wpa_ctrl_close(w);
     }
+    return 0;
+}
+
+static int sta_add_credential_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    char *message = TLV_VALUE_WPA_S_ADD_CRED_NOT_OK;
+    char buffer[BUFFER_LEN];
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i, cred_id, wpa_ret;
+    size_t resp_len;
+    char response[BUFFER_LEN];
+    char param_value[256];
+    struct tlv_hdr *tlv = NULL;
+    struct wpa_ctrl *w = NULL;
+    struct tlv_to_config_name* cfg = NULL;
+
+    if (sta_configured == 0) {
+        sta_configured = 1;
+#ifdef _OPENWRT_
+#else
+        system("rfkill unblock wlan");
+        sleep(1);
+#endif
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+        system(buffer);
+        sleep(3);
+
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
+        len = strlen(buffer);
+        if (len) {
+            write_file(get_wpas_conf_file(), buffer, len);
+        }
+    }
+    if (sta_started == 0) {
+        sta_started = 1;
+        /* Start WPA supplicant */
+        memset(buffer, 0 ,sizeof(buffer));
+        sprintf(buffer, "%s -B -t -c %s %s -i %s -f /var/log/supplicant.log", 
+            get_wpas_full_exec_path(),
+            get_wpas_conf_file(),
+            get_wpas_debug_arguments(),
+            get_wireless_interface());
+        len = system(buffer);
+        sleep(2);
+    }
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+    /* Assemble wpa_supplicant command */
+    memset(buffer, 0, sizeof(buffer));
+    snprintf(buffer, sizeof(buffer), "ADD_CRED");
+    resp_len = sizeof(response) - 1;
+    wpa_ret = wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    if (wpa_ret < 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command ADD_CRED. Response: %s", response);
+        goto done;
+    }
+    cred_id = atoi(response);
+
+    for (i = 0; i < req->tlv_num; i++) {
+        memset(param_value, 0, sizeof(param_value));
+        tlv = req->tlv[i];
+        cfg = find_tlv_config(tlv->id);
+        if (!cfg) {
+            continue;
+        }
+        memcpy(param_value, tlv->value, tlv->len);
+
+        /* Assemble wpa_supplicant command */
+        memset(buffer, 0, sizeof(buffer));
+        
+        if (cfg->quoted) {
+            snprintf(buffer, sizeof(buffer), "SET_CRED %d %s \"%s\"", cred_id, cfg->config_name, param_value);
+        } else {
+            snprintf(buffer, sizeof(buffer), "SET_CRED %d %s %s", cred_id, cfg->config_name, param_value);
+        }
+        indigo_logger(LOG_LEVEL_DEBUG, "Execute the command: %s", buffer);
+        /* Send command to wpa_supplicant UDS socket */
+        resp_len = sizeof(response) - 1;
+        wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+        /* Check response */
+        if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+            message = TLV_VALUE_WPA_SET_PARAMETER_NO_OK;
+            goto done;
+        }
+    }
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_WPA_S_ADD_CRED_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     return 0;
 }
 

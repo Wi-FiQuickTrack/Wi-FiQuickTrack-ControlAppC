@@ -129,6 +129,10 @@ struct indigo_api {
 #define APP_TYPE                                0x0021
 #define TLV_OP_CLASS                            0x0022
 #define TLV_IE_OVERRIDE                         0x0023
+#define TLV_HOME_FQDN                           0x0024
+#define TLV_USERNAME                            0x0025
+#define TLV_PREFER                              0x0026
+#define TLV_CREDENTIAL_TYPE                     0x0027
 #define TLV_ADDRESS                             0x0028
 #define TLV_DISABLE_PMKSA_CACHING               0x0033
 #define TLV_SAE_ANTI_CLOGGING_THRESHOLD         0x0034
@@ -318,6 +322,8 @@ struct indigo_api {
 
 #define TLV_VALUE_WPA_S_START_UP_OK             "wpa_supplicant is initialized successfully"
 #define TLV_VALUE_WPA_S_START_UP_NOT_OK         "The wpa_supplicant was unable to initialize."
+#define TLV_VALUE_WPA_S_ADD_CRED_OK             "Add credential to the STA successfully"
+#define TLV_VALUE_WPA_S_ADD_CRED_NOT_OK         "Failed to add credential to the STA."
 #define TLV_VALUE_WPA_S_STOP_NOT_OK             "Failed to stop wpa supplicant service."
 #define TLV_VALUE_WPA_S_STOP_OK                 "QuickTrack tool STA was successfully disconnected"
 #define TLV_VALUE_WPA_S_ASSOC_OK                "STA is up: WPA supplicant associated"
