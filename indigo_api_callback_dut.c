@@ -3120,6 +3120,27 @@ static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     if (tlv) {
         memset(pin_code, 0, sizeof(pin_code));
         memcpy(pin_code, tlv->value, tlv->len);
+
+        /* Please implement the wsc pin validation function to
+         * identify the invalid PIN code and DONOT start wps.
+         * */
+        #define WPS_PIN_VALIDATION_FILE "/tmp/pin_checksum.sh"
+        int len = 0, is_valid = 0;
+        char pipebuf[S_BUFFER_LEN];
+        char *parameter[] = {"sh", WPS_PIN_VALIDATION_FILE, pin_code, NULL};
+        memset(pipebuf, 0, sizeof(pipebuf));
+        if (0 == access(WPS_PIN_VALIDATION_FILE, F_OK)) {
+            len = pipe_command(pipebuf, sizeof(pipebuf), "/bin/sh", parameter);
+            if (len && atoi(pipebuf)) {
+                indigo_logger(LOG_LEVEL_INFO, "Valid PIN Code: %s", pin_code);
+            } else {
+                indigo_logger(LOG_LEVEL_INFO, "Invalid PIN Code: %s", pin_code);
+                goto done;
+            }
+        }
+        /*
+         * End of wsc pin validation function
+         * */
         sprintf(buffer, "WPS_PIN any %s", pin_code);
     } else {
         sprintf(buffer, "WPS_PBC");
