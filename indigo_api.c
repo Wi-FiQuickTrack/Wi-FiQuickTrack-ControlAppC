@@ -37,6 +37,7 @@ struct indigo_api indigo_api_list[] = {
     { API_AP_SEND_BTM_REQ, "API_AP_SEND_BTM_REQ", NULL, NULL },
     { API_AP_SEND_ARP_MSGS, "API_AP_SEND_ARP_MSGS", NULL, NULL },
     { API_AP_START_WPS, "AP_START_WPS", NULL, NULL },
+    { API_AP_CONFIGURE_WSC, "AP_CONFIGURE_WSC", NULL, NULL },
     /* Station specific */
     { API_STA_START_UP, "STA_START_UP", NULL, NULL },
     { API_STA_ASSOCIATE, "STA_ASSOCIATE", NULL, NULL },
@@ -253,6 +254,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_ADVICE_OF_CHARGE, "ADVICE_OF_CHARGE"},
     { TLV_WSC_CONFIG_METHOD, "WSC_CONFIG_METHOD"},
     { TLV_PERSISTENT, "PERSISTENT_GROUP" },
+    { TLV_WSC_CONFIG_ONLY, "WSC_CONFIG_ONLY" },
 };
 
 /* Find the type of the API stucture by the ID from the list */
