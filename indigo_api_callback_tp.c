@@ -131,9 +131,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     stop_loopback_data(NULL);
 
     if (reset == RESET_TYPE_INIT) {
-        /* reset interfaces info */
-        clear_interfaces_resource();
-
         len = unlink(get_hapd_conf_file());
         if (len) {
             indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
@@ -155,6 +152,11 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         system("uci -q delete wireless.@wifi-iface[1].own_ie_override");
 #endif
         memset(band_transmitter, 0, sizeof(band_transmitter));
+    }
+
+    if ((reset == RESET_TYPE_INIT) || (reset == RESET_TYPE_TEARDOWN) || (reset == RESET_TYPE_RECONFIGURE)) {
+        /* reset interfaces info */
+        clear_interfaces_resource();
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
