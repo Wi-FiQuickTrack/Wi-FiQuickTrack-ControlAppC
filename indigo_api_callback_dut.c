@@ -58,6 +58,7 @@ void register_apis() {
     register_api(API_AP_SET_PARAM , NULL, set_ap_parameter_handler);
     register_api(API_AP_SEND_BTM_REQ, NULL, send_ap_btm_handler);
     register_api(API_AP_START_WPS, NULL, start_wps_ap_handler);
+    register_api(API_AP_CONFIGURE_WSC, NULL, configure_ap_wsc_handler);
     /* STA */
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
@@ -885,6 +886,177 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'Configure and start wsc ap successfully. (Configure and start)'}
+static int configure_ap_wsc_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int len_1 = -1, len_2 = 0, len_3 = -1;
+    char buffer[L_BUFFER_LEN], ifname[S_BUFFER_LEN];
+    struct tlv_hdr *tlv;
+    char *message = NULL;
+    int bss_identifier = 0, band;
+    struct interface_info* wlan = NULL;
+    char bss_identifier_str[16], hw_mode_str[8];
+    struct bss_identifier_info bss_info;
+    char *parameter[] = {"pidof", get_hapd_exec_file(), NULL};
+    int swap_hostapd = 0;
+
+    /* Stop hostapd [Begin] */
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
+    system(buffer);
+    sleep(2);
+
+#ifdef _OPENWRT_
+#else
+    len_1 = system("rfkill unblock wlan");
+    if (len_1) {
+        indigo_logger(LOG_LEVEL_DEBUG, "Failed to run rfkill unblock wlan");
+    }
+    sleep(1);
+#endif
+
+    memset(buffer, 0, sizeof(buffer));
+    len_1 = pipe_command(buffer, sizeof(buffer), "/bin/pidof", parameter);
+    if (len_1) {
+        message = TLV_VALUE_HOSTAPD_STOP_NOT_OK;
+        goto done;
+    }
+    /* Stop hostapd [End] */
+
+    /* Generate hostapd configuration file [Begin] */
+    memset(buffer, 0, sizeof(buffer));
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_IDENTIFIER);
+    memset(ifname, 0, sizeof(ifname));
+    memset(&bss_info, 0, sizeof(bss_info));
+    if (tlv) {
+        /* Multiple wlans configure must carry TLV_BSS_IDENTIFIER */
+        memset(bss_identifier_str, 0, sizeof(bss_identifier_str));
+        memcpy(bss_identifier_str, tlv->value, tlv->len);
+        bss_identifier = atoi(bss_identifier_str);
+        parse_bss_identifier(bss_identifier, &bss_info);
+        wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
+        if (NULL == wlan) {
+            wlan = assign_wireless_interface_info(&bss_info);
+        }
+        if (wlan && bss_info.mbssid_enable) {
+            configure_ap_enable_mbssid();
+            if (bss_info.transmitter) {
+                band_transmitter[bss_info.band] = wlan;
+            }
+        }
+        printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n",
+               bss_identifier,
+               bss_info.band,
+               bss_info.mbssid_enable,
+               bss_info.transmitter,
+               bss_info.identifier
+               );
+    } else {
+        /* Single wlan case */
+        /* reset interfaces info */
+        clear_interfaces_resource();
+
+        tlv = find_wrapper_tlv_by_id(req, TLV_HW_MODE);
+        if (tlv)
+        {
+            memset(hw_mode_str, 0, sizeof(hw_mode_str));
+            memcpy(hw_mode_str, tlv->value, tlv->len);
+            if (find_wrapper_tlv_by_id(req, TLV_HE_6G_ONLY)) {
+                band = BAND_6GHZ;
+            } else if (!strncmp(hw_mode_str, "a", 1)) {
+                band = BAND_5GHZ;
+            } else {
+                band = BAND_24GHZ;
+            }
+            /* Single wlan use ID 1 */
+            bss_info.band = band;
+            bss_info.identifier = 1;
+            wlan = assign_wireless_interface_info(&bss_info);
+        }
+    }
+    if (wlan) {
+        printf("ifname %s hostapd conf file %s\n",
+               wlan ? wlan->ifname : "n/a",
+               wlan ? wlan->hapd_conf_file: "n/a"
+               );
+        len_2 = generate_hostapd_config(buffer, sizeof(buffer), req, wlan);
+        if (len_2)
+        {
+#if HOSTAPD_SUPPORT_MBSSID
+            if (bss_info.mbssid_enable && !bss_info.transmitter) {
+                if (band_transmitter[bss_info.band]) {
+                    append_file(band_transmitter[bss_info.band]->hapd_conf_file, buffer, len_2);
+                }
+                memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
+            }
+            else
+#endif
+                write_file(wlan->hapd_conf_file, buffer, len_2);
+        } else {
+            message = "Failed to generate hostapd configuration file.";
+            goto done;
+        }
+    }
+    show_wireless_interface_info();
+    /* Generate hostapd configuration file [End] */
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_WSC_CONFIG_ONLY);
+    if (tlv) {
+        /* Configure only (without starting hostapd) */
+        message = "Configure wsc ap successfully. (Configure only)";
+        goto done;
+    }
+
+    /* Start hostapd [Begin] */
+#ifdef _WTS_OPENWRT_
+    openwrt_apply_radio_config();
+    // DFS wait again if set wlan params after hostapd starts
+    iterate_all_wlan_interfaces(start_ap_set_wlan_params);
+#endif
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "%s -B -t -P /var/run/hostapd.pid -g %s %s -f /var/log/hostapd.log %s",
+        get_hapd_full_exec_path(),
+        get_hapd_global_ctrl_path(),
+        get_hostapd_debug_arguments(),
+        get_all_hapd_conf_files(&swap_hostapd));
+    len_3 = system(buffer);
+    sleep(1);
+
+    /* Bring up VAPs with MBSSID disable using WFA hostapd */
+    if (swap_hostapd) {
+#ifdef HOSTAPD_SUPPORT_MBSSID_WAR
+        indigo_logger(LOG_LEVEL_INFO, "Use WFA hostapd for MBSSID disable VAPs with RNR");
+        system("cp /overlay/hostapd /usr/sbin/hostapd");
+        use_openwrt_wpad = 0;
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "%s -B -t -P /var/run/hostapd_1.pid %s -f /var/log/hostapd_1.log %s",
+                get_hapd_full_exec_path(),
+                get_hostapd_debug_arguments(),
+                get_all_hapd_conf_files(&swap_hostapd));
+        len_3 = system(buffer);
+        sleep(1);
+#endif
+    }
+
+#ifndef _WTS_OPENWRT_
+    iterate_all_wlan_interfaces(start_ap_set_wlan_params);
+#endif
+
+    bridge_init(get_wlans_bridge());
+    if (len_3 == 0)
+        message = "Confiugre and start wsc ap successfully. (Configure and start)";
+    else
+        message = "Failed to start hostapd.";
+    /* Start hostapd [End] */
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, (len_1 == 0 || len_2 > 0 || len_3 == 0) ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
 
     return 0;

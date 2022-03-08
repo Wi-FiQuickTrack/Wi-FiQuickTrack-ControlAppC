@@ -50,6 +50,7 @@ struct indigo_api {
 #define API_AP_SEND_BTM_REQ                     0x1006
 #define API_AP_SEND_ARP_MSGS                    0x1007
 #define API_AP_START_WPS                        0x1008
+#define API_AP_CONFIGURE_WSC                    0x1009
 
 #define API_STA_ASSOCIATE                       0x2000
 #define API_STA_CONFIGURE                       0x2001
@@ -262,6 +263,7 @@ struct indigo_api {
 #define TLV_ADVICE_OF_CHARGE                    0x00d0
 #define TLV_WSC_CONFIG_METHOD                   0x00d1
 #define TLV_PERSISTENT                          0x00d2
+#define TLV_WSC_CONFIG_ONLY                     0x00d3
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
