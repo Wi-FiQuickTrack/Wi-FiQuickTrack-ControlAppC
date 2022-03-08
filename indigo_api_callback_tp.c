@@ -166,7 +166,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         memset(band_transmitter, 0, sizeof(band_transmitter));
     }
 
-    if ((reset == RESET_TYPE_INIT) || (reset == RESET_TYPE_TEARDOWN) || (reset == RESET_TYPE_RECONFIGURE)) {
+    if (reset != RESET_TYPE_KEEP_CONFIG) {
         /* reset interfaces info */
         clear_interfaces_resource();
     }
