@@ -261,7 +261,6 @@ struct indigo_api {
 #define TLV_EAP_FRAG_SIZE                       0x00ce
 #define TLV_PERFORM_WPS_IE_FRAG                 0x00cf
 #define TLV_ADVICE_OF_CHARGE                    0x00d0
-#define TLV_WSC_CONFIG_METHOD                   0x00d1
 #define TLV_PERSISTENT                          0x00d2
 #define TLV_WSC_CONFIG_ONLY                     0x00d3
 
@@ -354,6 +353,7 @@ struct indigo_api {
 #define TLV_VALUE_HS2_INSTALL_PPSMO_NOT_OK      "Failed to install PPSMO file"
 
 #define TLV_VALUE_AP_START_WPS_NOT_OK           "Failed to start WPS on AP interface"
+#define TLV_VALUE_AP_WSC_PIN_CODE_NOT_OK        "AP detects invalid PIN code"
 
 #define RESET_TYPE_INIT                         0x01
 #define RESET_TYPE_TEARDOWN                     0x02

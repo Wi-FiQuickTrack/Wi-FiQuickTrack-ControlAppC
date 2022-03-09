@@ -385,23 +385,6 @@ void stop_dhcp_client()
     system("killall dhclient 1>/dev/null 2>/dev/null");
 }
 
-conf_method_map CM_map[13] = {
-    {0x0001, "usba"},
-    {0x0002, "ethernet"},
-    {0x0004, "label"},
-    {0x0008, "display"},
-    {0x0010, "ext_nfc_token"},
-    {0x0020, "int_nfc_token"},
-    {0x0040, "nfc_interface"},
-    {0x0080, "pushbutton"},
-    {0x0100, "keypad"},
-    {0x0200, "virtual_pushbutton"},
-    {0x0400, "physical_pushbutton"},
-    {0x2000, "virtual_display"},
-    {0x4000, "physical_display"},
-
-};
-
 wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
     {
         /*
@@ -412,12 +395,12 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
         { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
         { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
         { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_OOB_ONLY }, /* wps oob state */
         /*
         * General
         * */
         { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
-        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_COMMON }, /* wps oob state */
-        { WPS_CONFIG, "", WPS_COMMON }, /* config methods */
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD_AP, WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
         { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
         { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
@@ -434,12 +417,12 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
         { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
         { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
         { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        { WPS_OOB_STATE, WPS_OOB_CONFIGURED, WPS_OOB_ONLY }, /* wps oob state */
         /*
         * General
         * */
         { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
-        { WPS_OOB_STATE, WPS_OOB_CONFIGURED, WPS_COMMON }, /* wps oob state */
-        { WPS_CONFIG, "", WPS_COMMON }, /* config methods */
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD_AP, WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
         { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
         { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
@@ -450,17 +433,100 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
 };
 
 wps_setting wps_settings_sta[STA_SETTING_NUM] = {
-        { WPS_CONFIG, "", WPS_COMMON }, /* config methods */
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD_STA, WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Intel Wireless STA", WPS_COMMON }, /* device name  */
         { WPS_MANUFACTURER, "Intel.com", WPS_COMMON }, /* manufacturer */
         { WPS_MODEL_NAME, "Intel Wireless STA", WPS_COMMON }, /* model name */
         { WPS_MODEL_NUMBER, "Intel Wireless STA-001", WPS_COMMON }, /* model number */
 };
 
+wps_setting *p_wps_setting = NULL;
+wps_setting customized_wps_settings_ap[AP_SETTING_NUM];
+wps_setting customized_wps_settings_sta[STA_SETTING_NUM];
+
+void save_wsc_setting(wps_setting *s, char *entry, int len)
+{
+    char *p = NULL;
+
+    p = strchr(entry, '\n');
+    if (p)
+        p++;
+    else
+        p = entry;
+
+    sscanf(p, "%[^:]:%[^:]:%s", s->wkey, s->value, s->attr);
+}
+
+wps_setting* __get_wps_setting(int len, char *buffer, enum wps_device_role role)
+{
+    char *token = strtok(buffer , ",");
+    wps_setting *s = NULL;
+    int i = 0;
+
+    if (role == WPS_AP) {
+        memset(customized_wps_settings_ap, 0, sizeof(customized_wps_settings_ap));
+        p_wps_setting = customized_wps_settings_ap;
+        while (token != NULL) {
+            s = &p_wps_setting[i++];
+            save_wsc_setting(s, token, strlen(token));
+            token = strtok(NULL, ",");
+        }
+    } else {
+        memset(customized_wps_settings_sta, 0, sizeof(customized_wps_settings_sta));
+        p_wps_setting = customized_wps_settings_sta;
+        while (token != NULL) {
+            s = &p_wps_setting[i++];
+            save_wsc_setting(s, token, strlen(token));
+            token = strtok(NULL, ",");
+        }
+    }
+    return p_wps_setting;
+}
+
 wps_setting* get_vendor_wps_settings(enum wps_device_role role)
 {
-    if (role == WPS_AP)
-        return wps_settings_ap[0];
-    else
-        return wps_settings_sta;
+    /*
+     * Please implement the function to get wps OOB and required settings as per vendor's direction.
+     * */
+#define WSC_SETTINGS_FILE_AP "/tmp/wsc_settings_APUT"
+#define WSC_SETTINGS_FILE_STA "/tmp/wsc_settings_STAUT"
+    int len = 0, is_valid = 0;
+    char pipebuf[S_BUFFER_LEN];
+    char *parameter_ap[] = {"cat", WSC_SETTINGS_FILE_AP, NULL, NULL};
+    char *parameter_sta[] = {"cat", WSC_SETTINGS_FILE_STA, NULL, NULL};
+
+    memset(pipebuf, 0, sizeof(pipebuf));
+    if (role == WPS_AP) {
+        if (0 == access(WSC_SETTINGS_FILE_AP, F_OK)) {
+            // use customized ap wsc settings
+#ifdef _OPENWRT_
+            len = pipe_command(pipebuf, sizeof(pipebuf), "/bin/cat", parameter_ap);
+#else
+            len = pipe_command(pipebuf, sizeof(pipebuf), "/usr/bin/cat", parameter_ap);
+#endif
+            if (len) {
+                indigo_logger(LOG_LEVEL_INFO, "wsc settings APUT:\n %s", pipebuf);
+                return __get_wps_setting(len, pipebuf, WPS_AP);
+            } else {
+                indigo_logger(LOG_LEVEL_INFO, "wsc settings APUT: no data");
+            }
+        } else {
+            // use default
+            return wps_settings_ap[0];
+        }
+    } else {
+        if (0 == access(WSC_SETTINGS_FILE_STA, F_OK)) {
+            // use customized sta wsc settings
+            len = pipe_command(pipebuf, sizeof(pipebuf), "/usr/bin/cat", parameter_sta);
+            if (len) {
+                indigo_logger(LOG_LEVEL_INFO, "wsc settings STAUT:\n %s", pipebuf);
+                return __get_wps_setting(len, pipebuf, WPS_STA);
+            } else {
+                indigo_logger(LOG_LEVEL_INFO, "wsc settings STAUT: no data");
+            }
+        } else {
+            // use default
+            return wps_settings_sta;
+        }
+    }
 }
