@@ -368,21 +368,18 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                 /* NOT use OOB: Configure manually. */
                 for (j = 0; j < AP_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
-                    if (s[j].attr & WPS_COMMON) {
-                        if (strlen(s[j].wkey) == strlen(WPS_OOB_STATE) &&
-                            !(memcmp(s[j].wkey, WPS_OOB_STATE, strlen(WPS_OOB_STATE)))) {
-                            if (atoi(s[j].value) == atoi(WPS_OOB_NOT_CONFIGURED)) {
-                                /* Change wps oob state to Configured. */
-                                sprintf(cfg_item, "%s=%s\n", s[j].wkey, WPS_OOB_CONFIGURED);
-                            } else {
-                                indigo_logger(LOG_LEVEL_ERROR, "DUT OOB state Mismatch: 0x%s", s[j].value);
-                                continue;
-                            }
-                        } else {
-                            sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                    /* set wps state */
+                    if (atoi(s[j].attr) == atoi(WPS_OOB_ONLY)) {
+                        if (!(memcmp(s[j].wkey, WPS_OOB_STATE, strlen(WPS_OOB_STATE)))) {
+                            /* set wps state to Configured compulsorily */
+                            sprintf(cfg_item, "%s=%s\n", s[j].wkey, WPS_OOB_CONFIGURED);
                         }
-                        strcat(output, cfg_item);
                     }
+                    /* set wps common settings */
+                    if (atoi(s[j].attr) ==  atoi(WPS_COMMON)) {
+                        sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                    }
+                    strcat(output, cfg_item);
                 }
             }
         }

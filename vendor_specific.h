@@ -118,10 +118,8 @@ void vendor_device_reset();
 #define SUPPORTED_CONF_METHOD_AP "label keypad push_button virtual_push_button display virtual_display"
 #define SUPPORTED_CONF_METHOD_STA "keypad push_button virtual_push_button display virtual_display"
 
-enum param_attr {
-    WPS_COMMON = 0x0001,
-    WPS_OOB_ONLY = 0x0010
-};
+#define WPS_OOB_ONLY "1"
+#define WPS_COMMON "2"
 
 enum wps_device_role {
     WPS_AP,
@@ -134,15 +132,10 @@ enum wps_device_role {
 
 typedef struct _wps_setting {
     /* key-value for each setting pair */
-    char *wkey;
-    char *value;
-    enum param_attr attr;
+    char wkey[64];
+    char value[512];
+    char attr[64];
 } wps_setting;
-
-typedef struct _conf_method_map {
-    unsigned int attr_bit;
-    char *name;
-} conf_method_map;
 
 #ifdef _TEST_PLATFORM_
 

@@ -31,7 +31,6 @@
 static char pac_file_path[S_BUFFER_LEN] = {0};
 struct interface_info* band_transmitter[16];
 extern struct sockaddr_in *tool_addr;
-extern conf_method_map CM_map[13];
 int sta_configured = 0;
 int sta_started = 0;
 
@@ -388,14 +387,17 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_WSC_OOB) {
             int j;
 
+            /* To get AP wps vendor info */
+            wps_setting *s = get_vendor_wps_settings(WPS_AP);
+            if (!s) {
+                indigo_logger(LOG_LEVEL_WARNING, "Failed to get AP wps settings");
+                continue;
+            }
             enable_wps = 1;
             memcpy(buffer, tlv->value, tlv->len);
-            wps_setting *s = get_vendor_wps_settings(WPS_AP);
             if (atoi(buffer)) {
                 /* Use OOB */
                 for (j = 0; j < AP_SETTING_NUM; j++) {
-                    if (0 == strlen(s[j].value))
-                        continue;
                     memset(cfg_item, 0, sizeof(cfg_item));
                     sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
                     strcat(output, cfg_item);
@@ -403,45 +405,20 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             } else {
                 /* NOT use OOB: Configure manually. */
                 for (j = 0; j < AP_SETTING_NUM; j++) {
-                    if (0 == strlen(s[j].value))
-                        continue;
                     memset(cfg_item, 0, sizeof(cfg_item));
-                    if (s[j].attr & WPS_COMMON) {
-                        if (strlen(s[j].wkey) == strlen(WPS_OOB_STATE) &&
-                            !(memcmp(s[j].wkey, WPS_OOB_STATE, strlen(WPS_OOB_STATE)))) {
-                            if (atoi(s[j].value) == atoi(WPS_OOB_NOT_CONFIGURED)) {
-                                /* Change wps oob state to Configured. */
-                                sprintf(cfg_item, "%s=%s\n", s[j].wkey, WPS_OOB_CONFIGURED);
-                            } else {
-                                indigo_logger(LOG_LEVEL_ERROR, "DUT OOB state Mismatch: 0x%s", s[j].value);
-                                continue;
-                            }
-                        } else {
-                            sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                    /* set wps state */
+                    if (atoi(s[j].attr) == atoi(WPS_OOB_ONLY)) {
+                        if (!(memcmp(s[j].wkey, WPS_OOB_STATE, strlen(WPS_OOB_STATE)))) {
+                            /* set wps state to Configured compulsorily */
+                            sprintf(cfg_item, "%s=%s\n", s[j].wkey, WPS_OOB_CONFIGURED);
                         }
-                        strcat(output, cfg_item);
                     }
+                    /* set wps common settings */
+                    if (atoi(s[j].attr) == atoi(WPS_COMMON)) {
+                        sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
+                    }
+                    strcat(output, cfg_item);
                 }
-            }
-        }
-
-        /* wsc config methods */
-        if (tlv->id == TLV_WSC_CONFIG_METHOD) {
-            int k, len = 0, conf_methods;
-            int count = sizeof(CM_map)/sizeof(CM_map[0]);
-
-            memcpy(buffer, tlv->value, tlv->len);
-            conf_methods = atoi(buffer);
-            memset(buffer, 0, sizeof(buffer));
-            indigo_logger(LOG_LEVEL_DEBUG, "APUT config methods: 0x%04X", conf_methods);
-            for (k = 0; k < count; k++) {
-                if (conf_methods & CM_map[k].attr_bit)
-                  len += snprintf(buffer + len, sizeof(buffer) - len, "%s ", CM_map[k].name);
-            }
-            indigo_logger(LOG_LEVEL_DEBUG, "APUT config methods: %s, len=%d", buffer, len);
-            if (len) {
-                sprintf(cfg_item, "config_methods=%s\n", buffer);
-                strcat(output, cfg_item);
             }
         }
 
@@ -1854,26 +1831,6 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
         }
     }
 
-    /* wsc config methods */
-    tlv = find_wrapper_tlv_by_id(wrapper, TLV_WSC_CONFIG_METHOD);
-    if (tlv) {
-        count = sizeof(CM_map)/sizeof(CM_map[0]);
-        memset(value, 0, sizeof(value));
-        memcpy(value, tlv->value, tlv->len);
-        conf_methods = atoi(value);
-        memset(buf, 0, sizeof(buf));
-        indigo_logger(LOG_LEVEL_DEBUG, "STAUT config methods: 0x%04X", conf_methods);
-        for (i = 0; i < count; i++) {
-            if (conf_methods & CM_map[i].attr_bit)
-                len += snprintf(buf + len, sizeof(buf) - len, "%s ", CM_map[i].name);
-        }
-        indigo_logger(LOG_LEVEL_DEBUG, "STAUT config methods: %s, len=%d", buf, len);
-        if (len) {
-            sprintf(cfg_item, "config_methods=%s\n", buf);
-            strcat(buffer, cfg_item);
-        }
-    }
-
     /* wps settings */
     tlv = find_wrapper_tlv_by_id(wrapper, TLV_WSC_OOB);
     if (tlv) {
@@ -1881,10 +1838,10 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
         memcpy(value, tlv->value, tlv->len);
         /* To get STA wps vendor info */
         wps_setting *s = get_vendor_wps_settings(WPS_STA);
-        if (atoi(value)) {
+        if (!s) {
+            indigo_logger(LOG_LEVEL_WARNING, "Failed to get STA wps settings");
+        } else if (atoi(value)) {
             for (i = 0; i < STA_SETTING_NUM; i++) {
-                if (0 == strlen(s[i].value))
-                    continue;
                 memset(cfg_item, 0, sizeof(cfg_item));
                 sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
                 strcat(buffer, cfg_item);
@@ -3307,6 +3264,7 @@ static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                 indigo_logger(LOG_LEVEL_INFO, "Valid PIN Code: %s", pin_code);
             } else {
                 indigo_logger(LOG_LEVEL_INFO, "Invalid PIN Code: %s", pin_code);
+                message = TLV_VALUE_AP_WSC_PIN_CODE_NOT_OK;
                 goto done;
             }
         }
