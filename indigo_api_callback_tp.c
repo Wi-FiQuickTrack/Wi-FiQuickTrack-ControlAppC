@@ -75,6 +75,18 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     return 0;
 }
 
+/*
+ * void (*callback_fn)(void *), callback of active wlans iterator
+ */
+void upload_wlan_hapd_conf(void *if_info) {
+    struct interface_info *wlan = (struct interface_info *) if_info;
+
+    if (tool_addr != NULL) {
+        http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, wlan->hapd_conf_file);
+        sleep(1);
+    }
+}
+
 // RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
@@ -117,7 +129,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     if (reset == RESET_TYPE_TEARDOWN) {
         /* Send hostapd conf and log to Tool */
         if (tool_addr != NULL) {
-            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, get_hapd_conf_file());
+            iterate_all_wlan_interfaces(upload_wlan_hapd_conf);
             sleep(1);
             http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, HAPD_LOG_FILE);
         } else {
@@ -154,7 +166,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         memset(band_transmitter, 0, sizeof(band_transmitter));
     }
 
-    if ((reset == RESET_TYPE_INIT) || (reset == RESET_TYPE_TEARDOWN) || (reset == RESET_TYPE_RECONFIGURE)) {
+    if (reset != RESET_TYPE_KEEP_CONFIG) {
         /* reset interfaces info */
         clear_interfaces_resource();
     }
