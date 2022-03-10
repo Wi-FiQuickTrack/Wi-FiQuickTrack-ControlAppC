@@ -274,4 +274,5 @@ static int start_wps_p2p_handler(struct packet_wrapper *req, struct packet_wrapp
 static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_intent_value_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_serv_disc_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif // __INDIGO_API_CALLBACK
