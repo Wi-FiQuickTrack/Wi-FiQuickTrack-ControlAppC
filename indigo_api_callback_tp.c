@@ -104,6 +104,32 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         reset = atoi(reset_type);
         indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
     }
+
+    if (reset == RESET_TYPE_INIT) {
+        open_tc_app_log();
+        len = unlink(get_hapd_conf_file());
+        if (len) {
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
+        }
+
+        /* clean the log */
+        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", HAPD_LOG_FILE);
+        system(buffer);
+        memset(buffer, 0, sizeof(buffer));
+#ifdef _WTS_OPENWRT_
+        /* Reset uci configurations */
+        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
+        system(buffer);
+
+        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
+        system(buffer);
+
+        system("uci -q delete wireless.@wifi-iface[0].own_ie_override");
+        system("uci -q delete wireless.@wifi-iface[1].own_ie_override");
+#endif
+        memset(band_transmitter, 0, sizeof(band_transmitter));
+    }
+
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
     system(buffer);
@@ -138,39 +164,17 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
         reset_bridge(get_wlans_bridge());
         reset_interface_ip(get_wireless_interface());
-        close_tc_app_log();
     }
 
     stop_loopback_data(NULL);
 
-    if (reset == RESET_TYPE_INIT) {
-        open_tc_app_log();
-        len = unlink(get_hapd_conf_file());
-        if (len) {
-            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
-        }
-
-        /* clean the log */
-        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", HAPD_LOG_FILE);
-        system(buffer);
-        memset(buffer, 0, sizeof(buffer));
-#ifdef _WTS_OPENWRT_
-        /* Reset uci configurations */
-        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
-        system(buffer);
-
-        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
-        system(buffer);
-
-        system("uci -q delete wireless.@wifi-iface[0].own_ie_override");
-        system("uci -q delete wireless.@wifi-iface[1].own_ie_override");
-#endif
-        memset(band_transmitter, 0, sizeof(band_transmitter));
-    }
 
     if (reset != RESET_TYPE_KEEP_CONFIG) {
         /* reset interfaces info */
         clear_interfaces_resource();
+    }
+    if (reset == RESET_TYPE_TEARDOWN) {
+        close_tc_app_log();
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -1098,6 +1102,17 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         reset = atoi(reset_type);
         indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
     }
+    if (reset == RESET_TYPE_INIT) {
+        open_tc_app_log();
+        len = unlink(get_wpas_conf_file());
+        if (len) {
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
+        }
+
+        /* clean the log */
+        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", WPAS_LOG_FILE);
+        system(buffer);
+    }
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
@@ -1128,20 +1143,8 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
             set_channel_width();
         }
         reconf_count = 0;
-        close_tc_app_log();
     }
 
-    if (reset == RESET_TYPE_INIT) {
-        open_tc_app_log();
-        len = unlink(get_wpas_conf_file());
-        if (len) {
-            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
-        }
-
-        /* clean the log */
-        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", WPAS_LOG_FILE);
-        system(buffer);
-    }
 
     if (reset == RESET_TYPE_RECONFIGURE) {
         reconf_count++;
@@ -1188,6 +1191,10 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         message = TLV_VALUE_WPA_S_STOP_NOT_OK;
     } else {
         message = TLV_VALUE_WPA_S_STOP_OK;
+    }
+
+    if (reset == RESET_TYPE_TEARDOWN) {
+        close_tc_app_log();
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
