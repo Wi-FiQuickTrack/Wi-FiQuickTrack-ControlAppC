@@ -66,6 +66,7 @@ struct indigo_api indigo_api_list[] = {
     { API_P2P_INVITE, "P2P_INVITE", NULL, NULL },
     { API_P2P_STOP_GROUP, "P2P_STOP_GROUP", NULL, NULL },
     { API_P2P_SET_SERV_DISC, "P2P_SET_SERV_DISC", NULL, NULL },
+    { API_STA_SEND_ICON_REQ, "STA_SEND_ICON_REQ", NULL, NULL },
     /* Network operation. E.g., get/set IP address, get MAC address, send the UDP data and reset */
     { API_GET_IP_ADDR, "GET_IP_ADDR", NULL, NULL },
     { API_GET_MAC_ADDR, "GET_MAC_ADDR", NULL, NULL },
@@ -255,6 +256,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_ADVICE_OF_CHARGE, "ADVICE_OF_CHARGE"},
     { TLV_PERSISTENT, "PERSISTENT_GROUP" },
     { TLV_WSC_CONFIG_ONLY, "WSC_CONFIG_ONLY" },
+    { TLV_ICON_FILE, "ICON_FILE" },
 };
 
 /* Find the type of the API stucture by the ID from the list */

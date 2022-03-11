@@ -50,6 +50,7 @@ void register_apis() {
     register_api(API_START_DHCP, NULL, start_dhcp_handler);
     register_api(API_STOP_DHCP, NULL, stop_dhcp_handler);
     register_api(API_GET_WSC_CRED, NULL, get_wsc_cred_handler);
+    register_api(API_STA_SEND_ICON_REQ, NULL, send_sta_icon_req_handler);
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
@@ -1955,6 +1956,107 @@ done:
         for (i = 0; i < count; i++) {
             fill_wrapper_tlv_bytes(resp, p_cfg[i].tid, strlen(p_cfg[i].val), p_cfg[i].val);
         }
+    }
+    return 0;
+}
+
+
+static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    char *message = TLV_VALUE_NOT_OK;
+    char buffer[1024];
+    char response[1024];
+    char bssid[256];
+    char icon_file[256], icon_checksum[64];
+    struct tlv_hdr *tlv = NULL;
+    struct wpa_ctrl *w = NULL;
+    size_t resp_len;
+    FILE *fp;
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+
+    /* TLV: BSSID */
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
+    if (tlv) {
+        memset(bssid, 0, sizeof(bssid));
+        memcpy(bssid, tlv->value, tlv->len);
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "missing BSSID configuration");
+        goto done;
+    }
+
+    /* TLV: ICON_FILE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_ICON_FILE);
+    if (tlv) {
+        memset(icon_file, 0, sizeof(icon_file));
+        memcpy(icon_file, tlv->value, tlv->len);
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "missing icon_file configuration");
+        goto done;
+    }
+
+    memset(buffer, 0, sizeof(buffer));
+    memset(response, 0, sizeof(response));
+
+    /* remove previous downloaded temp icon file */
+    snprintf(buffer, sizeof(buffer), "rm /tmp/osu-icon-*");
+    system(buffer);
+
+    /* set the default icon downloaded folder */
+    snprintf(buffer, sizeof(buffer), "SET osu_dir /tmp");
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+
+    indigo_logger(LOG_LEVEL_DEBUG, "%s -> resp: %s\n", buffer, response);
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+
+    /* send icon request */
+    snprintf(buffer, sizeof(buffer), "HS20_ICON_REQUEST %s %s", bssid, icon_file);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+
+    indigo_logger(LOG_LEVEL_DEBUG, "%s -> resp: %s\n", buffer, response);
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+
+    sleep(5);
+
+    /* calculate checksum of the downloaded icon file */
+    sprintf(buffer, "md5sum /tmp/osu-icon-1.png");
+    indigo_logger(LOG_LEVEL_DEBUG, "cmd: %s", buffer);
+
+    fp = popen(buffer, "r");
+    if (fp == NULL)
+        goto done;
+
+    fscanf(fp, "%s %*s", (char *)&icon_checksum);
+    pclose(fp);
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (status == TLV_VALUE_STATUS_OK) {
+        fill_wrapper_tlv_bytes(resp, TLV_PASSPOINT_ICON_CHECKSUM, strlen(icon_checksum), icon_checksum);
+    }
+
+    if (w) {
+        wpa_ctrl_close(w);
     }
     return 0;
 }
