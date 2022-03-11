@@ -84,6 +84,7 @@ void register_apis() {
     register_api(API_P2P_GET_INTENT_VALUE, NULL, get_intent_value_p2p_handler);
     register_api(API_P2P_INVITE, NULL, invite_p2p_handler);
     register_api(API_P2P_STOP_GROUP, NULL, stop_group_p2p_handler);
+    register_api(API_P2P_SET_SERV_DISC, NULL, set_serv_disc_p2p_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -3527,6 +3528,72 @@ static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper 
     if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
         goto done;
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+
+static int set_serv_disc_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct wpa_ctrl *w = NULL;
+    char buffer[BUFFER_LEN], response[BUFFER_LEN];
+    char addr[32], p2p_dev_if[32];
+    size_t resp_len;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_P2P_SET_SERV_DISC_NOT_OK;
+    struct tlv_hdr *tlv = NULL;
+
+    memset(addr, 0, sizeof(addr));
+    tlv = find_wrapper_tlv_by_id(req, TLV_ADDRESS);
+    if (tlv) {
+        /* Send Service Discovery Req */
+        memcpy(addr, tlv->value, tlv->len);
+    } else {
+        /* Set Services case */
+        /* Add bonjour and upnp Service */
+    }
+
+    get_p2p_dev_if(p2p_dev_if, sizeof(p2p_dev_if));
+    indigo_logger(LOG_LEVEL_DEBUG, "P2P Dev IF: %s", p2p_dev_if);
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_if_ctrl_path(p2p_dev_if));
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+
+    memset(buffer, 0, sizeof(buffer));
+    memset(response, 0, sizeof(response));
+    if (addr[0] != 0) {
+        sprintf(buffer, "P2P_SERV_DISC_REQ %s 02000001", addr);
+        indigo_logger(LOG_LEVEL_DEBUG, "Command: %s", buffer);
+    } else {
+        sprintf(buffer, "P2P_SERVICE_ADD bonjour 096d797072696e746572045f697070c00c001001 09747874766572733d311a70646c3d6170706c69636174696f6e2f706f7374736372797074");
+    }
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+
+    if (addr[0] == 0) {
+        if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+            goto done;
+        }
+        sprintf(buffer, "P2P_SERVICE_ADD upnp 10 uuid:5566d33e-9774-09ab-4822-333456785632::urn:schemas-upnp-org:service:ContentDirectory:2");
+        wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+        if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+            indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+            goto done;
+        }
     }
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;

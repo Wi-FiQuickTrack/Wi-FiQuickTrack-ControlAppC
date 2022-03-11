@@ -65,6 +65,7 @@ struct indigo_api indigo_api_list[] = {
     { API_STA_START_WPS, "STA_START_WPS", NULL, NULL },
     { API_P2P_INVITE, "P2P_INVITE", NULL, NULL },
     { API_P2P_STOP_GROUP, "P2P_STOP_GROUP", NULL, NULL },
+    { API_P2P_SET_SERV_DISC, "P2P_SET_SERV_DISC", NULL, NULL },
     /* Network operation. E.g., get/set IP address, get MAC address, send the UDP data and reset */
     { API_GET_IP_ADDR, "GET_IP_ADDR", NULL, NULL },
     { API_GET_MAC_ADDR, "GET_MAC_ADDR", NULL, NULL },
