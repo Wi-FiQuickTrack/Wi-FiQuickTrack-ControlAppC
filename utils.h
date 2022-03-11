@@ -26,6 +26,12 @@
 #define TOOL_POST_PORT 8080
 #define HAPD_UPLOAD_API "/upload-platform-hapd-log"
 #define WPAS_UPLOAD_API "/upload-platform-wpas-log"
+#ifdef _DUT_
+#define APP_LOG_FILE "controlappc_DUT.log"
+#else
+#define APP_LOG_FILE "controlappc_tool_platform.log"
+#endif
+#define UPLOAD_TC_APP_LOG 1
 
 /* Log */
 enum {
@@ -125,6 +131,8 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 char* read_file(char *fn);
 int write_file(char *fn, char *buffer, int len);
 int append_file(char *fn, char *buffer, int len); 
+void open_tc_app_log();
+void close_tc_app_log();
 
 /* network interface and loopback API */
 int get_mac_address(char *buffer, int size, char *interface);

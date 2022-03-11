@@ -136,13 +136,15 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
             indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
         }
 
-       reset_bridge(get_wlans_bridge());
-       reset_interface_ip(get_wireless_interface());
+        reset_bridge(get_wlans_bridge());
+        reset_interface_ip(get_wireless_interface());
+        close_tc_app_log();
     }
 
     stop_loopback_data(NULL);
 
     if (reset == RESET_TYPE_INIT) {
+        open_tc_app_log();
         len = unlink(get_hapd_conf_file());
         if (len) {
             indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
@@ -489,7 +491,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             if (NULL == wlan) {
                 wlan = assign_wireless_interface_info(&bss_info);
             }
-            printf("TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
+            indigo_logger(LOG_LEVEL_DEBUG, "TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
                     bss_identifier,
                     bss_info.identifier,
                     wlan ? wlan->ifname : "n/a"
@@ -654,7 +656,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                 band_transmitter[bss_info.band] = wlan;
             }
         }
-        printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
+        indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
                bss_identifier,
                bss_info.band,
                bss_info.mbssid_enable,
@@ -687,7 +689,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         }
     }
     if (wlan) {
-        printf("ifname %s hostapd conf file %s\n", 
+        indigo_logger(LOG_LEVEL_DEBUG, "ifname %s hostapd conf file %s\n", 
                wlan ? wlan->ifname : "n/a",
                wlan ? wlan->hapd_conf_file: "n/a"
                );
@@ -882,7 +884,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         bss_identifier = atoi(bss_identifier_str);
         parse_bss_identifier(bss_identifier, &bss_info);
 
-        printf("TLV_BSS_IDENTIFIER 0x%x identifier %d band %d\n",
+        indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x identifier %d band %d\n",
                bss_identifier,
                bss_info.identifier,
                bss_info.band);
@@ -1126,9 +1128,11 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
             set_channel_width();
         }
         reconf_count = 0;
+        close_tc_app_log();
     }
 
     if (reset == RESET_TYPE_INIT) {
+        open_tc_app_log();
         len = unlink(get_wpas_conf_file());
         if (len) {
             indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
