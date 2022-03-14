@@ -205,6 +205,11 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
     }
 
+    if (reset == RESET_TYPE_INIT) {
+        open_tc_app_log();
+        system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
+    }
+
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
     system(buffer);
@@ -227,15 +232,12 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         message = TLV_VALUE_HOSTAPD_STOP_OK;
     }
 
-    /* Test case teardown case */
-    if (reset == RESET_TYPE_TEARDOWN) {
-    }
-
     /* reset interfaces info */
     clear_interfaces_resource();
 
-    if (reset == RESET_TYPE_INIT) {
-        system("rm -rf /var/log/hostapd.log >/dev/null 2>/dev/null");
+    /* Test case teardown case */
+    if (reset == RESET_TYPE_TEARDOWN) {
+        close_tc_app_log();
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -543,7 +545,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             if (NULL == wlan) {
                 wlan = assign_wireless_interface_info(&bss_info);
             }
-            printf("TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
+            indigo_logger(LOG_LEVEL_DEBUG, "TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
                     bss_identifier,
                     bss_info.identifier,
                     wlan ? wlan->ifname : "n/a"
@@ -758,7 +760,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                 band_transmitter[bss_info.band] = wlan;
             }
         }
-        printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
+        indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
                bss_identifier,
                bss_info.band,
                bss_info.mbssid_enable,
@@ -786,7 +788,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         }
     }
     if (wlan) {
-        printf("ifname %s hostapd conf file %s\n", 
+        indigo_logger(LOG_LEVEL_DEBUG, "ifname %s hostapd conf file %s\n", 
                wlan ? wlan->ifname : "n/a",
                wlan ? wlan->hapd_conf_file: "n/a"
                );
@@ -1180,7 +1182,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
             bss_identifier = atoi(bss_identifier_str);
             parse_bss_identifier(bss_identifier, &bss_info);
 
-            printf("TLV_BSS_IDENTIFIER 0x%x identifier %d band %d\n", 
+            indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x identifier %d band %d\n", 
                     bss_identifier,
                     bss_info.identifier,
                     bss_info.band
@@ -1246,7 +1248,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (bss_info.identifier >= 0) {
-        printf("Get mac_addr %s\n", mac_addr);
+        indigo_logger(LOG_LEVEL_DEBUG, "Get mac_addr %s\n", mac_addr);
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_OK;
         goto done;
@@ -1740,18 +1742,8 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
     }
 
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
-    system(buffer);
-    sleep(2);
-    sta_configured = 0;
-    sta_started = 0;
-
-    /* Test case teardown case */
-    if (reset == RESET_TYPE_TEARDOWN) {
-    }
-
     if (reset == RESET_TYPE_INIT) {
+        open_tc_app_log();
         /* clean the log */
         system("rm -rf /var/log/supplicant.log >/dev/null 2>/dev/null");
 
@@ -1759,8 +1751,15 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         if (strlen(pac_file_path)) {
             remove_pac_file(pac_file_path);
             memset(pac_file_path, 0, sizeof(pac_file_path));
-        }        
+        }
     }
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
+    sleep(2);
+    sta_configured = 0;
+    sta_started = 0;
 
     len = reset_interface_ip(get_wireless_interface());
     if (len) {
@@ -1773,6 +1772,11 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         message = TLV_VALUE_WPA_S_STOP_NOT_OK;
     } else {
         message = TLV_VALUE_WPA_S_STOP_OK;
+    }
+
+    /* Test case teardown case */
+    if (reset == RESET_TYPE_TEARDOWN) {
+        close_tc_app_log();
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
