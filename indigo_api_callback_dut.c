@@ -2422,7 +2422,7 @@ done:
 static int add_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
-    char freq[64];
+    char freq[64], he[16];
     size_t resp_len;
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_P2P_ADD_GROUP_NOT_OK;
@@ -2440,6 +2440,11 @@ static int add_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapp
         goto done;
     }
 
+    memset(he, 0, sizeof(he));
+    tlv = find_wrapper_tlv_by_id(req, TLV_IEEE80211_AX);
+    if (tlv)
+        snprintf(he, sizeof(he), " he");
+
     /* Open wpa_supplicant UDS socket */
     w = wpa_ctrl_open(get_wpas_ctrl_path());
     if (!w) {
@@ -2451,7 +2456,7 @@ static int add_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapp
 
     memset(buffer, 0, sizeof(buffer));
     memset(response, 0, sizeof(response));
-    sprintf(buffer, "P2P_GROUP_ADD freq=%s", freq);
+    sprintf(buffer, "P2P_GROUP_ADD freq=%s%s", freq, he);
     resp_len = sizeof(response) - 1;
     wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
     /* Check response */
@@ -3478,6 +3483,7 @@ static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper 
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     char addr[32], if_name[16], persist[32], p2p_dev_if[32];
+    char freq[16], he[16];
     size_t resp_len;
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_P2P_INVITE_NOT_OK;
@@ -3517,10 +3523,23 @@ static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper 
 
     memset(buffer, 0, sizeof(buffer));
     memset(response, 0, sizeof(response));
-    if (persist[0] != 0)
-        sprintf(buffer, "P2P_INVITE %s peer=%s", persist, addr);
-    else
+    if (persist[0] != 0) {
+        memset(he, 0, sizeof(he));
+        tlv = find_wrapper_tlv_by_id(req, TLV_IEEE80211_AX);
+        if (tlv)
+            snprintf(he, sizeof(he), " he");
+
+        tlv = find_wrapper_tlv_by_id(req, TLV_FREQUENCY);
+        if (tlv) {
+            memset(freq, 0, sizeof(freq));
+            memcpy(freq, tlv->value, tlv->len);
+            sprintf(buffer, "P2P_INVITE %s peer=%s%s freq=%s", persist, addr, he, freq);
+        } else {
+            sprintf(buffer, "P2P_INVITE %s peer=%s%s", persist, addr, he);
+        }
+    } else {
         sprintf(buffer, "P2P_INVITE group=%s peer=%s", if_name, addr);
+    }
     indigo_logger(LOG_LEVEL_DEBUG, "Command: %s", buffer);
     resp_len = sizeof(response) - 1;
     wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
