@@ -401,6 +401,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                     strcat(output, cfg_item);
                 }
             }
+            continue;
         }
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
