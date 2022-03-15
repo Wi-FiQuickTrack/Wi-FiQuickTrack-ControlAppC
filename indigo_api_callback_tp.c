@@ -1784,8 +1784,8 @@ static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper 
         } else {
         }
     } else {
-        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_ROLE");
-        goto done;
+        indigo_logger(LOG_LEVEL_INFO, "Missed TLV_ROLE, Use default wireless IF");
+        snprintf(if_name, sizeof(if_name), "%s", get_wireless_interface());
     }
 
     /* TLV: TLV_STATIC_IP */
@@ -1832,8 +1832,8 @@ static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *
         } else {
         }
     } else {
-        indigo_logger(LOG_LEVEL_ERROR, "Missed TLV: TLV_ROLE");
-        goto done;
+        snprintf(if_name, sizeof(if_name), "%s", get_wireless_interface());
+        reset_interface_ip(if_name);
     }
 
     /* TLV: TLV_STATIC_IP */
