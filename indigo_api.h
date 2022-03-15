@@ -263,6 +263,7 @@ struct indigo_api {
 #define TLV_EAP_FRAG_SIZE                       0x00ce
 #define TLV_PERFORM_WPS_IE_FRAG                 0x00cf
 #define TLV_ADVICE_OF_CHARGE                    0x00d0
+#define TLV_IGNORE_BROADCAST_SSID               0x00d1
 #define TLV_PERSISTENT                          0x00d2
 #define TLV_WSC_CONFIG_ONLY                     0x00d3
 #define TLV_ICON_FILE                           0x00d4
