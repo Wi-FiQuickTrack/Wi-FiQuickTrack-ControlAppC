@@ -258,6 +258,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_PERSISTENT, "PERSISTENT_GROUP" },
     { TLV_WSC_CONFIG_ONLY, "WSC_CONFIG_ONLY" },
     { TLV_ICON_FILE, "ICON_FILE" },
+    { TLV_P2P_DISABLED, "P2P_DISABLED" },
 };
 
 /* Find the type of the API stucture by the ID from the list */
