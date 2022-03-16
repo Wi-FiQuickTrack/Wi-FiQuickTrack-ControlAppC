@@ -606,11 +606,11 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
         { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
         { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
         { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_OOB_ONLY }, /* wps oob state */
         /*
         * General
         * */
         { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
-        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_COMMON }, /* wps oob state */
         { WPS_CONFIG, SUPPORTED_CONF_METHOD_AP, WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
         { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
@@ -628,11 +628,11 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
         { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
         { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
         { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_OOB_ONLY }, /* wps oob state */
         /*
         * General
         * */
         { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
-        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_COMMON }, /* wps oob state */
         { WPS_CONFIG, SUPPORTED_CONF_METHOD_AP, WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "1234567890abcdef1234567890abcdef", WPS_COMMON }, /* device name  */
         { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
@@ -650,11 +650,11 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
         { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
         { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
         { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
+        { WPS_OOB_STATE, WPS_OOB_CONFIGURED, WPS_OOB_ONLY }, /* wps oob state */
         /*
         * General
         * */
         { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
-        { WPS_OOB_STATE, WPS_OOB_CONFIGURED, WPS_COMMON }, /* wps oob state */
         { WPS_CONFIG, SUPPORTED_CONF_METHOD_AP, WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
         { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */

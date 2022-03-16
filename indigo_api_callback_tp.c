@@ -50,6 +50,7 @@ void register_apis() {
     register_api(API_START_DHCP, NULL, start_dhcp_handler);
     register_api(API_STOP_DHCP, NULL, stop_dhcp_handler);
     register_api(API_GET_WSC_CRED, NULL, get_wsc_cred_handler);
+    register_api(API_STA_SEND_ICON_REQ, NULL, send_sta_icon_req_handler);
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
@@ -104,6 +105,32 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         reset = atoi(reset_type);
         indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
     }
+
+    if (reset == RESET_TYPE_INIT) {
+        open_tc_app_log();
+        len = unlink(get_hapd_conf_file());
+        if (len) {
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
+        }
+
+        /* clean the log */
+        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", HAPD_LOG_FILE);
+        system(buffer);
+        memset(buffer, 0, sizeof(buffer));
+#ifdef _WTS_OPENWRT_
+        /* Reset uci configurations */
+        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
+        system(buffer);
+
+        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
+        system(buffer);
+
+        system("uci -q delete wireless.@wifi-iface[0].own_ie_override");
+        system("uci -q delete wireless.@wifi-iface[1].own_ie_override");
+#endif
+        memset(band_transmitter, 0, sizeof(band_transmitter));
+    }
+
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
     system(buffer);
@@ -136,39 +163,19 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
             indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
         }
 
-       reset_bridge(get_wlans_bridge());
-       reset_interface_ip(get_wireless_interface());
+        reset_bridge(get_wlans_bridge());
+        reset_interface_ip(get_wireless_interface());
     }
 
     stop_loopback_data(NULL);
 
-    if (reset == RESET_TYPE_INIT) {
-        len = unlink(get_hapd_conf_file());
-        if (len) {
-            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove hostapd.conf");
-        }
-
-        /* clean the log */
-        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", HAPD_LOG_FILE);
-        system(buffer);
-        memset(buffer, 0, sizeof(buffer));
-#ifdef _WTS_OPENWRT_
-        /* Reset uci configurations */
-        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi0.country");
-        system(buffer);
-
-        snprintf(buffer, sizeof(buffer), "uci -q delete wireless.wifi1.country");
-        system(buffer);
-
-        system("uci -q delete wireless.@wifi-iface[0].own_ie_override");
-        system("uci -q delete wireless.@wifi-iface[1].own_ie_override");
-#endif
-        memset(band_transmitter, 0, sizeof(band_transmitter));
-    }
 
     if (reset != RESET_TYPE_KEEP_CONFIG) {
         /* reset interfaces info */
         clear_interfaces_resource();
+    }
+    if (reset == RESET_TYPE_TEARDOWN) {
+        close_tc_app_log();
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -394,6 +401,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                     strcat(output, cfg_item);
                 }
             }
+            continue;
         }
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
@@ -489,7 +497,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             if (NULL == wlan) {
                 wlan = assign_wireless_interface_info(&bss_info);
             }
-            printf("TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
+            indigo_logger(LOG_LEVEL_DEBUG, "TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
                     bss_identifier,
                     bss_info.identifier,
                     wlan ? wlan->ifname : "n/a"
@@ -654,7 +662,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                 band_transmitter[bss_info.band] = wlan;
             }
         }
-        printf("TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
+        indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
                bss_identifier,
                bss_info.band,
                bss_info.mbssid_enable,
@@ -687,7 +695,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         }
     }
     if (wlan) {
-        printf("ifname %s hostapd conf file %s\n", 
+        indigo_logger(LOG_LEVEL_DEBUG, "ifname %s hostapd conf file %s\n", 
                wlan ? wlan->ifname : "n/a",
                wlan ? wlan->hapd_conf_file: "n/a"
                );
@@ -882,7 +890,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         bss_identifier = atoi(bss_identifier_str);
         parse_bss_identifier(bss_identifier, &bss_info);
 
-        printf("TLV_BSS_IDENTIFIER 0x%x identifier %d band %d\n",
+        indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x identifier %d band %d\n",
                bss_identifier,
                bss_info.identifier,
                bss_info.band);
@@ -1096,6 +1104,17 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         reset = atoi(reset_type);
         indigo_logger(LOG_LEVEL_DEBUG, "Reset Type: %d", reset);
     }
+    if (reset == RESET_TYPE_INIT) {
+        open_tc_app_log();
+        len = unlink(get_wpas_conf_file());
+        if (len) {
+            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
+        }
+
+        /* clean the log */
+        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", WPAS_LOG_FILE);
+        system(buffer);
+    }
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
@@ -1128,16 +1147,6 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         reconf_count = 0;
     }
 
-    if (reset == RESET_TYPE_INIT) {
-        len = unlink(get_wpas_conf_file());
-        if (len) {
-            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove wpa_supplicant.conf");
-        }
-
-        /* clean the log */
-        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", WPAS_LOG_FILE);
-        system(buffer);
-    }
 
     if (reset == RESET_TYPE_RECONFIGURE) {
         reconf_count++;
@@ -1184,6 +1193,10 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
         message = TLV_VALUE_WPA_S_STOP_NOT_OK;
     } else {
         message = TLV_VALUE_WPA_S_STOP_OK;
+    }
+
+    if (reset == RESET_TYPE_TEARDOWN) {
+        close_tc_app_log();
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -1955,6 +1968,107 @@ done:
         for (i = 0; i < count; i++) {
             fill_wrapper_tlv_bytes(resp, p_cfg[i].tid, strlen(p_cfg[i].val), p_cfg[i].val);
         }
+    }
+    return 0;
+}
+
+
+static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    char *message = TLV_VALUE_NOT_OK;
+    char buffer[1024];
+    char response[1024];
+    char bssid[256];
+    char icon_file[256], icon_checksum[64];
+    struct tlv_hdr *tlv = NULL;
+    struct wpa_ctrl *w = NULL;
+    size_t resp_len;
+    FILE *fp;
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+
+    /* TLV: BSSID */
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
+    if (tlv) {
+        memset(bssid, 0, sizeof(bssid));
+        memcpy(bssid, tlv->value, tlv->len);
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "missing BSSID configuration");
+        goto done;
+    }
+
+    /* TLV: ICON_FILE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_ICON_FILE);
+    if (tlv) {
+        memset(icon_file, 0, sizeof(icon_file));
+        memcpy(icon_file, tlv->value, tlv->len);
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "missing icon_file configuration");
+        goto done;
+    }
+
+    memset(buffer, 0, sizeof(buffer));
+    memset(response, 0, sizeof(response));
+
+    /* remove previous downloaded temp icon file */
+    snprintf(buffer, sizeof(buffer), "rm /tmp/osu-icon-*");
+    system(buffer);
+
+    /* set the default icon downloaded folder */
+    snprintf(buffer, sizeof(buffer), "SET osu_dir /tmp");
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+
+    indigo_logger(LOG_LEVEL_DEBUG, "%s -> resp: %s\n", buffer, response);
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+
+    /* send icon request */
+    snprintf(buffer, sizeof(buffer), "HS20_ICON_REQUEST %s %s", bssid, icon_file);
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+
+    indigo_logger(LOG_LEVEL_DEBUG, "%s -> resp: %s\n", buffer, response);
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+
+    sleep(5);
+
+    /* calculate checksum of the downloaded icon file */
+    sprintf(buffer, "md5sum /tmp/osu-icon-1.png");
+    indigo_logger(LOG_LEVEL_DEBUG, "cmd: %s", buffer);
+
+    fp = popen(buffer, "r");
+    if (fp == NULL)
+        goto done;
+
+    fscanf(fp, "%s %*s", (char *)&icon_checksum);
+    pclose(fp);
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (status == TLV_VALUE_STATUS_OK) {
+        fill_wrapper_tlv_bytes(resp, TLV_PASSPOINT_ICON_CHECKSUM, strlen(icon_checksum), icon_checksum);
+    }
+
+    if (w) {
+        wpa_ctrl_close(w);
     }
     return 0;
 }

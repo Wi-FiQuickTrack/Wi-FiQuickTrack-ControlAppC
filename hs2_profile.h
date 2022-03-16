@@ -118,7 +118,7 @@ const char * operating_class_indication[] = {
 
 const char * osu_providers_list[] = {
     "",
-    "osu_server_uri=https://osu-server.r2-testbed.wi-fi.org/\nosu_friendly_name=eng:SP Red Test Only\nosu_friendly_name=kor:SP 빨강 테스트 전용\nosu_method_list=1\nosu_service_desc=eng:Free service for test purpose\nosu_service_desc=kor:테스트 목적으로 무료 서비스\n",
+    "osu_ssid=\"OSU\"\nosu_server_uri=https://osu-server.r2-testbed.wi-fi.org/\nosu_friendly_name=eng:SP Red Test Only\nosu_friendly_name=kor:SP 빨강 테스트 전용\nosu_method_list=1\nosu_icon=icon_red_eng.png\nosu_icon=icon_red_zxx.png\nosu_service_desc=eng:Free service for test purpose\nosu_service_desc=kor:테스트 목적으로 무료 서비스\n",
     "",
     "",
     "",
@@ -158,7 +158,8 @@ const char * advice_of_charge[] = {
 
 // <Icon Width>:<Icon Height>:<Language code>:<Icon Type>:<Name>:<file path>
 const char * hs20_icon[] = {
-    "hs20_icon=160:76:eng:image/png:icon_red_eng.png:/overlay/icon_red_eng.png\n",
+    "hs20_icon=160:76:eng:image/png:icon_red_eng.png:/overlay/passpoint/icon_red_eng.png\n",
+    "hs20_icon=128:61:zxx:image/png:icon_red_zxx.png:/overlay/passpoint/icon_red_zxx.png\n",
 };
 
 struct tlv_to_profile hs2_profile[] = {

@@ -102,6 +102,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_OSU_SERVER_URI, "osu_server_uri", 0 },
     { TLV_OSU_METHOD, "osu_method_list", 0 },
     { TLV_DOMAIN_LIST, "domain_name", 0 },
+    { TLV_IGNORE_BROADCAST_SSID, "ignore_broadcast_ssid", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },
@@ -270,6 +271,7 @@ static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wr
 static int set_sta_channel_width_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* P2P */
 static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int find_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);

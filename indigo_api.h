@@ -79,6 +79,7 @@ struct indigo_api {
 #define API_P2P_INVITE                          0x2018
 #define API_P2P_STOP_GROUP                      0x2019
 #define API_P2P_SET_SERV_DISC                   0x201a
+#define API_STA_SEND_ICON_REQ                   0x201b
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -262,9 +263,11 @@ struct indigo_api {
 #define TLV_EAP_FRAG_SIZE                       0x00ce
 #define TLV_PERFORM_WPS_IE_FRAG                 0x00cf
 #define TLV_ADVICE_OF_CHARGE                    0x00d0
+#define TLV_IGNORE_BROADCAST_SSID               0x00d1
 #define TLV_PERSISTENT                          0x00d2
 #define TLV_WSC_CONFIG_ONLY                     0x00d3
-#define TLV_P2P_DISABLED                        0x00d4
+#define TLV_ICON_FILE                           0x00d4
+#define TLV_P2P_DISABLED                        0x00d5
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
@@ -283,6 +286,7 @@ struct indigo_api {
 #define TLV_WSC_SSID                            0xa00c
 #define TLV_WSC_WPA_KEY_MGMT                    0xa00d
 #define TLV_WSC_WPA_PASSPHRASS                  0xa00e
+#define TLV_PASSPOINT_ICON_CHECKSUM             0xa00f
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01

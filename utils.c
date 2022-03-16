@@ -58,6 +58,12 @@ static struct loopback_info loopback = {};
 /* bridge used for wireless interfaces */
 char wlans_bridge[32];
 
+#if UPLOAD_TC_APP_LOG
+/* per test case control app log */
+FILE *app_log;
+extern struct sockaddr_in *tool_addr;
+#endif
+
 #ifdef HOSTAPD_SUPPORT_MBSSID_WAR
 int use_openwrt_wpad = 0;
 #endif
@@ -75,6 +81,11 @@ void debug_print_timestamp(void) {
         strftime(buffer, sizeof(buffer), "%b %d %H:%M:%S", info);
     }
     printf("%s ", buffer);
+#if UPLOAD_TC_APP_LOG
+    if (app_log) {
+        fprintf(app_log, "%s ", buffer);
+    }
+#endif
 }
 
 void indigo_logger(int level, const char *fmt, ...) {
@@ -118,6 +129,14 @@ void indigo_logger(int level, const char *fmt, ...) {
         vprintf(format, ap);
         va_end(ap);
         printf("\n");
+#if UPLOAD_TC_APP_LOG
+        if (app_log) {
+            va_start(ap, fmt);
+            vfprintf(app_log, format, ap);
+            fprintf(app_log, "\n");
+            va_end(ap);
+        }
+#endif
     }
 
     if (level >= stdout_level) {
@@ -143,6 +162,32 @@ void indigo_logger(int level, const char *fmt, ...) {
         vsyslog(priority, format, ap);
         va_end(ap);
     }
+}
+
+void open_tc_app_log() {
+#if UPLOAD_TC_APP_LOG
+    if (app_log) {
+        fclose(app_log);
+        app_log = NULL;
+    }
+    app_log = fopen(APP_LOG_FILE, "w");
+    if (app_log == NULL) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open the file %s", APP_LOG_FILE);    
+    }
+#endif
+}
+
+/* Close file handle and upload test case control app log */
+void close_tc_app_log() {
+#if UPLOAD_TC_APP_LOG
+    if (app_log) {
+        fclose(app_log);
+        app_log = NULL;
+        if (tool_addr != NULL) {
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, APP_LOG_FILE);
+        }
+    }
+#endif
 }
 
 /* System */
