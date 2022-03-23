@@ -169,11 +169,9 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     stop_loopback_data(NULL);
 
+    /* reset interfaces info */
+    clear_interfaces_resource();
 
-    if (reset != RESET_TYPE_KEEP_CONFIG) {
-        /* reset interfaces info */
-        clear_interfaces_resource();
-    }
     if (reset == RESET_TYPE_TEARDOWN) {
         close_tc_app_log();
     }
