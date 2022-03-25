@@ -85,6 +85,7 @@ void register_apis() {
     register_api(API_P2P_INVITE, NULL, invite_p2p_handler);
     register_api(API_P2P_STOP_GROUP, NULL, stop_group_p2p_handler);
     register_api(API_P2P_SET_SERV_DISC, NULL, set_serv_disc_p2p_handler);
+    register_api(API_P2P_SET_EXT_LISTEN, NULL, set_ext_listen_p2p_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -3618,6 +3619,44 @@ static int set_serv_disc_p2p_handler(struct packet_wrapper *req, struct packet_w
             indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
             goto done;
         }
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+
+static int set_ext_listen_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct wpa_ctrl *w = NULL;
+    char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
+    size_t resp_len;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_P2P_SET_EXT_LISTEN_NOT_OK;
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+    memset(buffer, 0, sizeof(buffer));
+    memset(response, 0, sizeof(response));
+    sprintf(buffer, "P2P_EXT_LISTEN 1000 4000");
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    /* Check response */
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
     }
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_OK;
