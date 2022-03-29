@@ -665,12 +665,32 @@ wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
     },
 };
 
-wps_setting wps_settings_sta[STA_SETTING_NUM] = {
+wps_setting wps_settings_sta[GROUP_NUM][STA_SETTING_NUM] = {
+    {
+        /*
+        * General
+        * */
         { WPS_CONFIG, SUPPORTED_CONF_METHOD_STA, WPS_COMMON }, /* config methods */
         { WPS_DEV_NAME, "Intel Wireless STA", WPS_COMMON }, /* device name  */
         { WPS_MANUFACTURER, "Intel.com", WPS_COMMON }, /* manufacturer */
         { WPS_MODEL_NAME, "Intel Wireless STA", WPS_COMMON }, /* model name */
         { WPS_MODEL_NUMBER, "Intel Wireless STA-001", WPS_COMMON }, /* model number */
+        { WPS_SERIAL_NUMBER, "STA-001", WPS_COMMON }, /* serial number */
+    },
+    {
+        /*
+        * Test purpose for WPS IE fragmentation.
+        * */
+        { WPS_CONFIG, SUPPORTED_CONF_METHOD_STA, WPS_COMMON }, /* config methods */
+        { WPS_DEV_NAME, "1234567890abcdef1234567890abcdef", WPS_COMMON }, /* device name  */
+        { WPS_MANUFACTURER, "1234567890abcdef1234567890abcdef1234567890abcdef1234567890", WPS_COMMON }, /* manufacturer */
+        { WPS_MODEL_NAME, "1234567890abcdef1234567890abcdef", WPS_COMMON }, /* model name */
+        { WPS_MODEL_NUMBER, "1234567890abcdef1234567890abcdef", WPS_COMMON }, /* model number */
+        { WPS_SERIAL_NUMBER, "001", WPS_COMMON }, /* serial number */
+    },
+    {
+        {0}
+    }
 };
 
 wps_setting* get_vendor_wps_settings(enum wps_device_role role)
@@ -678,17 +698,19 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
     if (role == WPS_AP)
         return wps_settings_ap[0];
     else
-        return wps_settings_sta;
+        return wps_settings_sta[0];
 }
 
 wps_setting* get_vendor_wps_settings_for_ie_frag_test(enum wps_device_role role)
 {
     /*
-    * Test purpose to enlarge wps ie payload and perform wps ie fragmentation automatically. (AP only)
+    * Test purpose to enlarge wps ie payload and perform wps ie fragmentation automatically.
     * */
 
     if (role == WPS_AP)
         return wps_settings_ap[1];
+    else if (role == WPS_STA)
+        return wps_settings_sta[1];
     else
         return NULL;
 }

@@ -128,7 +128,7 @@ enum wps_device_role {
 
 #define GROUP_NUM (3)
 #define AP_SETTING_NUM (14)
-#define STA_SETTING_NUM (5)
+#define STA_SETTING_NUM (6)
 
 typedef struct _wps_setting {
     /* key-value for each setting pair */
