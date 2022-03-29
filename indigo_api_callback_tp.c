@@ -1419,6 +1419,7 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
     char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     struct tlv_hdr *tlv = NULL;
     struct tlv_to_config_name* cfg = NULL;
+    int perform_wps_ie_frag = 0;
 #ifdef _OPENWRT_
 #else
     system("rfkill unblock wlan");
@@ -1465,16 +1466,28 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
         }
 
         /* wps settings */
+        tlv = find_wrapper_tlv_by_id(req, TLV_PERFORM_WPS_IE_FRAG);
+        if (tlv) {
+            perform_wps_ie_frag = 1;
+        }
+
+        /* wps settings */
         tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
         if (tlv) {
             int j;
+            wps_setting *s = NULL;
 
             memset(value, 0, sizeof(value));
             memcpy(value, tlv->value, tlv->len);
 
             /* To get STA wps vendor info */
-            wps_setting *s = get_vendor_wps_settings(WPS_STA);
-            if (atoi(value)) {
+            if (perform_wps_ie_frag == 1)
+                s = get_vendor_wps_settings_for_ie_frag_test(WPS_STA);
+            else
+                s = get_vendor_wps_settings(WPS_STA);
+            if (!s) {
+                indigo_logger(LOG_LEVEL_ERROR, "Failed to get vendor wps settings.");
+            } else if (atoi(value)) {
                 for (j = 0; j < STA_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
                     sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
