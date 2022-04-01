@@ -103,6 +103,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_OSU_METHOD, "osu_method_list", 0 },
     { TLV_DOMAIN_LIST, "domain_name", 0 },
     { TLV_IGNORE_BROADCAST_SSID, "ignore_broadcast_ssid", 0 },
+    { TLV_MANAGE_P2P, "manage_p2p", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },

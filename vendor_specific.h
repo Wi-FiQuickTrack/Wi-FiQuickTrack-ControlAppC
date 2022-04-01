@@ -164,6 +164,9 @@ void openwrt_apply_radio_config(void);
 int detect_third_radio(void);
 #endif
 
+void create_sta_interface();
+void delete_sta_interface();
+
 void configure_ap_enable_mbssid();
 void configure_ap_radio_params(char *band, char *country, int channel, int chwidth);
 void start_ap_set_wlan_params(void *if_info);

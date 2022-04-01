@@ -203,6 +203,22 @@ void interfaces_init() {
 #endif
 }
 
+void create_sta_interface() {
+    char buffer[S_BUFFER_LEN];
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "iw phy phy0 interface add %s_sta type managed >/dev/null 2>/dev/null", get_wireless_interface());
+    system(buffer);
+}
+
+void delete_sta_interface() {
+    char buffer[S_BUFFER_LEN];
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "iw dev %s_sta del", get_wireless_interface());
+    system(buffer);
+}
+
 /* Be invoked when start controlApp */
 void vendor_init() {
     /* Make sure native hostapd/wpa_supplicant is inactive */
@@ -477,11 +493,11 @@ const struct sta_driver_ops sta_driver_platform2_ops = {
 	.set_phy_mode           = set_phy_mode_platform2,
 };
 
-
+/* Return addr of P2P-device if there is no GO or client interface */
 int get_p2p_mac_addr(char *mac_addr, size_t size) {
     FILE *fp;
     char buffer[S_BUFFER_LEN], *ptr, addr[32];
-    int error = 1;
+    int error = 1, match = 0;
 
     fp = popen("iw dev", "r");
     if (fp) {
@@ -489,22 +505,23 @@ int get_p2p_mac_addr(char *mac_addr, size_t size) {
             ptr = strstr(buffer, "addr");
             if (ptr != NULL) {
                 sscanf(ptr, "%*s %s", addr);
-                if (fgets(buffer, sizeof(buffer), fp) != NULL) {
+                while (fgets(buffer, sizeof(buffer), fp) != NULL) {
                     ptr = strstr(buffer, "type");
                     if (ptr != NULL) {
                         ptr += 5;
                         if (!strncmp(ptr, "P2P-GO", 6) || !strncmp(ptr, "P2P-client", 10)) {
 			                snprintf(mac_addr, size, "%s", addr);
                             error = 0;
-                            break;
+                            match = 1;
                         } else if (!strncmp(ptr, "P2P-device", 10)) {
 			                snprintf(mac_addr, size, "%s", addr);
                             error = 0;
                         }
-                    } else {
-                        printf("Format changed??? Can't detect device type");
+                        break;
                     }
                 }
+                if (match)
+                    break;
             }
         }
         pclose(fp);
@@ -531,11 +548,12 @@ int get_p2p_group_if(char *if_name, size_t size) {
                         if (!strncmp(ptr, "P2P-GO", 6) || !strncmp(ptr, "P2P-client", 10)) {
 			                snprintf(if_name, size, "%s", name);
                             error = 0;
-                            break;
                         }
+                        break;
                     }
                 }
-                break;
+                if (!error)
+                    break;
             }
         }
         pclose(fp);
