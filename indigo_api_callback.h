@@ -139,7 +139,6 @@ struct tlv_to_config_name maps[] = {
 
     /* hapd + wpas */
     { TLV_EAP_FRAG_SIZE, "fragment_size", 0 },
-    { TLV_AP_STA_COEXIST, "ap_sta_coexist", 0 },
 };
 
 struct tlv_to_config_name semicolon_list[] = {
