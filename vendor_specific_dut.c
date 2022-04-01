@@ -262,10 +262,11 @@ void start_ap_set_wlan_params(void *if_info) {
     printf("set_wlan_params: %s\n", buffer);
 }
 
+/* Return addr of P2P-device if there is no GO or client interface */
 int get_p2p_mac_addr(char *mac_addr, size_t size) {
     FILE *fp;
     char buffer[S_BUFFER_LEN], *ptr, addr[32];
-    int error = 1;
+    int error = 1, match = 0;
 
     fp = popen("iw dev", "r");
     if (fp) {
@@ -273,22 +274,23 @@ int get_p2p_mac_addr(char *mac_addr, size_t size) {
             ptr = strstr(buffer, "addr");
             if (ptr != NULL) {
                 sscanf(ptr, "%*s %s", addr);
-                if (fgets(buffer, sizeof(buffer), fp) != NULL) {
+                while (fgets(buffer, sizeof(buffer), fp) != NULL) {
                     ptr = strstr(buffer, "type");
                     if (ptr != NULL) {
                         ptr += 5;
                         if (!strncmp(ptr, "P2P-GO", 6) || !strncmp(ptr, "P2P-client", 10)) {
 			                snprintf(mac_addr, size, "%s", addr);
                             error = 0;
-                            break;
+                            match = 1;
                         } else if (!strncmp(ptr, "P2P-device", 10)) {
 			                snprintf(mac_addr, size, "%s", addr);
                             error = 0;
                         }
-                    } else {
-                        printf("Format changed??? Can't detect device type");
+                        break;
                     }
                 }
+                if (match)
+                    break;
             }
         }
         pclose(fp);
@@ -315,11 +317,12 @@ int get_p2p_group_if(char *if_name, size_t size) {
                         if (!strncmp(ptr, "P2P-GO", 6) || !strncmp(ptr, "P2P-client", 10)) {
 			                snprintf(if_name, size, "%s", name);
                             error = 0;
-                            break;
                         }
+                        break;
                     }
                 }
-                break;
+                if (!error)
+                    break;
             }
         }
         pclose(fp);

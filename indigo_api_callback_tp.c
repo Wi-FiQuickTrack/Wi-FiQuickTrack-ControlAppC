@@ -1086,6 +1086,7 @@ done:
     return 0;
 }
 
+int delete_sta_if = 0;
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
     char buffer[S_BUFFER_LEN*2], reset_type[16], buffer1[S_BUFFER_LEN], buffer2[S_BUFFER_LEN];
@@ -1195,6 +1196,11 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
     if (reset == RESET_TYPE_TEARDOWN) {
         close_tc_app_log();
+    }
+
+    if (delete_sta_if) {
+        delete_sta_interface();
+        delete_sta_if = 0;
     }
 
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
@@ -1705,6 +1711,7 @@ static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrappe
     size_t resp_len;
     char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     struct tlv_hdr *tlv = NULL;
+    char if_name[32];
 
 #ifdef _OPENWRT_
 #else
@@ -1716,6 +1723,15 @@ static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrappe
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
     system(buffer);
     sleep(3);
+
+    tlv = find_wrapper_tlv_by_id(req, TLV_AP_STA_COEXIST);
+    if (tlv) {
+        create_sta_interface();
+        snprintf(if_name, sizeof(if_name), "%s_sta", get_wireless_interface());
+        delete_sta_if = 1;
+    } else {
+        snprintf(if_name, sizeof(if_name), "%s", get_wireless_interface());
+    }
 
     tlv = find_wrapper_tlv_by_id(req, TLV_CONTROL_INTERFACE);
     if (tlv) {
@@ -1756,7 +1772,7 @@ static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrappe
         get_wpas_full_exec_path(),
         get_wpas_conf_file(),
         get_wpas_debug_arguments(),
-        get_wireless_interface(),
+        if_name,
         WPAS_LOG_FILE);
     len = system(buffer);
     sleep(2);
