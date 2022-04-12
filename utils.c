@@ -964,10 +964,8 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
             interfaces[i].identifier = bss->identifier;
             interfaces[i].mbssid_enable = bss->mbssid_enable;
             interfaces[i].transmitter = bss->transmitter;
-            if (bss->mbssid_enable) {
-                interfaces[i].hapd_bss_id = band_mbssid_cnt[bss->band];
-                band_mbssid_cnt[bss->band]++;
-            }
+            interfaces[i].hapd_bss_id = band_mbssid_cnt[bss->band];
+            band_mbssid_cnt[bss->band]++;
             memset(interfaces[i].hapd_conf_file, 0, sizeof(interfaces[i].hapd_conf_file));
             snprintf(interfaces[i].hapd_conf_file, sizeof(interfaces[i].hapd_conf_file),
                      "%s/hostapd_%s.conf", HAPD_CONF_FILE_DEFAULT_PATH, interfaces[i].ifname);
