@@ -3326,6 +3326,7 @@ static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     int i, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
     struct tlv_hdr *tlv = NULL;
+    int use_dynamic_pin = 0;
 
     memset(buffer, 0 ,sizeof(buffer));
     sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
@@ -3342,6 +3343,7 @@ static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapp
         memcpy(pin_code, tlv->value, tlv->len);
         if (strlen(pin_code) == 1 && atoi(pin_code) == 0)
             sprintf(buffer, "WPS_PIN any");
+            use_dynamic_pin = 1;
         else
             sprintf(buffer, "WPS_PIN any %s", pin_code);
     } else {
@@ -3372,7 +3374,7 @@ done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (status == TLV_VALUE_STATUS_OK) {
+    if (status == TLV_VALUE_STATUS_OK && use_dynamic_pin) {
         fill_wrapper_tlv_bytes(resp, TLV_WSC_PIN_CODE, strlen(response), response);
     }
     if (w) {
