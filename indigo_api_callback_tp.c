@@ -31,6 +31,7 @@
 
 struct sta_platform_config sta_hw_config = {PHYMODE_AUTO, CHWIDTH_AUTO, false, false};
 struct interface_info* band_transmitter[16];
+struct interface_info* band_first_wlan[16];
 
 #ifdef _WTS_OPENWRT_
 int rrm = 0, he_mu_edca = 0;
@@ -128,7 +129,6 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
         system("uci -q delete wireless.@wifi-iface[0].own_ie_override");
         system("uci -q delete wireless.@wifi-iface[1].own_ie_override");
 #endif
-        memset(band_transmitter, 0, sizeof(band_transmitter));
     }
 
     memset(buffer, 0, sizeof(buffer));
@@ -171,6 +171,8 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     /* reset interfaces info */
     clear_interfaces_resource();
+    memset(band_transmitter, 0, sizeof(band_transmitter));
+    memset(band_first_wlan, 0, sizeof(band_first_wlan));
 
     if (reset == RESET_TYPE_TEARDOWN) {
         close_tc_app_log();
@@ -267,12 +269,14 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int enable_wps = 0, is_g_mode = 0, is_a_mode = 0, use_mbss = 0;
     int bss_load_tlv = 0;
     int perform_wps_ie_frag = 0;
+    int is_multiple_bssid = 0;
 
 
 #if HOSTAPD_SUPPORT_MBSSID
-    if (wlanp->mbssid_enable && !wlanp->transmitter)
+    if ((wlanp->mbssid_enable && !wlanp->transmitter) || (band_first_wlan[wlanp->band])) {
         sprintf(output, "bss=%s\n", wlanp->ifname);
-    else
+        is_multiple_bssid = 1;
+    } else
         sprintf(output, "ctrl_interface_group=0\ninterface=%s\n", wlanp->ifname);
 #else
     sprintf(output, "ctrl_interface_group=0\ninterface=%s\n", wlanp->ifname);
@@ -287,6 +291,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         tlv = wrapper->tlv[i];
         memset(buffer, 0, sizeof(buffer));
         memset(cfg_item, 0, sizeof(cfg_item));
+
+        /* channel will be configured on the first wlan */
+        if (is_multiple_bssid && (tlv->id == TLV_CHANNEL)) {
+            continue;
+        }
 
         /* This is used when hostapd will use multiple lines to 
          * configure multiple items in the same configuration parameter
@@ -703,13 +712,24 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 #if HOSTAPD_SUPPORT_MBSSID
             if (bss_info.mbssid_enable && !bss_info.transmitter) {
                 if (band_transmitter[bss_info.band]) {
+                    indigo_logger(LOG_LEVEL_DEBUG, "Append bss conf to %s", band_transmitter[bss_info.band]->hapd_conf_file);
                     append_file(band_transmitter[bss_info.band]->hapd_conf_file, buffer, len);
                 }
+                memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
+            }
+            else if (band_first_wlan[bss_info.band]) {
+                indigo_logger(LOG_LEVEL_DEBUG, "Append bss conf to %s", band_first_wlan[bss_info.band]->hapd_conf_file);
+                append_file(band_first_wlan[bss_info.band]->hapd_conf_file, buffer, len);
                 memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
             }
             else
 #endif
                 write_file(wlan->hapd_conf_file, buffer, len);
+        }
+
+        if (!band_first_wlan[bss_info.band]) {
+            /* For the first configured ap */
+            band_first_wlan[bss_info.band] = wlan;
         }
     }
     show_wireless_interface_info();
@@ -895,6 +915,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         wlan = get_wireless_interface_info(bss_info.band, bss_info.identifier);
         if (wlan) {
             get_mac_address(mac_addr, sizeof(mac_addr), wlan->ifname);
+            indigo_logger(LOG_LEVEL_DEBUG, "Get mac_addr %s\n", mac_addr);
             status = TLV_VALUE_STATUS_OK;
             message = TLV_VALUE_OK;
         } 
