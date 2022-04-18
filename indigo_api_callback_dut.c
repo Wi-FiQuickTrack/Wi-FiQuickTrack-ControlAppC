@@ -3341,11 +3341,12 @@ static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     if (tlv) {
         memset(pin_code, 0, sizeof(pin_code));
         memcpy(pin_code, tlv->value, tlv->len);
-        if (strlen(pin_code) == 1 && atoi(pin_code) == 0)
+        if (strlen(pin_code) == 1 && atoi(pin_code) == 0) {
             sprintf(buffer, "WPS_PIN any");
             use_dynamic_pin = 1;
-        else
+        } else {
             sprintf(buffer, "WPS_PIN any %s", pin_code);
+        }
     } else {
         sprintf(buffer, "WPS_PBC");
     }
