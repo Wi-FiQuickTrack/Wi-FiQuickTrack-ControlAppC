@@ -30,6 +30,7 @@
 
 static char pac_file_path[S_BUFFER_LEN] = {0};
 struct interface_info* band_transmitter[16];
+struct interface_info* band_first_wlan[16];
 extern struct sockaddr_in *tool_addr;
 int sta_configured = 0;
 int sta_started = 0;
@@ -173,6 +174,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     memset(band_transmitter, 0, sizeof(band_transmitter));
+    memset(band_first_wlan, 0, sizeof(band_first_wlan));
 
     vendor_device_reset();
 
@@ -235,6 +237,8 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     /* reset interfaces info */
     clear_interfaces_resource();
+    memset(band_transmitter, 0, sizeof(band_transmitter));
+    memset(band_first_wlan, 0, sizeof(band_first_wlan));
 
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
@@ -301,10 +305,13 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     struct tlv_to_profile *profile = NULL; 
     int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
     int hs20_icons_attached = 0;
+    int is_multiple_bssid = 0;
 
 #if HOSTAPD_SUPPORT_MBSSID
-    if (wlanp->mbssid_enable && !wlanp->transmitter)
+    if ((wlanp->mbssid_enable && !wlanp->transmitter) || (band_first_wlan[wlanp->band])) {
         sprintf(output, "bss=%s\nctrl_interface=%s\n", wlanp->ifname, HAPD_CTRL_PATH_DEFAULT);
+        is_multiple_bssid = 1;
+    }
     else
         sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, wlanp->ifname);
 #else
@@ -323,6 +330,11 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         tlv = wrapper->tlv[i];
         memset(buffer, 0, sizeof(buffer));
         memset(cfg_item, 0, sizeof(cfg_item));
+
+        /* channel will be configured on the first wlan */
+        if (is_multiple_bssid && (tlv->id == TLV_CHANNEL)) {
+            continue;
+        }
 
         if (tlv->id == TLV_HE_6G_ONLY) {
             is_6g_only = 1;
@@ -800,13 +812,23 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 #if HOSTAPD_SUPPORT_MBSSID
             if (bss_info.mbssid_enable && !bss_info.transmitter) {
                 if (band_transmitter[bss_info.band]) {
+                    indigo_logger(LOG_LEVEL_DEBUG, "Append bss conf to %s", band_transmitter[bss_info.band]->hapd_conf_file);
                     append_file(band_transmitter[bss_info.band]->hapd_conf_file, buffer, len);
                 }
                 memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
             }
-            else
+            else if (band_first_wlan[bss_info.band]) {
+                indigo_logger(LOG_LEVEL_DEBUG, "Append bss conf to %s", band_first_wlan[bss_info.band]->hapd_conf_file);
+                append_file(band_first_wlan[bss_info.band]->hapd_conf_file, buffer, len);
+                memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
+            } else
 #endif
                 write_file(wlan->hapd_conf_file, buffer, len);
+        }
+
+        if (!band_first_wlan[bss_info.band]) {
+            /* For the first configured ap */
+            band_first_wlan[bss_info.band] = wlan;
         }
     }
     show_wireless_interface_info();
@@ -1234,7 +1256,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         get_key_value(mac_addr, response, "address");
     } else {
 #if HOSTAPD_SUPPORT_MBSSID
-        if(wlan && wlan->mbssid_enable) {
+        if(bss_info.identifier >= 0) {
             sprintf(buff, "ssid[%d]", wlan->hapd_bss_id);
             get_key_value(connected_ssid, response, buff);
             sprintf(buff, "bssid[%d]", wlan->hapd_bss_id);
