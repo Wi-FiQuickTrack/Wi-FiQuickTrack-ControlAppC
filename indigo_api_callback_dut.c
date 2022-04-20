@@ -331,9 +331,14 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         memset(buffer, 0, sizeof(buffer));
         memset(cfg_item, 0, sizeof(cfg_item));
 
-        /* channel will be configured on the first wlan */
-        if (is_multiple_bssid && (tlv->id == TLV_CHANNEL)) {
-            continue;
+        if (tlv->id == TLV_CHANNEL) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            channel = atoi(value);
+            if (is_multiple_bssid) {
+               /* channel will be configured on the first wlan */
+               continue; 
+            }
         }
 
         if (tlv->id == TLV_HE_6G_ONLY) {
@@ -468,12 +473,6 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_HW_MODE) {
             memset(band, 0, sizeof(band));
             memcpy(band, tlv->value, tlv->len);
-        }
-
-        if (tlv->id == TLV_CHANNEL) {
-            memset(value, 0, sizeof(value));
-            memcpy(value, tlv->value, tlv->len);
-            channel = atoi(value);
         }
 
         if (tlv->id == TLV_HE_OPER_CHWIDTH) {
