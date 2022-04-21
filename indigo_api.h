@@ -81,6 +81,7 @@ struct indigo_api {
 #define API_P2P_SET_SERV_DISC                   0x201a
 #define API_STA_SEND_ICON_REQ                   0x201b
 #define API_P2P_SET_EXT_LISTEN                  0x201c
+#define API_STA_ENABLE_WSC                      0x201d
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
