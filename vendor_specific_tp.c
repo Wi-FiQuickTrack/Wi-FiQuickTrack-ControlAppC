@@ -530,6 +530,7 @@ int get_p2p_mac_addr(char *mac_addr, size_t size) {
     return error;
 }
 
+/* Get the name of P2P Group(GO or Client) interface */
 int get_p2p_group_if(char *if_name, size_t size) {
     FILE *fp;
     char buffer[S_BUFFER_LEN], *ptr, name[32];
@@ -562,21 +563,22 @@ int get_p2p_group_if(char *if_name, size_t size) {
     return error;
 }
 
-
+/* Append IP range config and start dhcpd */
 void start_dhcp_server(char *if_name, char *ip_addr)
 {
     char buffer[S_BUFFER_LEN];
     char ip_sub[32], *ptr;
     FILE *fp;
 
-    /*
+    /* Avoid using system dhcp server service
        snprintf(buffer, sizeof(buffer), "sed -i -e 's/INTERFACESv4=\".*\"/INTERFACESv4=\"%s\"/g' /etc/default/isc-dhcp-server", if_name);
        system(buffer);
        snprintf(buffer, sizeof(buffer), "systemctl restart isc-dhcp-server.service");
        system(buffer);
      */
-    // dhcpd -user dhcpd -group dhcpd -f -4 -pf /run/dhcp-server/dhcpd.pid -cf /etc/dhcp/dhcpd.conf p2p-wlp2s0-0 
-    // Avoid apparmor check because we manually start dhcpd
+    /* Sample command from isc-dhcp-server: dhcpd -user dhcpd -group dhcpd -f -4 -pf /run/dhcp-server/dhcpd.pid -cf /etc/dhcp/dhcpd.conf p2p-wlp2s0-0 */
+
+    /* Avoid apparmor check because we manually start dhcpd */
     memset(ip_sub, 0, sizeof(ip_sub));
     ptr = strrchr(ip_addr, '.');
     memcpy(ip_sub, ip_addr, ptr - ip_addr);
@@ -597,7 +599,7 @@ void start_dhcp_server(char *if_name, char *ip_addr)
 
 void stop_dhcp_server()
 {
-    //system("systemctl stop isc-dhcp-server.service");
+    /* system("systemctl stop isc-dhcp-server.service"); */
     system("killall dhcpd 1>/dev/null 2>/dev/null");
 }
 

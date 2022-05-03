@@ -275,14 +275,14 @@ static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* P2P */
 static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int find_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int listen_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int add_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int stop_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int start_wps_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int get_intent_value_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_serv_disc_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_ext_listen_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int p2p_find_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int p2p_listen_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int add_p2p_group_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int stop_p2p_group_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int p2p_start_wps_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int p2p_connect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int get_p2p_intent_value_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int p2p_invite_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_p2p_serv_disc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_p2p_ext_listen_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif // __INDIGO_API_CALLBACK
