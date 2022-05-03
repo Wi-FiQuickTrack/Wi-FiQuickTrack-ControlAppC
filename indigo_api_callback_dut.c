@@ -30,6 +30,7 @@
 
 static char pac_file_path[S_BUFFER_LEN] = {0};
 struct interface_info* band_transmitter[16];
+struct interface_info* band_first_wlan[16];
 extern struct sockaddr_in *tool_addr;
 int sta_configured = 0;
 int sta_started = 0;
@@ -86,6 +87,7 @@ void register_apis() {
     register_api(API_P2P_STOP_GROUP, NULL, stop_p2p_group_handler);
     register_api(API_P2P_SET_SERV_DISC, NULL, set_p2p_serv_disc_handler);
     register_api(API_P2P_SET_EXT_LISTEN, NULL, set_p2p_ext_listen_handler);
+    register_api(API_STA_ENABLE_WSC, NULL, enable_wsc_sta_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -173,6 +175,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     memset(band_transmitter, 0, sizeof(band_transmitter));
+    memset(band_first_wlan, 0, sizeof(band_first_wlan));
 
     vendor_device_reset();
 
@@ -235,6 +238,8 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     /* reset interfaces info */
     clear_interfaces_resource();
+    memset(band_transmitter, 0, sizeof(band_transmitter));
+    memset(band_first_wlan, 0, sizeof(band_first_wlan));
 
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
@@ -301,10 +306,13 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     struct tlv_to_profile *profile = NULL; 
     int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
     int hs20_icons_attached = 0;
+    int is_multiple_bssid = 0;
 
 #if HOSTAPD_SUPPORT_MBSSID
-    if (wlanp->mbssid_enable && !wlanp->transmitter)
+    if ((wlanp->mbssid_enable && !wlanp->transmitter) || (band_first_wlan[wlanp->band])) {
         sprintf(output, "bss=%s\nctrl_interface=%s\n", wlanp->ifname, HAPD_CTRL_PATH_DEFAULT);
+        is_multiple_bssid = 1;
+    }
     else
         sprintf(output, "ctrl_interface=%s\nctrl_interface_group=0\ninterface=%s\n", HAPD_CTRL_PATH_DEFAULT, wlanp->ifname);
 #else
@@ -323,6 +331,16 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         tlv = wrapper->tlv[i];
         memset(buffer, 0, sizeof(buffer));
         memset(cfg_item, 0, sizeof(cfg_item));
+
+        if (tlv->id == TLV_CHANNEL) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            channel = atoi(value);
+            if (is_multiple_bssid) {
+               /* channel will be configured on the first wlan */
+               continue; 
+            }
+        }
 
         if (tlv->id == TLV_HE_6G_ONLY) {
             is_6g_only = 1;
@@ -456,12 +474,6 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (tlv->id == TLV_HW_MODE) {
             memset(band, 0, sizeof(band));
             memcpy(band, tlv->value, tlv->len);
-        }
-
-        if (tlv->id == TLV_CHANNEL) {
-            memset(value, 0, sizeof(value));
-            memcpy(value, tlv->value, tlv->len);
-            channel = atoi(value);
         }
 
         if (tlv->id == TLV_HE_OPER_CHWIDTH) {
@@ -800,13 +812,23 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 #if HOSTAPD_SUPPORT_MBSSID
             if (bss_info.mbssid_enable && !bss_info.transmitter) {
                 if (band_transmitter[bss_info.band]) {
+                    indigo_logger(LOG_LEVEL_DEBUG, "Append bss conf to %s", band_transmitter[bss_info.band]->hapd_conf_file);
                     append_file(band_transmitter[bss_info.band]->hapd_conf_file, buffer, len);
                 }
                 memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
             }
-            else
+            else if (band_first_wlan[bss_info.band]) {
+                indigo_logger(LOG_LEVEL_DEBUG, "Append bss conf to %s", band_first_wlan[bss_info.band]->hapd_conf_file);
+                append_file(band_first_wlan[bss_info.band]->hapd_conf_file, buffer, len);
+                memset(wlan->hapd_conf_file, 0, sizeof(wlan->hapd_conf_file));
+            } else
 #endif
                 write_file(wlan->hapd_conf_file, buffer, len);
+        }
+
+        if (!band_first_wlan[bss_info.band]) {
+            /* For the first configured ap */
+            band_first_wlan[bss_info.band] = wlan;
         }
     }
     show_wireless_interface_info();
@@ -1234,7 +1256,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         get_key_value(mac_addr, response, "address");
     } else {
 #if HOSTAPD_SUPPORT_MBSSID
-        if(wlan && wlan->mbssid_enable) {
+        if(bss_info.identifier >= 0) {
             sprintf(buff, "ssid[%d]", wlan->hapd_bss_id);
             get_key_value(connected_ssid, response, buff);
             sprintf(buff, "bssid[%d]", wlan->hapd_bss_id);
@@ -1836,26 +1858,6 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
             sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
             strcat(buffer, cfg_item);
         }
-    }
-
-    /* wps settings */
-    tlv = find_wrapper_tlv_by_id(wrapper, TLV_WSC_OOB);
-    if (tlv) {
-        memset(value, 0, sizeof(value));
-        memcpy(value, tlv->value, tlv->len);
-        /* To get STA wps vendor info */
-        wps_setting *s = get_vendor_wps_settings(WPS_STA);
-        if (!s) {
-            indigo_logger(LOG_LEVEL_WARNING, "Failed to get STA wps settings");
-        } else if (atoi(value)) {
-            for (i = 0; i < STA_SETTING_NUM; i++) {
-                memset(cfg_item, 0, sizeof(cfg_item));
-                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
-                strcat(buffer, cfg_item);
-            }
-        }
-        /* WPS: no network profile configuration and return. */
-        goto done;
     }
 
     strcat(buffer, "network={\n");
@@ -3322,34 +3324,29 @@ done:
 static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
-    char pin_code[64], if_name[32];
+    char pin_code[64];
     size_t resp_len;
-    int i, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
     struct tlv_hdr *tlv = NULL;
-
-    memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
-        get_wpas_full_exec_path(),
-        get_wpas_conf_file(),
-        get_wireless_interface());
-    system(buffer);
-    sleep(2);
+    int use_dynamic_pin = 0;
 
     memset(buffer, 0, sizeof(buffer));
     tlv = find_wrapper_tlv_by_id(req, TLV_PIN_CODE);
     if (tlv) {
         memset(pin_code, 0, sizeof(pin_code));
         memcpy(pin_code, tlv->value, tlv->len);
-        if (strlen(pin_code) == 1 && atoi(pin_code) == 0)
+        if (strlen(pin_code) == 1 && atoi(pin_code) == 0) {
             sprintf(buffer, "WPS_PIN any");
-        else
+            use_dynamic_pin = 1;
+        } else {
             sprintf(buffer, "WPS_PIN any %s", pin_code);
+        }
     } else {
         sprintf(buffer, "WPS_PBC");
     }
 
-    /* Open hostapd UDS socket */
+    /* Open wpa_supplicant UDS socket */
     w = wpa_ctrl_open(get_wpas_ctrl_path());
     if (!w) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
@@ -3373,7 +3370,7 @@ done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (status == TLV_VALUE_STATUS_OK) {
+    if (status == TLV_VALUE_STATUS_OK && use_dynamic_pin) {
         fill_wrapper_tlv_bytes(resp, TLV_WSC_PIN_CODE, strlen(response), response);
     }
     if (w) {
@@ -3672,5 +3669,86 @@ done:
     if (w) {
         wpa_ctrl_close(w);
     }
+    return 0;
+}
+
+static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    char buffer[L_BUFFER_LEN];
+    char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN], buf[S_BUFFER_LEN];
+    int i, len = 0, status = TLV_VALUE_STATUS_NOT_OK;
+    struct tlv_hdr *tlv = NULL;
+    struct tlv_to_config_name* cfg = NULL;
+
+#ifdef _OPENWRT_
+#else
+    system("rfkill unblock wlan");
+    sleep(1);
+#endif
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
+    sleep(3);
+
+    /* Generate configuration */
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
+
+    for (i = 0; i < req->tlv_num; i++) {
+        cfg = find_wpas_global_config_name(req->tlv[i]->id);
+        if (cfg) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
+            sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+            strcat(buffer, cfg_item);
+        }
+    }
+
+    /* wps settings */
+    tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        /* To get STA wps vendor info */
+        wps_setting *s = get_vendor_wps_settings(WPS_STA);
+        if (!s) {
+            indigo_logger(LOG_LEVEL_WARNING, "Failed to get STA wps settings");
+        } else if (atoi(value)) {
+            for (i = 0; i < STA_SETTING_NUM; i++) {
+                memset(cfg_item, 0, sizeof(cfg_item));
+                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
+                strcat(buffer, cfg_item);
+            }
+            indigo_logger(LOG_LEVEL_DEBUG, "Appended STA WSC data");
+        } else {
+            indigo_logger(LOG_LEVEL_WARNING, "Failed to append STA WSC data");
+        }
+    } else {
+        indigo_logger(LOG_LEVEL_WARNING, "No WSC TLV found. Failed to append STA WSC data");
+    }
+
+    len = strlen(buffer);
+
+    if (len) {
+        write_file(get_wpas_conf_file(), buffer, len);
+    }
+
+    /* Start wpa supplicant */
+    memset(buffer, 0 ,sizeof(buffer));
+    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wireless_interface());
+    system(buffer);
+    sleep(2);
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_WPA_S_START_UP_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     return 0;
 }
