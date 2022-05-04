@@ -77,16 +77,16 @@ void register_apis() {
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
     register_api(API_STA_POWER_SAVE, NULL, NULL);
     register_api(API_P2P_START_UP, NULL, start_up_p2p_handler);
-    register_api(API_P2P_FIND, NULL, find_p2p_handler);
-    register_api(API_P2P_LISTEN, NULL, listen_p2p_handler);
-    register_api(API_P2P_ADD_GROUP, NULL, add_group_p2p_handler);
-    register_api(API_P2P_START_WPS, NULL, start_wps_p2p_handler);
-    register_api(API_P2P_CONNECT, NULL, connect_p2p_handler);
-    register_api(API_P2P_GET_INTENT_VALUE, NULL, get_intent_value_p2p_handler);
-    register_api(API_P2P_INVITE, NULL, invite_p2p_handler);
-    register_api(API_P2P_STOP_GROUP, NULL, stop_group_p2p_handler);
-    register_api(API_P2P_SET_SERV_DISC, NULL, set_serv_disc_p2p_handler);
-    register_api(API_P2P_SET_EXT_LISTEN, NULL, set_ext_listen_p2p_handler);
+    register_api(API_P2P_FIND, NULL, p2p_find_handler);
+    register_api(API_P2P_LISTEN, NULL, p2p_listen_handler);
+    register_api(API_P2P_ADD_GROUP, NULL, add_p2p_group_handler);
+    register_api(API_P2P_START_WPS, NULL, p2p_start_wps_handler);
+    register_api(API_P2P_CONNECT, NULL, p2p_connect_handler);
+    register_api(API_P2P_GET_INTENT_VALUE, NULL, get_p2p_intent_value_handler);
+    register_api(API_P2P_INVITE, NULL, p2p_invite_handler);
+    register_api(API_P2P_STOP_GROUP, NULL, stop_p2p_group_handler);
+    register_api(API_P2P_SET_SERV_DISC, NULL, set_p2p_serv_disc_handler);
+    register_api(API_P2P_SET_EXT_LISTEN, NULL, set_p2p_ext_listen_handler);
     register_api(API_STA_ENABLE_WSC, NULL, enable_wsc_sta_handler);
 }
 
@@ -1335,7 +1335,7 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
     char tool_udp_port[16];
     char if_name[32];
 
-    /* Find network interface. If bridge exists, then use it. Otherwise, it uses the initiation value. */
+    /* Find network interface. If P2P Group or bridge exists, then use it. Otherwise, it uses the initiation value. */
     memset(local_ip, 0, sizeof(local_ip));
     if (get_p2p_group_if(if_name, sizeof(if_name)) == 0 && find_interface_ip(local_ip, sizeof(local_ip), if_name)) {
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", if_name);
@@ -2349,7 +2349,7 @@ done:
     return 0;
 }
 
-static int find_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int p2p_find_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     size_t resp_len;
@@ -2388,7 +2388,7 @@ done:
     return 0;
 }
 
-static int listen_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int p2p_listen_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     size_t resp_len;
@@ -2427,7 +2427,7 @@ done:
     return 0;
 }
 
-static int add_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int add_p2p_group_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     char freq[64], he[16];
@@ -2485,7 +2485,7 @@ done:
     return 0;
 }
 
-static int stop_group_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int stop_p2p_group_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     int persist = 0;
@@ -2529,6 +2529,7 @@ static int stop_group_p2p_handler(struct packet_wrapper *req, struct packet_wrap
     }
 
     if (persist == 1) {
+        /* Can use global ctrl if global ctrl is initialized */
         get_p2p_dev_if(p2p_dev_if, sizeof(p2p_dev_if));
         indigo_logger(LOG_LEVEL_DEBUG, "P2P Dev IF: %s", p2p_dev_if);
         /* Open wpa_supplicant UDS socket */
@@ -2540,7 +2541,7 @@ static int stop_group_p2p_handler(struct packet_wrapper *req, struct packet_wrap
             goto done;
         }
 
-        /* Clear the persistent group */
+        /* Clear the persistent group with id 0 */
         memset(buffer, 0, sizeof(buffer));
         memset(response, 0, sizeof(response));
         sprintf(buffer, "REMOVE_NETWORK 0");
@@ -2565,7 +2566,7 @@ done:
     return 0;
 }
 
-static int start_wps_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int p2p_start_wps_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     char pin_code[64], if_name[32];
@@ -2968,7 +2969,7 @@ done:
     return 0;
 }
 
-static int connect_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int p2p_connect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     char pin_code[64], if_name[32];
@@ -3230,7 +3231,7 @@ done:
     return 0;
 }
 
-static int get_intent_value_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int get_p2p_intent_value_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_OK;
     char *message = TLV_VALUE_OK;
     char response[S_BUFFER_LEN];
@@ -3482,7 +3483,7 @@ done:
     return 0;
 }
 
-static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int p2p_invite_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     char addr[32], if_name[16], persist[32], p2p_dev_if[32];
@@ -3507,12 +3508,14 @@ static int invite_p2p_handler(struct packet_wrapper *req, struct packet_wrapper 
     memset(persist, 0, sizeof(persist));
     tlv = find_wrapper_tlv_by_id(req, TLV_PERSISTENT);
     if (tlv) {
-            snprintf(persist, sizeof(persist), "persistent=0");
+        /* Assume persistent group id is 0 */
+        snprintf(persist, sizeof(persist), "persistent=0");
     } else if (get_p2p_group_if(if_name, sizeof(if_name)) != 0) {
         message = "Failed to get P2P Group Interface";
         goto done;
     }
 
+    /* Can use global ctrl if global ctrl is initialized */
     get_p2p_dev_if(p2p_dev_if, sizeof(p2p_dev_if));
     indigo_logger(LOG_LEVEL_DEBUG, "P2P Dev IF: %s", p2p_dev_if);
     /* Open wpa_supplicant UDS socket */
@@ -3564,7 +3567,7 @@ done:
     return 0;
 }
 
-static int set_serv_disc_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int set_p2p_serv_disc_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[BUFFER_LEN], response[BUFFER_LEN];
     char addr[32], p2p_dev_if[32];
@@ -3583,6 +3586,7 @@ static int set_serv_disc_p2p_handler(struct packet_wrapper *req, struct packet_w
         /* Add bonjour and upnp Service */
     }
 
+    /* Can use global ctrl if global ctrl is initialized */
     get_p2p_dev_if(p2p_dev_if, sizeof(p2p_dev_if));
     indigo_logger(LOG_LEVEL_DEBUG, "P2P Dev IF: %s", p2p_dev_if);
     /* Open wpa_supplicant UDS socket */
@@ -3630,7 +3634,7 @@ done:
     return 0;
 }
 
-static int set_ext_listen_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int set_p2p_ext_listen_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
     size_t resp_len;

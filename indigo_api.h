@@ -302,8 +302,8 @@ struct indigo_api {
 #define TLV_BAND_5GHZ                           "5GHz"
 #define TLV_BAND_6GHZ                           "6GHz"
 
-#define TLV_VALUE_APP_VERSION                   "v1.0"
-#define TLV_VALUE_TEST_PLATFORM_APP_VERSION     "v1.0"
+#define TLV_VALUE_APP_VERSION                   "v2.0"
+#define TLV_VALUE_TEST_PLATFORM_APP_VERSION     "v2.0"
 #define TLV_VALUE_OK                            "OK"
 #define TLV_VALUE_NOT_OK                        "Failed"
 #define TLV_VALUE_INSUFFICIENT_TLV              "TLV is insufficient to run the command"
