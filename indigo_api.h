@@ -272,6 +272,7 @@ struct indigo_api {
 #define TLV_P2P_DISABLED                        0x00d5
 #define TLV_MANAGE_P2P                          0x00d6
 #define TLV_AP_STA_COEXIST                      0x00d7
+#define TLV_WPS_INDEPENDENT                     0x00d8
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT

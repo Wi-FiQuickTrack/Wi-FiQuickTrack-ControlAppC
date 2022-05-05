@@ -263,6 +263,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_P2P_DISABLED, "P2P_DISABLED" },
     { TLV_MANAGE_P2P, "MANAGE_P2P" },
     { TLV_AP_STA_COEXIST, "AP_STA_COEXIST" },
+    { TLV_WPS_INDEPENDENT, "WPS_INDEPENDENT" },  
 };
 
 /* Find the type of the API stucture by the ID from the list */
