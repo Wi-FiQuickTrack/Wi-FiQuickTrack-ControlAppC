@@ -392,61 +392,6 @@ void stop_dhcp_client()
     system("killall dhclient 1>/dev/null 2>/dev/null");
 }
 
-wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
-    {
-        /*
-        * WPS OOB required. (Not-Configured OOB state)
-        * */
-        { WPS_OOB_SSID, "Openwrt-WPS-dut", WPS_OOB_ONLY }, /* ap broadcasts ssid */
-        { WPS_OOB_AUTH_TYPE, "WPA-PSK", WPS_OOB_ONLY }, /* authentication type */
-        { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
-        { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
-        { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
-        { WPS_OOB_STATE, WPS_OOB_NOT_CONFIGURED, WPS_OOB_ONLY }, /* wps oob state */
-        /*
-        * General
-        * */
-        { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
-        { WPS_CONFIG, SUPPORTED_CONF_METHOD_AP, WPS_COMMON }, /* config methods */
-        { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
-        { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
-        { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
-        { WPS_MODEL_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* model name */
-        { WPS_MODEL_NUMBER, "Openwrt Wireless AP-001", WPS_COMMON }, /* model number */
-        { WPS_SERIAL_NUMBER, "OA14998888", WPS_COMMON }, /* serial number */
-    },
-    {
-        /*
-        * WPS OOB required. (Configured OOB state)
-        * */
-        { WPS_OOB_SSID, "Openwrt-WPS-dut", WPS_OOB_ONLY }, /* ap broadcasts ssid */
-        { WPS_OOB_AUTH_TYPE, "WPA-PSK", WPS_OOB_ONLY }, /* authentication type */
-        { WPS_OOB_ENC_TYPE, "CCMP", WPS_OOB_ONLY }, /* encryption type */
-        { WPS_OOB_WPA_VER, "2", WPS_OOB_ONLY }, /* wpa version. 1: wpa, 2: wpa2 */
-        { WPS_OOB_PSK, "1qaz2wsx", WPS_OOB_ONLY }, /* passphrass */
-        { WPS_OOB_STATE, WPS_OOB_CONFIGURED, WPS_OOB_ONLY }, /* wps oob state */
-        /*
-        * General
-        * */
-        { WPS_OOB_AP_PIN, "12345670", WPS_COMMON }, /* wps ap pin */
-        { WPS_CONFIG, SUPPORTED_CONF_METHOD_AP, WPS_COMMON }, /* config methods */
-        { WPS_DEV_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* device name  */
-        { WPS_DEV_TYPE, "6-0050F204-1", WPS_COMMON }, /* primary device type */
-        { WPS_MANUFACTURER, "OpenwrtProject.org", WPS_COMMON }, /* manufacturer */
-        { WPS_MODEL_NAME, "Openwrt Wireless AP", WPS_COMMON }, /* model name */
-        { WPS_MODEL_NUMBER, "Openwrt Wireless AP-001", WPS_COMMON }, /* model number */
-        { WPS_SERIAL_NUMBER, "OA14998888", WPS_COMMON }, /* serial number */
-    },
-};
-
-wps_setting wps_settings_sta[STA_SETTING_NUM] = {
-        { WPS_CONFIG, SUPPORTED_CONF_METHOD_STA, WPS_COMMON }, /* config methods */
-        { WPS_DEV_NAME, "Intel Wireless STA", WPS_COMMON }, /* device name  */
-        { WPS_MANUFACTURER, "Intel.com", WPS_COMMON }, /* manufacturer */
-        { WPS_MODEL_NAME, "Intel Wireless STA", WPS_COMMON }, /* model name */
-        { WPS_MODEL_NUMBER, "Intel Wireless STA-001", WPS_COMMON }, /* model number */
-};
-
 wps_setting *p_wps_setting = NULL;
 wps_setting customized_wps_settings_ap[AP_SETTING_NUM];
 wps_setting customized_wps_settings_sta[STA_SETTING_NUM];
@@ -493,7 +438,7 @@ wps_setting* __get_wps_setting(int len, char *buffer, enum wps_device_role role)
 wps_setting* get_vendor_wps_settings(enum wps_device_role role)
 {
     /*
-     * Please implement the function to get wps OOB and required settings as per vendor's direction.
+     * Please implement the vendor proprietary function to get WPS OOB and required settings.
      * */
 #define WSC_SETTINGS_FILE_AP "/tmp/wsc_settings_APUT"
 #define WSC_SETTINGS_FILE_STA "/tmp/wsc_settings_STAUT"
@@ -518,8 +463,7 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
                 indigo_logger(LOG_LEVEL_INFO, "wsc settings APUT: no data");
             }
         } else {
-            // use default
-            return wps_settings_ap[0];
+            return NULL;
         }
     } else {
         if (0 == access(WSC_SETTINGS_FILE_STA, F_OK)) {
@@ -532,8 +476,7 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
                 indigo_logger(LOG_LEVEL_INFO, "wsc settings STAUT: no data");
             }
         } else {
-            // use default
-            return wps_settings_sta;
+            return NULL;
         }
     }
 }

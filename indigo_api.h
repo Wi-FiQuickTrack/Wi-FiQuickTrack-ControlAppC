@@ -260,7 +260,7 @@ struct indigo_api {
 #define TLV_PIN_CODE                            0x00c9
 #define TLV_P2P_CONN_TYPE                       0x00ca
 #define TLV_HS20_OPERATING_CLASS_INDICATION     0x00cb
-#define TLV_WSC_OOB                             0x00cc
+#define TLV_WPS_ENABLE                          0x00cc
 #define TLV_UPDATE_CONFIG                       0x00cd
 #define TLV_EAP_FRAG_SIZE                       0x00ce
 #define TLV_PERFORM_WPS_IE_FRAG                 0x00cf
@@ -377,6 +377,9 @@ struct indigo_api {
 
 #define P2P_CONN_TYPE_JOIN                      0x01
 #define P2P_CONN_TYPE_AUTH                      0x02
+
+#define WPS_ENABLE_NORMAL                       0x01
+#define WPS_ENABLE_OOB                          0x02
 
 struct indigo_api* get_api_by_id(int id);
 struct indigo_tlv* get_tlv_by_id(int id);
