@@ -290,7 +290,7 @@ struct indigo_api {
 #define TLV_P2P_INTENT_VALUE                    0xa00b
 #define TLV_WSC_SSID                            0xa00c
 #define TLV_WSC_WPA_KEY_MGMT                    0xa00d
-#define TLV_WSC_WPA_PASSPHRASS                  0xa00e
+#define TLV_WSC_WPA_PASSPHRASE                  0xa00e
 #define TLV_PASSPOINT_ICON_CHECKSUM             0xa00f
 
 /* TLV Value */

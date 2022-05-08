@@ -3412,7 +3412,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
         // APUT
         struct _cfg_cred cfg_creds[] = {
             {"ssid", "ssid=", {0}, TLV_WSC_SSID},
-            {"wpa_passphrase", "wpa_passphrase=", {0}, TLV_WSC_WPA_PASSPHRASS},
+            {"wpa_passphrase", "wpa_passphrase=", {0}, TLV_WSC_WPA_PASSPHRASE},
             {"wpa_key_mgmt", "wpa_key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
         };
         count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
@@ -3436,7 +3436,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
         // STAUT
         struct _cfg_cred cfg_creds[] = {
             {"ssid", "ssid=", {0}, TLV_WSC_SSID},
-            {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASS},
+            {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASE},
             {"key_mgmt", "key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
         };
         count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
