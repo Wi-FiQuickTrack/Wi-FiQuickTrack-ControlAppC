@@ -463,6 +463,7 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
                 indigo_logger(LOG_LEVEL_INFO, "wsc settings APUT: no data");
             }
         } else {
+            indigo_logger(LOG_LEVEL_ERROR, "APUT: WPS Erorr. Failed to get settings.");
             return NULL;
         }
     } else {
@@ -476,6 +477,7 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
                 indigo_logger(LOG_LEVEL_INFO, "wsc settings STAUT: no data");
             }
         } else {
+            indigo_logger(LOG_LEVEL_ERROR, "STAUT: WPS Erorr. Failed to get settings.");
             return NULL;
         }
     }
