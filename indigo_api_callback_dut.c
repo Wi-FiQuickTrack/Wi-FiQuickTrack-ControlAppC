@@ -406,26 +406,27 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         /* wps settings */
-        if (tlv->id == TLV_WSC_OOB) {
+        if (tlv->id == TLV_WPS_ENABLE) {
             int j;
 
             /* To get AP wps vendor info */
             wps_setting *s = get_vendor_wps_settings(WPS_AP);
             if (!s) {
-                indigo_logger(LOG_LEVEL_WARNING, "Failed to get AP wps settings");
+                indigo_logger(LOG_LEVEL_WARNING, "Failed to get APUT WPS settings");
                 continue;
             }
             enable_wps = 1;
             memcpy(buffer, tlv->value, tlv->len);
-            if (atoi(buffer)) {
-                /* Use OOB */
+            if (atoi(buffer) == WPS_ENABLE_OOB) {
+                /* WPS OOB: Out-of-Box */
                 for (j = 0; j < AP_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
                     sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
                     strcat(output, cfg_item);
                 }
-            } else {
-                /* NOT use OOB: Configure manually. */
+                indigo_logger(LOG_LEVEL_INFO, "APUT Configure WPS: OOB.");
+            } else if (atoi(buffer) == WPS_ENABLE_NORMAL){
+                /* WPS Normal: Configure manually. */
                 for (j = 0; j < AP_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
                     /* set wps state */
@@ -441,6 +442,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                     }
                     strcat(output, cfg_item);
                 }
+                indigo_logger(LOG_LEVEL_INFO, "APUT Configure WPS: Manually Configured.");
+            } else {
+                indigo_logger(LOG_LEVEL_ERROR, "Unknown WPS TLV value: %d (TLV ID 0x%04x)", atoi(buffer), tlv->id);
             }
             continue;
         }
@@ -581,7 +585,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
     }
 
-    /* add rf band according to TLV_BSS_IDENTIFIER/TLV_HW_MODE/TLV_WSC_OOB */
+    /* add rf band according to TLV_BSS_IDENTIFIER/TLV_HW_MODE/TLV_WPS_ENABLE */
     if (enable_wps) {
         if (use_mbss) {
             /* The wps test for mbss should always be dual concurrent. */
@@ -3408,7 +3412,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
         // APUT
         struct _cfg_cred cfg_creds[] = {
             {"ssid", "ssid=", {0}, TLV_WSC_SSID},
-            {"wpa_passphrase", "wpa_passphrase=", {0}, TLV_WSC_WPA_PASSPHRASS},
+            {"wpa_passphrase", "wpa_passphrase=", {0}, TLV_WSC_WPA_PASSPHRASE},
             {"wpa_key_mgmt", "wpa_key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
         };
         count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
@@ -3432,7 +3436,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
         // STAUT
         struct _cfg_cred cfg_creds[] = {
             {"ssid", "ssid=", {0}, TLV_WSC_SSID},
-            {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASS},
+            {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASE},
             {"key_mgmt", "key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
         };
         count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
@@ -3706,23 +3710,23 @@ static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrap
     }
 
     /* wps settings */
-    tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
+    tlv = find_wrapper_tlv_by_id(req, TLV_WPS_ENABLE);
     if (tlv) {
         memset(value, 0, sizeof(value));
         memcpy(value, tlv->value, tlv->len);
         /* To get STA wps vendor info */
         wps_setting *s = get_vendor_wps_settings(WPS_STA);
         if (!s) {
-            indigo_logger(LOG_LEVEL_WARNING, "Failed to get STA wps settings");
-        } else if (atoi(value)) {
+            indigo_logger(LOG_LEVEL_WARNING, "Failed to get STAUT WPS settings");
+        } else if (atoi(value) == WPS_ENABLE_NORMAL) {
             for (i = 0; i < STA_SETTING_NUM; i++) {
                 memset(cfg_item, 0, sizeof(cfg_item));
                 sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
                 strcat(buffer, cfg_item);
             }
-            indigo_logger(LOG_LEVEL_DEBUG, "Appended STA WSC data");
+            indigo_logger(LOG_LEVEL_INFO, "STAUT Configure WPS");
         } else {
-            indigo_logger(LOG_LEVEL_WARNING, "Failed to append STA WSC data");
+            indigo_logger(LOG_LEVEL_ERROR, "Invalid WPS TLV value: %d (TLV ID 0x%04x)", atoi(value), tlv->id);
         }
     } else {
         indigo_logger(LOG_LEVEL_WARNING, "No WSC TLV found. Failed to append STA WSC data");

@@ -369,7 +369,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         }
 
         /* wps settings */
-        if (tlv->id == TLV_WSC_OOB) {
+        if (tlv->id == TLV_WPS_ENABLE) {
             int j;
             wps_setting *s = NULL;
 
@@ -380,18 +380,19 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             else
                 s = get_vendor_wps_settings(WPS_AP);
             if (!s) {
-                indigo_logger(LOG_LEVEL_ERROR, "Failed to get vendor wps settings.");
+                indigo_logger(LOG_LEVEL_ERROR, "Failed to get AP WPS settings.");
                 continue;
             }
-            if (atoi(buffer)) {
-                /* Use OOB */
+            if (atoi(buffer) == WPS_ENABLE_OOB) {
+                /* WPS OOB: Out-of-Box */
                 for (j = 0; j < AP_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
                     sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
                     strcat(output, cfg_item);
                 }
-            } else {
-                /* NOT use OOB: Configure manually. */
+                indigo_logger(LOG_LEVEL_INFO, "AP Configure WPS: OOB.");
+            } else if (atoi(buffer) == WPS_ENABLE_NORMAL) {
+                /* WPS Normal: Configure manually. */
                 for (j = 0; j < AP_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
                     /* set wps state */
@@ -407,6 +408,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                     }
                     strcat(output, cfg_item);
                 }
+                indigo_logger(LOG_LEVEL_INFO, "AP Configure WPS: Manually Configured.");
+            } else {
+                indigo_logger(LOG_LEVEL_ERROR, "Unknown WPS TLV value: %d (TLV ID 0x%04x)", atoi(buffer), tlv->id);
             }
             continue;
         }
@@ -538,7 +542,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             add_mu_edca_params(output);
     }
 
-    /* add rf band according to TLV_BSS_IDENTIFIER/TLV_HW_MODE/TLV_WSC_OOB */
+    /* add rf band according to TLV_BSS_IDENTIFIER/TLV_HW_MODE/TLV_WPS_ENABLE */
     if (enable_wps) {
         if (use_mbss) {
             /* The wps test for mbss should always be dual concurrent. */
@@ -1175,7 +1179,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
             /* wpas conf file rename and send */
             memset(buffer, 0, sizeof(buffer));
             memset(buffer1, 0, sizeof(buffer1));
-            snprintf(buffer1, sizeof(buffer1), "%s.m%d", get_wpas_conf_file(), reconf_count);
+            snprintf(buffer1, sizeof(buffer1), "%s.reconfig_%d", get_wpas_conf_file(), reconf_count);
             snprintf(buffer, sizeof(buffer), "mv %s %s", get_wpas_conf_file(), buffer1);
             system(buffer);
             http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, buffer1);
@@ -1183,7 +1187,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
             /* wpas log file rename and send */
             memset(buffer, 0, sizeof(buffer));
             memset(buffer2, 0, sizeof(buffer2));
-            snprintf(buffer2, sizeof(buffer2), "%s.m%d", WPAS_LOG_FILE, reconf_count);
+            snprintf(buffer2, sizeof(buffer2), "%s.reconfig_%d", WPAS_LOG_FILE, reconf_count);
             snprintf(buffer, sizeof(buffer), "mv %s %s", WPAS_LOG_FILE, buffer2);
             system(buffer);
             http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, buffer2);
@@ -1499,7 +1503,7 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
         }
 
         /* wps settings */
-        tlv = find_wrapper_tlv_by_id(req, TLV_WSC_OOB);
+        tlv = find_wrapper_tlv_by_id(req, TLV_WPS_ENABLE);
         if (tlv) {
             int j;
             wps_setting *s = NULL;
@@ -1513,13 +1517,16 @@ static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrappe
             else
                 s = get_vendor_wps_settings(WPS_STA);
             if (!s) {
-                indigo_logger(LOG_LEVEL_ERROR, "Failed to get vendor wps settings.");
-            } else if (atoi(value)) {
+                indigo_logger(LOG_LEVEL_ERROR, "Failed to get AP WPS settings.");
+            } else if (atoi(value) == WPS_ENABLE_NORMAL) {
                 for (j = 0; j < STA_SETTING_NUM; j++) {
                     memset(cfg_item, 0, sizeof(cfg_item));
                     sprintf(cfg_item, "%s=%s\n", s[j].wkey, s[j].value);
                     strcat(buffer, cfg_item);
                 }
+                indigo_logger(LOG_LEVEL_INFO, "STA Configure WPS");
+            } else {
+                indigo_logger(LOG_LEVEL_ERROR, "Invalid WPS TLV value: %d (TLV ID 0x%04x)", atoi(value), tlv->id);
             }
         }
 
@@ -1945,7 +1952,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
         // Test Platform: STA
         struct _cfg_cred cfg_creds[] = {
             {"ssid", "ssid=", {0}, TLV_WSC_SSID},
-            {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASS},
+            {"psk", "psk=", {0}, TLV_WSC_WPA_PASSPHRASE},
             {"key_mgmt", "key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
         };
         count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
@@ -1959,7 +1966,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
         // Test Platform: AP
         struct _cfg_cred cfg_creds[] = {
             {"ssid", "ssid=", {0}, TLV_WSC_SSID},
-            {"wpa_passphrase", "wpa_passphrase=", {0}, TLV_WSC_WPA_PASSPHRASS},
+            {"wpa_passphrase", "wpa_passphrase=", {0}, TLV_WSC_WPA_PASSPHRASE},
             {"wpa_key_mgmt", "wpa_key_mgmt=", {0}, TLV_WSC_WPA_KEY_MGMT}
         };
         count = sizeof(cfg_creds)/sizeof(struct _cfg_cred);
