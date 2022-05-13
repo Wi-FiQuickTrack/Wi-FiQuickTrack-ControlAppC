@@ -43,8 +43,8 @@
 #define WPAS_CONF_FILE_DEFAULT                      "/tmp/wpa_supplicant.conf"
 // 2(2.4G): first interface ath1, second interface ath11
 // 5(5G): first interface ath0, second interface ath01
-#define DEFAULT_APP_INTERFACES_PARAMS               "2:ath1,2:ath11,5:ath0,5:ath01"
-#define DEFAULT_APP_6E_INTERFACES_PARAMS            "6:ath0,6:ath01,5:ath1,5:ath11,2:ath2,2:ath21"
+#define DEFAULT_APP_INTERFACES_PARAMS               "2:ath1,2:ath11,2:ath12,2:ath13,5:ath0,5:ath01,5:ath02,5:ath03"
+#define DEFAULT_APP_6E_INTERFACES_PARAMS            "6:ath0,6:ath01,6:ath02,6:ath03,5:ath1,5:ath11,5:ath12,5:ath13,2:ath2,2:ath21,2:ath22,2:ath23"
 
 #else
 #define HAPD_CONF_FILE_DEFAULT                      "/etc/hostapd/hostapd.conf"
@@ -66,9 +66,12 @@
 #define WPAS_GLOBAL_CTRL_PATH_DEFAULT               "/var/run/wpa_supplicant/global" // not use wpas global before
 #define WPAS_LOG_FILE                               "/var/log/supplicant.log"
 
+#define HS20_OSU_CLIENT "/usr/local/bin/WFA-Hostapd-Supplicant/hs20-osu-client"
+
 #define WIRELESS_INTERFACE_DEFAULT                  "wlan0"
 #define SERVICE_PORT_DEFAULT                        9004
 
+/* Default bridge for wireless interfaces */
 #define BRIDGE_WLANS                                "br-wlans"
 
 #ifdef _WTS_OPENWRT_
@@ -82,9 +85,57 @@
 #define HOSTAPD_SUPPORT_MBSSID_WAR
 #endif
 
+/* Default DUT GO intent value */
+#define P2P_GO_INTENT 7
+
+#define DHCP_SERVER_IP "192.168.65.1"
 void vendor_init();
 void vendor_deinit();
 void vendor_device_reset();
+
+/**
+ * wps settings retrieved with vendor-specific operations.
+ */
+
+#define WPS_OOB_SSID          "ssid"
+#define WPS_OOB_AUTH_TYPE     "wpa_key_mgmt"
+#define WPS_OOB_ENC_TYPE      "wpa_pairwise"
+#define WPS_OOB_PSK           "wpa_passphrase"
+#define WPS_OOB_WPA_VER       "wpa"
+#define WPS_OOB_AP_PIN        "ap_pin"
+#define WPS_OOB_STATE         "wps_state"
+#define WPS_CONFIG            "config_methods"
+#define WPS_DEV_NAME          "device_name"
+#define WPS_DEV_TYPE          "device_type"
+#define WPS_MANUFACTURER      "manufacturer"
+#define WPS_MODEL_NAME        "model_name"
+#define WPS_MODEL_NUMBER      "model_number"
+#define WPS_SERIAL_NUMBER     "serial_number"
+
+#define WPS_OOB_NOT_CONFIGURED  "1"
+#define WPS_OOB_CONFIGURED      "2"
+
+#define SUPPORTED_CONF_METHOD_AP "label keypad push_button virtual_push_button display virtual_display"
+#define SUPPORTED_CONF_METHOD_STA "keypad push_button virtual_push_button display virtual_display"
+
+#define WPS_OOB_ONLY "1"
+#define WPS_COMMON "2"
+
+enum wps_device_role {
+    WPS_AP,
+    WPS_STA
+};
+
+#define GROUP_NUM (3)
+#define AP_SETTING_NUM (14)
+#define STA_SETTING_NUM (6)
+
+typedef struct _wps_setting {
+    /* key-value for each setting pair */
+    char wkey[64];
+    char value[512];
+    char attr[64];
+} wps_setting;
 
 #ifdef _TEST_PLATFORM_
 
@@ -113,8 +164,20 @@ void openwrt_apply_radio_config(void);
 int detect_third_radio(void);
 #endif
 
+void create_sta_interface();
+void delete_sta_interface();
+
 void configure_ap_enable_mbssid();
 void configure_ap_radio_params(char *band, char *country, int channel, int chwidth);
 void start_ap_set_wlan_params(void *if_info);
 
+int get_p2p_mac_addr(char *mac_addr, size_t size);
+int get_p2p_group_if(char *if_name, size_t size);
+int get_p2p_dev_if(char *if_name, size_t size);
+
+void start_dhcp_server(char *if_name, char *ip_addr);
+void stop_dhcp_server();
+void start_dhcp_client(char *if_name);
+void stop_dhcp_client();
+wps_setting* get_vendor_wps_settings(enum wps_device_role);
 #endif

@@ -20,13 +20,14 @@ create_source_folder() {
 copy_filter_source() {
     cp -rf *.c *.h Makefile ${source_folder}
     cp -rf patch_nwmgr.sh ${source_folder}
+    cp -rf QT_dhcpd.conf ${source_folder}
 }
 
 create_control() {
     echo "Package: ${package_name}" >"$control_file"
     echo "Version: ${version}-${revision}" >>"$control_file"
     echo "Architecture: all" >>"$control_file"
-    echo "Depends: build-essential, arping" >>"$control_file"
+    echo "Depends: build-essential, arping, isc-dhcp-server" >>"$control_file"
     echo "Essential: no" >>"$control_file"
     echo "Conflicts: wfa-indigo-controlappc" >>"$control_file"
     echo "Priority: optional" >>"$control_file"
@@ -50,6 +51,8 @@ create_postinst() {
     echo "cp app ../app_tp" >>"$postinst_file"
     echo "make clean >/dev/null" >>"$postinst_file"
 
+    echo "cp QT_dhcpd.conf ../QT_dhcpd.conf" >>"$postinst_file"
+
     echo "echo \"Test application version\"" >>"$postinst_file"
     echo "../app_dut -v" >>"$postinst_file"
     echo "../app_tp -v" >>"$postinst_file"
@@ -72,6 +75,7 @@ create_prerm() {
     echo "rm -rf /usr/local/bin/${package_name}/app_dut" >>"$prerm_file"
     echo "rm -rf /usr/local/bin/${package_name}/app_tp" >>"$prerm_file"
     echo "/bin/bash ${installed_source_folder}/patch_nwmgr.sh restore" >>"$prerm_file"
+    echo "rm -rf /usr/local/bin/${package_name}/QT_dhcpd.conf" >>"$prerm_file"
     echo "fi" >>"$prerm_file"
 
     chmod 755 "$prerm_file"

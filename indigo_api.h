@@ -49,6 +49,8 @@ struct indigo_api {
 #define API_AP_SET_PARAM                        0x1005
 #define API_AP_SEND_BTM_REQ                     0x1006
 #define API_AP_SEND_ARP_MSGS                    0x1007
+#define API_AP_START_WPS                        0x1008
+#define API_AP_CONFIGURE_WSC                    0x1009
 
 #define API_STA_ASSOCIATE                       0x2000
 #define API_STA_CONFIGURE                       0x2001
@@ -62,6 +64,24 @@ struct indigo_api {
 #define API_STA_SET_PHY_MODE                    0x2009
 #define API_STA_SET_CHANNEL_WIDTH               0x200a
 #define API_STA_POWER_SAVE                      0x200b
+#define API_P2P_START_UP                        0x200c
+#define API_P2P_FIND                            0x200d
+#define API_P2P_LISTEN                          0x200e
+#define API_P2P_ADD_GROUP                       0x200f
+#define API_P2P_START_WPS                       0x2010
+#define API_P2P_CONNECT                         0x2011
+#define API_STA_HS2_ASSOCIATE                   0x2012
+#define API_STA_ADD_CREDENTIAL                  0x2013
+#define API_STA_SCAN                            0x2014
+#define API_P2P_GET_INTENT_VALUE                0x2015
+#define API_STA_START_WPS                       0x2016
+#define API_STA_INSTALL_PPSMO                   0x2017
+#define API_P2P_INVITE                          0x2018
+#define API_P2P_STOP_GROUP                      0x2019
+#define API_P2P_SET_SERV_DISC                   0x201a
+#define API_STA_SEND_ICON_REQ                   0x201b
+#define API_P2P_SET_EXT_LISTEN                  0x201c
+#define API_STA_ENABLE_WSC                      0x201d
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -73,6 +93,10 @@ struct indigo_api {
 #define API_DEVICE_RESET                        0x5007
 #define API_SEND_LOOP_BACK_DATA                 0x5008
 #define API_STOP_LOOP_BACK_DATA                 0x5009
+#define API_START_DHCP                          0x500a
+#define API_STOP_DHCP                           0x500b
+#define API_GET_WSC_PIN                         0x500c
+#define API_GET_WSC_CRED                        0x500d
 
 /* TLV definition */
 #define TLV_SSID                                0x0001
@@ -110,6 +134,10 @@ struct indigo_api {
 #define APP_TYPE                                0x0021
 #define TLV_OP_CLASS                            0x0022
 #define TLV_IE_OVERRIDE                         0x0023
+#define TLV_HOME_FQDN                           0x0024
+#define TLV_USERNAME                            0x0025
+#define TLV_PREFER                              0x0026
+#define TLV_CREDENTIAL_TYPE                     0x0027
 #define TLV_ADDRESS                             0x0028
 #define TLV_DISABLE_PMKSA_CACHING               0x0033
 #define TLV_SAE_ANTI_CLOGGING_THRESHOLD         0x0034
@@ -192,11 +220,59 @@ struct indigo_api {
 #define TLV_SKIP_6G_BSS_SECURITY_CHECK          0x00a1
 #define TLV_OWE_TRANSITION_BSS_IDENTIFIER       0x00a2
 #define TLV_FREQ_LIST                           0x00a3
-#define TLV_SHORT_SSID                          0x00a4
+#define TLV_BSSID_FILTER_LIST                   0x00a4
 #define TLV_HE_BEACON_TX_SU_PPDU                0x00a5
 #define TLV_HE_6G_ONLY                          0x00a6
 #define TLV_HE_UNSOL_PR_RESP_CADENCE            0x00a7
 #define TLV_HE_FILS_DISCOVERY_TX                0x00a8
+#define TLV_HS20                                0x00a9
+#define TLV_ACCESS_NETWORK_TYPE                 0x00aa
+#define TLV_INTERNET                            0x00ab
+#define TLV_VENUE_GROUP                         0x00ac
+#define TLV_VENUE_TYPE                          0x00ad
+#define TLV_HESSID                              0x00ae
+#define TLV_OSU_SSID                            0x00af
+#define TLV_ANQP_3GPP_CELL_NETWORK_INFO         0x00b0 
+#define TLV_PROXY_ARP                           0x00b1
+#define TLV_BSSLOAD_ENABLE                      0x00b2
+#define TLV_ROAMING_CONSORTIUM                  0x00b3
+#define TLV_NETWORK_AUTH_TYPE                   0x00b4
+#define TLV_DOMAIN_LIST                         0x00b5
+#define TLV_HS20_OPERATOR_FRIENDLY_NAME         0x00b6
+#define TLV_NAI_REALM                           0x00b7
+#define TLV_VENUE_NAME                          0x00b8
+#define TLV_IPADDR_TYPE_AVAILABILITY            0x00b9
+#define TLV_HS20_WAN_METRICS                    0x00ba
+#define TLV_HS20_CONN_CAPABILITY                0x00bb
+#define TLV_VENUE_URL                           0x00bc
+#define TLV_OPERATOR_ICON_METADATA              0x00bd
+#define TLV_OSU_PROVIDERS_LIST                  0x00be
+#define TLV_OSU_PROVIDERS_NAI_LIST              0x00bf
+#define TLV_REALM                               0x00c0
+#define TLV_IMSI                                0x00c1
+#define TLV_MILENAGE                            0x00c2
+#define TLV_PPSMO_FILE                          0x00c3
+#define TLV_OSU_SERVER_URI                      0x00c4
+#define TLV_OSU_METHOD                          0x00c5
+#define TLV_GO_INTENT                           0x00c6
+#define TLV_WSC_METHOD                          0x00c7
+#define TLV_PIN_METHOD                          0x00c8
+#define TLV_PIN_CODE                            0x00c9
+#define TLV_P2P_CONN_TYPE                       0x00ca
+#define TLV_HS20_OPERATING_CLASS_INDICATION     0x00cb
+#define TLV_WPS_ENABLE                          0x00cc
+#define TLV_UPDATE_CONFIG                       0x00cd
+#define TLV_EAP_FRAG_SIZE                       0x00ce
+#define TLV_PERFORM_WPS_IE_FRAG                 0x00cf
+#define TLV_ADVICE_OF_CHARGE                    0x00d0
+#define TLV_IGNORE_BROADCAST_SSID               0x00d1
+#define TLV_PERSISTENT                          0x00d2
+#define TLV_WSC_CONFIG_ONLY                     0x00d3
+#define TLV_ICON_FILE                           0x00d4
+#define TLV_P2P_DISABLED                        0x00d5
+#define TLV_MANAGE_P2P                          0x00d6
+#define TLV_AP_STA_COEXIST                      0x00d7
+#define TLV_WPS_INDEPENDENT                     0x00d8
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
@@ -210,17 +286,24 @@ struct indigo_api {
 #define TLV_ARP_RECV_NUM                        0xa007
 #define TLV_TEST_PLATFORM_APP_VERSION           0xa008
 #define TLV_LOOP_BACK_SERVER_PORT               0xa009
+#define TLV_WSC_PIN_CODE                        0xa00a
+#define TLV_P2P_INTENT_VALUE                    0xa00b
+#define TLV_WSC_SSID                            0xa00c
+#define TLV_WSC_WPA_KEY_MGMT                    0xa00d
+#define TLV_WSC_WPA_PASSPHRASE                  0xa00e
+#define TLV_PASSPOINT_ICON_CHECKSUM             0xa00f
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01
 #define DUT_TYPE_APUT                           0x02
+#define DUT_TYPE_P2PUT                          0x03
 
 #define TLV_BAND_24GHZ                          "2.4GHz"
 #define TLV_BAND_5GHZ                           "5GHz"
 #define TLV_BAND_6GHZ                           "6GHz"
 
-#define TLV_VALUE_APP_VERSION                   "v1.0"
-#define TLV_VALUE_TEST_PLATFORM_APP_VERSION     "v1.0"
+#define TLV_VALUE_APP_VERSION                   "v2.0"
+#define TLV_VALUE_TEST_PLATFORM_APP_VERSION     "v2.0"
 #define TLV_VALUE_OK                            "OK"
 #define TLV_VALUE_NOT_OK                        "Failed"
 #define TLV_VALUE_INSUFFICIENT_TLV              "TLV is insufficient to run the command"
@@ -247,9 +330,12 @@ struct indigo_api {
 #define TLV_VALUE_BROADCAST_ARP_TEST_NOT_OK     "Broadcast ARP test failed"
 #define TLV_VALUE_CREATE_BRIDGE_OK              "Bridge network is created successfully"
 #define TLV_VALUE_CREATE_BRIDGE_NOT_OK          "Failed to create bridge network"
+#define TLV_VALUE_START_DHCP_NOT_OK              "Failed to start DHCP server or client"
 
 #define TLV_VALUE_WPA_S_START_UP_OK             "wpa_supplicant is initialized successfully"
 #define TLV_VALUE_WPA_S_START_UP_NOT_OK         "The wpa_supplicant was unable to initialize."
+#define TLV_VALUE_WPA_S_ADD_CRED_OK             "Add credential to the STA successfully"
+#define TLV_VALUE_WPA_S_ADD_CRED_NOT_OK         "Failed to add credential to the STA."
 #define TLV_VALUE_WPA_S_STOP_NOT_OK             "Failed to stop wpa supplicant service."
 #define TLV_VALUE_WPA_S_STOP_OK                 "QuickTrack tool STA was successfully disconnected"
 #define TLV_VALUE_WPA_S_ASSOC_OK                "STA is up: WPA supplicant associated"
@@ -261,15 +347,39 @@ struct indigo_api {
 #define TLV_VALUE_WPA_S_CTRL_NOT_OK             "Failed to connect to WPA supplicant control interface"
 #define TLV_VALUE_WPA_S_BTM_QUERY_OK            "Sent WNM_BSS_QUERY"
 #define TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK        "Failed to WNM_BSS_QUERY"
+#define TLV_VALUE_WPA_S_SCAN_NOT_OK             "Failed to trigger SCAN"
 #define TLV_VALUE_RESET_OK                      "Device reset successfully"
 #define TLV_VALUE_RESET_NOT_OK                  "Failed to run Device reset"
 #define TLV_VALUE_POWER_SAVE_OK                 "Set power save value successfully"
 #define TLV_VALUE_POWER_SAVE_NOT_OK             "Failed to set power save value"
 
+#define TLV_VALUE_P2P_FIND_NOT_OK               "Failed to trigger P2P find"
+#define TLV_VALUE_P2P_LISTEN_NOT_OK             "Failed to trigger P2P listen"
+#define TLV_VALUE_P2P_ADD_GROUP_NOT_OK          "Failed to add P2P group"
+#define TLV_VALUE_P2P_START_WPS_NOT_OK          "Failed to start WPS on GO interface"
+#define TLV_VALUE_P2P_CONNECT_NOT_OK            "Failed to trigger P2P connect"
+#define TLV_VALUE_P2P_INVITE_NOT_OK             "Failed to invite P2P device"
+#define TLV_VALUE_P2P_SET_SERV_DISC_NOT_OK      "Failed to set service discovery"
+#define TLV_VALUE_P2P_SET_EXT_LISTEN_NOT_OK     "Failed to set extended listen timing"
+
+#define TLV_VALUE_HS2_INSTALL_PPSMO_OK          "PPSMO file is installed"
+#define TLV_VALUE_HS2_INSTALL_PPSMO_NOT_OK      "Failed to install PPSMO file"
+
+#define TLV_VALUE_AP_START_WPS_NOT_OK           "Failed to start WPS on AP interface"
+#define TLV_VALUE_AP_WSC_PIN_CODE_NOT_OK        "AP detects invalid PIN code"
+
 #define RESET_TYPE_INIT                         0x01
 #define RESET_TYPE_TEARDOWN                     0x02
+#define RESET_TYPE_RECONFIGURE                  0x03
 
 #define WPA_CTRL_OK                             "OK"
+#define WPA_CTRL_FAIL                           "FAIL"
+
+#define P2P_CONN_TYPE_JOIN                      0x01
+#define P2P_CONN_TYPE_AUTH                      0x02
+
+#define WPS_ENABLE_NORMAL                       0x01
+#define WPS_ENABLE_OOB                          0x02
 
 struct indigo_api* get_api_by_id(int id);
 struct indigo_tlv* get_tlv_by_id(int id);

@@ -51,10 +51,18 @@ int syslog_level = LOG_LEVEL_INFO;
 /* multiple VAPs */
 int interface_count = 0;
 int configured_interface_count = 0;
-struct interface_info interfaces[8];
+struct interface_info interfaces[16];
 int band_mbssid_cnt[16];
 struct interface_info* default_interface;
 static struct loopback_info loopback = {};
+/* bridge used for wireless interfaces */
+char wlans_bridge[32];
+
+#if UPLOAD_TC_APP_LOG
+/* per test case control app log */
+FILE *app_log;
+extern struct sockaddr_in *tool_addr;
+#endif
 
 #ifdef HOSTAPD_SUPPORT_MBSSID_WAR
 int use_openwrt_wpad = 0;
@@ -73,6 +81,11 @@ void debug_print_timestamp(void) {
         strftime(buffer, sizeof(buffer), "%b %d %H:%M:%S", info);
     }
     printf("%s ", buffer);
+#if UPLOAD_TC_APP_LOG
+    if (app_log) {
+        fprintf(app_log, "%s ", buffer);
+    }
+#endif
 }
 
 void indigo_logger(int level, const char *fmt, ...) {
@@ -116,6 +129,14 @@ void indigo_logger(int level, const char *fmt, ...) {
         vprintf(format, ap);
         va_end(ap);
         printf("\n");
+#if UPLOAD_TC_APP_LOG
+        if (app_log) {
+            va_start(ap, fmt);
+            vfprintf(app_log, format, ap);
+            fprintf(app_log, "\n");
+            va_end(ap);
+        }
+#endif
     }
 
     if (level >= stdout_level) {
@@ -141,6 +162,32 @@ void indigo_logger(int level, const char *fmt, ...) {
         vsyslog(priority, format, ap);
         va_end(ap);
     }
+}
+
+void open_tc_app_log() {
+#if UPLOAD_TC_APP_LOG
+    if (app_log) {
+        fclose(app_log);
+        app_log = NULL;
+    }
+    app_log = fopen(APP_LOG_FILE, "w");
+    if (app_log == NULL) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open the file %s", APP_LOG_FILE);    
+    }
+#endif
+}
+
+/* Close file handle and upload test case control app log */
+void close_tc_app_log() {
+#if UPLOAD_TC_APP_LOG
+    if (app_log) {
+        fclose(app_log);
+        app_log = NULL;
+        if (tool_addr != NULL) {
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, APP_LOG_FILE);
+        }
+    }
+#endif
 }
 
 /* System */
@@ -480,7 +527,10 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
     }
-    snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+    if (is_bridge_created()) {
+        snprintf(ifname, sizeof(ifname), "%s", get_wlans_bridge());
+    } else if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
+        snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
     const int len = strnlen(ifname, IFNAMSIZ);
     if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
@@ -582,12 +632,16 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         timeout.tv_usec = 0;
     }
 
-    snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+    if (is_bridge_created()) {
+        snprintf(ifname, sizeof(ifname), "%s", get_wlans_bridge());
+    } else if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
+        snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
     const int len = strnlen(ifname, IFNAMSIZ);
     if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
         return -1;
     }
+    indigo_logger(LOG_LEVEL_DEBUG, "Bind the interface %s", ifname);
 
     setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char *)&timeout, sizeof(timeout));
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
@@ -730,6 +784,17 @@ int set_mac_address(char *ifname, char *mac) {
 }
 
 int bridge_created = 0;
+
+char* get_wlans_bridge() {
+    return wlans_bridge;
+}
+int set_wlans_bridge(char* br) {
+    memset(wlans_bridge, 0, sizeof(wlans_bridge));
+    snprintf(wlans_bridge, sizeof(wlans_bridge), "%s", br);
+    printf("\nwlans_bridge = %s.\n", wlans_bridge);
+
+    return 0;
+}
 
 int is_bridge_created() {
     return bridge_created;
@@ -899,10 +964,8 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
             interfaces[i].identifier = bss->identifier;
             interfaces[i].mbssid_enable = bss->mbssid_enable;
             interfaces[i].transmitter = bss->transmitter;
-            if (bss->mbssid_enable) {
-                interfaces[i].hapd_bss_id = band_mbssid_cnt[bss->band];
-                band_mbssid_cnt[bss->band]++;
-            }
+            interfaces[i].hapd_bss_id = band_mbssid_cnt[bss->band];
+            band_mbssid_cnt[bss->band]++;
             memset(interfaces[i].hapd_conf_file, 0, sizeof(interfaces[i].hapd_conf_file));
             snprintf(interfaces[i].hapd_conf_file, sizeof(interfaces[i].hapd_conf_file),
                      "%s/hostapd_%s.conf", HAPD_CONF_FILE_DEFAULT_PATH, interfaces[i].ifname);
@@ -920,6 +983,18 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
         if ((interfaces[i].band == band) && 
              ((interfaces[i].identifier != UNUSED_IDENTIFIER) &&
               (interfaces[i].identifier == identifier))) {
+            return &interfaces[i];
+        }
+    }
+
+    return NULL;
+}
+
+struct interface_info* get_first_configured_wireless_interface_info() {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
             return &interfaces[i];
         }
     }
@@ -1056,6 +1131,11 @@ char* get_wpas_ctrl_path() {
     return wpas_full_ctrl_path;
 }
 
+char* get_wpas_if_ctrl_path(char* if_name) {
+    memset(wpas_full_ctrl_path, 0, sizeof(wpas_full_ctrl_path));
+    sprintf(wpas_full_ctrl_path, "%s/%s", wpas_ctrl_path, if_name);
+    return wpas_full_ctrl_path;
+}
 int set_wpas_ctrl_path(char* path) {
     snprintf(wpas_ctrl_path, sizeof(wpas_ctrl_path), "%s", path);
     return 0;
