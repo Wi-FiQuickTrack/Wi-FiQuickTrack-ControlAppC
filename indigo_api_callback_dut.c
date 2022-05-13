@@ -3343,8 +3343,15 @@ static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapp
         if (strlen(pin_code) == 1 && atoi(pin_code) == 0) {
             sprintf(buffer, "WPS_PIN any");
             use_dynamic_pin = 1;
-        } else {
+        } else if (strlen(pin_code) == 4 || strlen(pin_code) == 8){
             sprintf(buffer, "WPS_PIN any %s", pin_code);
+        } else {
+            /* Please implement the function to strip the extraneous
+            *  hyphen(dash) attached with 4 or 8-digit PIN code, then
+            *  start WPS PIN Registration with stripped PIN code.
+            * */
+            indigo_logger(LOG_LEVEL_ERROR, "Unrecognized PIN: %s", pin_code);
+            goto done;
         }
     } else {
         sprintf(buffer, "WPS_PBC");
