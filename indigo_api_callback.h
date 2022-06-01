@@ -105,6 +105,8 @@ struct tlv_to_config_name maps[] = {
     { TLV_IGNORE_BROADCAST_SSID, "ignore_broadcast_ssid", 0 },
     { TLV_MANAGE_P2P, "manage_p2p", 0 },
     { TLV_WPS_INDEPENDENT, "wps_independent", 0 },
+    { TLV_LOCAL_PWR_CONST, "local_pwr_constraint", 0 },
+    { TLV_SPECTRUM_MGMT_REQ, "spectrum_mgmt_required", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },
