@@ -26,6 +26,12 @@
 #define TOOL_POST_PORT 8080
 #define HAPD_UPLOAD_API "/upload-platform-hapd-log"
 #define WPAS_UPLOAD_API "/upload-platform-wpas-log"
+#ifdef _DUT_
+#define APP_LOG_FILE "controlappc_DUT.log"
+#else
+#define APP_LOG_FILE "controlappc_tool_platform.log"
+#endif
+#define UPLOAD_TC_APP_LOG 1
 
 /* Log */
 enum {
@@ -125,6 +131,8 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 char* read_file(char *fn);
 int write_file(char *fn, char *buffer, int len);
 int append_file(char *fn, char *buffer, int len); 
+void open_tc_app_log();
+void close_tc_app_log();
 
 /* network interface and loopback API */
 int get_mac_address(char *buffer, int size, char *interface);
@@ -137,6 +145,8 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
 int stop_loopback_data(int *pkt_sent);
 int send_broadcast_arp(char *target_ip, int *send_count, int rate);
 int send_icmp_data(char *target_ip, int packet_count, int packet_size, double rate);
+char* get_wlans_bridge();
+int set_wlans_bridge(char* br);
 int is_bridge_created();
 int create_bridge(char *br);
 int add_interface_to_bridge(char *br, char *interface);
@@ -175,6 +185,7 @@ int set_wpas_exec_file(char* path);
 char* get_wpas_full_exec_path();
 int set_wpas_full_exec_path(char* path);
 char* get_wpas_ctrl_path();
+char* get_wpas_if_ctrl_path(char* if_name);
 int set_wpas_ctrl_path(char* path);
 char* get_wpas_global_ctrl_path();
 int set_wpas_global_ctrl_path(char* path);
@@ -195,6 +206,7 @@ char* get_all_hapd_conf_files(int *swap_hostapd);
 void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss);
 struct interface_info* assign_wireless_interface_info(struct bss_identifier_info *bss);
 struct interface_info* get_wireless_interface_info(int band, int identifier);
+struct interface_info* get_first_configured_wireless_interface_info();
 int add_all_wireless_interface_to_bridge(char *br);
 void set_default_wireless_interface_info(int channel);
 int show_wireless_interface_info();
