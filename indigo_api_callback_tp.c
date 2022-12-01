@@ -39,6 +39,7 @@ int rrm = 0, he_mu_edca = 0;
 
 extern struct sockaddr_in *tool_addr;
 extern wps_setting* get_vendor_wps_settings_for_ie_frag_test(enum wps_device_role role);
+int additional_tp_id = 0;
 
 void register_apis() {
     /* Basic */
@@ -46,6 +47,8 @@ void register_apis() {
     register_api(API_GET_CONTROL_APP_VERSION, NULL, get_control_app_handler);
     register_api(API_SEND_LOOP_BACK_DATA, NULL, send_loopback_data_handler);
     register_api(API_STOP_LOOP_BACK_DATA, NULL, stop_loopback_data_handler);
+    register_api(API_START_LOOP_BACK_SERVER, NULL, start_loopback_server);
+    register_api(API_STOP_LOOP_BACK_SERVER, NULL, stop_loop_back_server_handler);
     /* TODO: API_CREATE_NEW_INTERFACE_BRIDGE_NETWORK */
     register_api(API_ASSIGN_STATIC_IP, NULL, assign_static_ip_handler);
     register_api(API_START_DHCP, NULL, start_dhcp_handler);
@@ -69,11 +72,17 @@ void register_apis() {
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    char buffer[S_BUFFER_LEN];
+#ifdef _VERSION_
+    snprintf(buffer, sizeof(buffer), "%s", _VERSION_);
+#else
+    snprintf(buffer, sizeof(buffer), "%s", TLV_VALUE_APP_VERSION);
+#endif
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
     fill_wrapper_tlv_bytes(resp, TLV_TEST_PLATFORM_APP_VERSION, 
-        strlen(TLV_VALUE_TEST_PLATFORM_APP_VERSION), TLV_VALUE_TEST_PLATFORM_APP_VERSION);
+        strlen(buffer), buffer);
     return 0;
 }
 
@@ -82,17 +91,35 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
  */
 void upload_wlan_hapd_conf(void *if_info) {
     struct interface_info *wlan = (struct interface_info *) if_info;
+    char buffer[S_BUFFER_LEN], conf_name[128];
+    int id = 0;
 
     if (tool_addr != NULL) {
-        http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, wlan->hapd_conf_file);
-        sleep(1);
+        if (additional_tp_id != 0) {
+            id = additional_tp_id & 0x0F;
+            memset(conf_name, 0, sizeof(conf_name));
+            snprintf(conf_name, sizeof(conf_name),"/tmp/hostapd_%s_add_tp_%d.conf", wlan->ifname, id);
+
+            memset(buffer, 0, sizeof(buffer));
+            snprintf(buffer, sizeof(buffer),"cp %s %s 1>/dev/null 2>/dev/null", wlan->hapd_conf_file, conf_name);
+            system(buffer);
+
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, conf_name);
+            sleep(1);
+
+            snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", conf_name);
+            system(buffer);
+        } else {
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, wlan->hapd_conf_file);
+            sleep(1);
+        }
     }
 }
 
 // RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len = 0, reset = 0;
-    char buffer[S_BUFFER_LEN], reset_type[16];
+    int len = 0, reset = 0, id = 0;
+    char buffer[S_BUFFER_LEN], reset_type[16], log_name[128];
     char *parameter[] = {"pidof", get_hapd_exec_file(), NULL};
     char *message = NULL;
     int status = TLV_VALUE_STATUS_NOT_OK;
@@ -154,11 +181,40 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
 
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
+        /* TLV: ADDITIONAL_TEST_PLATFORM_ID */
+        tlv = find_wrapper_tlv_by_id(req, TLV_ADDITIONAL_TEST_PLATFORM_ID);
+        memset(buffer, 0, sizeof(buffer));
+        if (tlv) {
+            memcpy(buffer, tlv->value, tlv->len);
+            additional_tp_id = atoi(buffer);
+            id = additional_tp_id & 0x0F;
+            indigo_logger(LOG_LEVEL_DEBUG, "Additional AP test platform id: %d", id);
+        }
+
         /* Send hostapd conf and log to Tool */
         if (tool_addr != NULL) {
-            iterate_all_wlan_interfaces(upload_wlan_hapd_conf);
-            sleep(1);
-            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, HAPD_LOG_FILE);
+            if (additional_tp_id != 0) {
+                memset(log_name, 0, sizeof(log_name));
+                snprintf(log_name, sizeof(log_name),"/tmp/hostapd_add_tp_%d.log", id);
+
+                memset(buffer, 0, sizeof(buffer));
+                snprintf(buffer, sizeof(buffer),"cp %s %s 1>/dev/null 2>/dev/null", WPAS_LOG_FILE, log_name);
+                system(buffer);
+
+                iterate_all_wlan_interfaces(upload_wlan_hapd_conf);
+                sleep(1);
+                http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, log_name);
+
+                snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", log_name);
+                system(buffer);
+
+                /* reset additional_tp_id */
+                additional_tp_id = 0;
+            } else {
+                iterate_all_wlan_interfaces(upload_wlan_hapd_conf);
+                sleep(1);
+                http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, HAPD_UPLOAD_API, HAPD_LOG_FILE);
+            }
         } else {
             indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
         }
@@ -977,19 +1033,25 @@ static int stop_loopback_data_handler(struct packet_wrapper *req, struct packet_
 
 static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
-    char dut_ip[64];
+    char dst_ip[64];
     char dut_port[32];
     char rate[16], pkt_count[16], pkt_size[16], recv_count[16], pkt_type[16];
     int status = TLV_VALUE_STATUS_NOT_OK, recvd = 0;
     char *message = TLV_VALUE_SEND_LOOPBACK_DATA_NOT_OK;
 
     /* TLV: TLV_DUT_IP_ADDRESS */
-    memset(dut_ip, 0, sizeof(dut_ip));
+    memset(dst_ip, 0, sizeof(dst_ip));
     tlv = find_wrapper_tlv_by_id(req, TLV_DUT_IP_ADDRESS);
     if (tlv) {
-        memcpy(dut_ip, tlv->value, tlv->len);
+        memcpy(dst_ip, tlv->value, tlv->len);
     } else {
-        goto done;
+        /* TLV: TLV_TP_IP_ADDRESS */
+        tlv = find_wrapper_tlv_by_id(req, TLV_TP_IP_ADDRESS);
+        if (tlv) {
+            memcpy(dst_ip, tlv->value, tlv->len);
+        } else {
+            goto done;
+        }
     }
     memset(dut_port, 0, sizeof(dut_port));
     tlv = find_wrapper_tlv_by_id(req, TLV_DUT_UDP_PORT);
@@ -1032,15 +1094,15 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
     }
 
     /* Detect and delete existing ARP entry for STAUT randomized MAC */
-    detect_del_arp_entry(dut_ip);
+    detect_del_arp_entry(dst_ip);
 
     /* Start loopback */
     snprintf(recv_count, sizeof(recv_count), "0");
 
     if (strcmp(pkt_type, "icmp") == 0) {
-        recvd = send_icmp_data(dut_ip, atoi(pkt_count), atoi(pkt_size), atof(rate));
+        recvd = send_icmp_data(dst_ip, atoi(pkt_count), atoi(pkt_size), atof(rate));
     } else if (strcmp(pkt_type, "udp") == 0) {
-        recvd = send_udp_data(dut_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atof(rate));
+        recvd = send_udp_data(dst_ip, atoi(dut_port), atoi(pkt_count), atoi(pkt_size), atof(rate));
     }
 
     /* -1 : Continuous data case uses timer and directly reply OK */
@@ -1054,6 +1116,57 @@ done:
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     fill_wrapper_tlv_bytes(resp, TLV_LOOP_BACK_DATA_RECEIVED, strlen(recv_count), recv_count);
+
+    return 0;
+}
+
+static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct tlv_hdr *tlv;
+    char local_ip[256];
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_LOOPBACK_SVR_START_NOT_OK;
+    char tool_udp_port[16];
+    char if_name[32];
+
+    /* Find network interface. If P2P Group or bridge exists, then use it. Otherwise, it uses the initiation value. */
+    memset(local_ip, 0, sizeof(local_ip));
+    if (get_p2p_group_if(if_name, sizeof(if_name)) == 0 && find_interface_ip(local_ip, sizeof(local_ip), if_name)) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", if_name);
+    } else if (find_interface_ip(local_ip, sizeof(local_ip), get_wlans_bridge())) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wlans_bridge());
+    } else if (find_interface_ip(local_ip, sizeof(local_ip), get_wireless_interface())) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wireless_interface());
+// #ifdef __TEST__
+    } else if (find_interface_ip(local_ip, sizeof(local_ip), "eth0")) {
+        indigo_logger(LOG_LEVEL_DEBUG, "use %s", "eth0");
+// #endif /* __TEST__ */
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "No available interface");
+        goto done;
+    }
+    /* Start loopback */
+    if (!loopback_server_start(local_ip, tool_udp_port, LOOPBACK_TIMEOUT)) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_LOOPBACK_SVR_START_OK;
+    }
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    fill_wrapper_tlv_bytes(resp, TLV_LOOP_BACK_SERVER_PORT, strlen(tool_udp_port), tool_udp_port);
+
+    return 0;
+}
+
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'Loopback server in idle state'}
+static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    /* Stop loopback */
+    if (loopback_server_status()) {
+        loopback_server_stop();
+    }
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_LOOP_BACK_STOP_OK), TLV_VALUE_LOOP_BACK_STOP_OK);
 
     return 0;
 }
@@ -1113,8 +1226,9 @@ done:
 
 int delete_sta_if = 0;
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len = 0, reset = 0;
-    char buffer[S_BUFFER_LEN*2], reset_type[16], buffer1[S_BUFFER_LEN], buffer2[S_BUFFER_LEN];
+    int len = 0, reset = 0, id = 0;
+    char buffer[S_BUFFER_LEN*2], reset_type[16];
+    char log_name[128], conf_name[128];
     char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
@@ -1147,11 +1261,46 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
     /* Test case teardown case */
     if (reset == RESET_TYPE_TEARDOWN) {
+        /* TLV: ADDITIONAL_TEST_PLATFORM_ID */
+        tlv = find_wrapper_tlv_by_id(req, TLV_ADDITIONAL_TEST_PLATFORM_ID);
+        memset(buffer, 0, sizeof(buffer));
+        if (tlv) {
+            memcpy(buffer, tlv->value, tlv->len);
+            additional_tp_id = atoi(buffer);
+            id = additional_tp_id & 0x0F;
+            indigo_logger(LOG_LEVEL_DEBUG, "Additional STA test platform id: %d", id);
+        }
+
         /* Send supplicant conf and log to Tool */
         if (tool_addr != NULL) {
-            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, get_wpas_conf_file());
-            sleep(1);
-            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, WPAS_LOG_FILE);
+            if (additional_tp_id != 0) {
+                memset(conf_name, 0, sizeof(conf_name));
+                memset(log_name, 0, sizeof(log_name));
+                snprintf(conf_name, sizeof(conf_name),"/tmp/wpa_supplicant_add_tp_%d.conf", id);
+                snprintf(log_name, sizeof(log_name),"/tmp/supplicant_add_tp_%d.log", id);
+
+                memset(buffer, 0, sizeof(buffer));
+                snprintf(buffer, sizeof(buffer),"cp %s %s 1>/dev/null 2>/dev/null", get_wpas_conf_file(), conf_name);
+                system(buffer);
+
+                snprintf(buffer, sizeof(buffer),"cp %s %s 1>/dev/null 2>/dev/null", WPAS_LOG_FILE, log_name);
+                system(buffer);
+
+                http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, conf_name);
+                sleep(1);
+                http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, log_name);
+
+                snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", conf_name);
+                system(buffer);
+                snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", log_name);
+                system(buffer);
+                /* reset additional_tp_id */
+                additional_tp_id = 0;
+            } else {
+                http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, get_wpas_conf_file());
+                sleep(1);
+                http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, WPAS_LOG_FILE);
+            }
         } else {
             indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
         }
@@ -1173,37 +1322,50 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
 
     if (reset == RESET_TYPE_RECONFIGURE) {
+        /* TLV: ADDITIONAL_TEST_PLATFORM_ID */
+        tlv = find_wrapper_tlv_by_id(req, TLV_ADDITIONAL_TEST_PLATFORM_ID);
+        memset(buffer, 0, sizeof(buffer));
+        if (tlv) {
+            memcpy(buffer, tlv->value, tlv->len);
+            additional_tp_id = atoi(buffer);
+            id = additional_tp_id & 0x0F;
+            indigo_logger(LOG_LEVEL_DEBUG, "Additional STA test platform id: %d", id);
+        }
         reconf_count++;
-        /* Send intermediate supplicant conf and log to Tool */
+
+        /* Upload intermediate supplicant conf and log to Tool */
         if (tool_addr != NULL) {
-            /* wpas conf file rename and send */
+            memset(conf_name, 0, sizeof(conf_name));
+            memset(log_name, 0, sizeof(log_name));
+
+            if (additional_tp_id != 0) {
+                snprintf(conf_name, sizeof(conf_name),"/tmp/wpa_supplicant_add_tp_%d_reconf_%d.conf", id, reconf_count);
+                snprintf(log_name, sizeof(log_name),"/tmp/supplicant_add_tp_%d_reconf_%d.log", id, reconf_count);
+                /* reset additional_tp_id */
+                additional_tp_id = 0;
+            } else {
+                snprintf(conf_name, sizeof(conf_name),"/tmp/wpa_supplicant_reconf_%d.conf", reconf_count);
+                snprintf(log_name, sizeof(log_name),"/tmp/supplicant_reconf_%d.log", reconf_count);
+            }
+
             memset(buffer, 0, sizeof(buffer));
-            memset(buffer1, 0, sizeof(buffer1));
-            snprintf(buffer1, sizeof(buffer1), "%s.reconfig_%d", get_wpas_conf_file(), reconf_count);
-            snprintf(buffer, sizeof(buffer), "mv %s %s", get_wpas_conf_file(), buffer1);
+            snprintf(buffer, sizeof(buffer),"cp %s %s 1>/dev/null 2>/dev/null", get_wpas_conf_file(), conf_name);
             system(buffer);
-            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, buffer1);
-            sleep(1);
-            /* wpas log file rename and send */
-            memset(buffer, 0, sizeof(buffer));
-            memset(buffer2, 0, sizeof(buffer2));
-            snprintf(buffer2, sizeof(buffer2), "%s.reconfig_%d", WPAS_LOG_FILE, reconf_count);
-            snprintf(buffer, sizeof(buffer), "mv %s %s", WPAS_LOG_FILE, buffer2);
+
+            snprintf(buffer, sizeof(buffer),"cp %s %s 1>/dev/null 2>/dev/null", WPAS_LOG_FILE, log_name);
             system(buffer);
-            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, buffer2);
+
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, conf_name);
             sleep(1);
+            http_file_post(inet_ntoa(tool_addr->sin_addr), TOOL_POST_PORT, WPAS_UPLOAD_API, log_name);
+
+            snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", conf_name);
+            system(buffer);
+            snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", log_name);
+            system(buffer);
         } else {
             indigo_logger(LOG_LEVEL_ERROR, "Can't get tool IP address");
         }
-        len = unlink(buffer1);
-        if (len) {
-            indigo_logger(LOG_LEVEL_DEBUG, "Failed to remove %s", buffer1);
-        }
-
-        /* clean the log */
-        memset(buffer, 0, sizeof(buffer));
-        snprintf(buffer, sizeof(buffer), "rm -rf %s >/dev/null 2>/dev/null", buffer2);
-        system(buffer);
     }
 
     len = reset_interface_ip(get_wireless_interface());

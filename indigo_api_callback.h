@@ -20,7 +20,6 @@
 
 #define LOOPBACK_TIMEOUT 180
 
-
 struct tlv_to_config_name {
     unsigned short tlv_id;
     char config_name[NAME_SIZE];

@@ -275,6 +275,13 @@ struct indigo_api {
 #define TLV_WPS_INDEPENDENT                     0x00d8
 #define TLV_LOCAL_PWR_CONST                     0x00d9
 #define TLV_SPECTRUM_MGMT_REQ                   0x00da
+#define TLV_CAPTURE_FILE                        0x00db
+#define TLV_CAPTURE_FILTER                      0x00dc
+#define TLV_CAPTURE_INFILE                      0x00dd
+#define TLV_CAPTURE_OUTFILE                     0x00de
+#define TLV_TP_IP_ADDRESS                       0x00df
+#define TLV_WPS_ER_SUPPORT                      0x00e0
+#define TLV_ADDITIONAL_TEST_PLATFORM_ID         0x00e1
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
@@ -304,8 +311,7 @@ struct indigo_api {
 #define TLV_BAND_5GHZ                           "5GHz"
 #define TLV_BAND_6GHZ                           "6GHz"
 
-#define TLV_VALUE_APP_VERSION                   "v2.0"
-#define TLV_VALUE_TEST_PLATFORM_APP_VERSION     "v2.0"
+#define TLV_VALUE_APP_VERSION                   "v2.1"
 #define TLV_VALUE_OK                            "OK"
 #define TLV_VALUE_NOT_OK                        "Failed"
 #define TLV_VALUE_INSUFFICIENT_TLV              "TLV is insufficient to run the command"

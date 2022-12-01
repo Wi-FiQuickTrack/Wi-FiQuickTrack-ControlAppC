@@ -695,7 +695,7 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
                 indigo_logger(LOG_LEVEL_INFO, "icmp echo reply from %s, Receive echo %d bytes data", target_ip, n - 20);
                 pkt_rcv++;
             } else {
-                indigo_logger(LOG_LEVEL_INFO, "Received packet is not the ICMP reply from the DUT");
+                indigo_logger(LOG_LEVEL_INFO, "Received packet is not the ICMP reply from the Destination");
             }
         }
         usleep(rate * 1000000);
@@ -1749,4 +1749,10 @@ done:
     if (socketfd) {
         close(socketfd);
     }
+}
+
+int file_exists(const char *fname)
+{
+	struct stat s;
+	return stat(fname, &s) == 0;
 }

@@ -26,6 +26,7 @@
 #define TOOL_POST_PORT 8080
 #define HAPD_UPLOAD_API "/upload-platform-hapd-log"
 #define WPAS_UPLOAD_API "/upload-platform-wpas-log"
+#define ARTIFACTS_UPLOAD_API "/upload-test-artifacts"
 #ifdef _DUT_
 #define APP_LOG_FILE "controlappc_DUT.log"
 #else
@@ -225,4 +226,5 @@ int get_6g_center_freq_index(int channel, int width);
 int is_ht40plus_chan(int chan);
 int is_ht40minus_chan(int chan);
 int http_file_post(char *host, int port, char *path, char *file_name);
+int file_exists(const char *fname);
 #endif

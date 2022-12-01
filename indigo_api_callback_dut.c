@@ -92,6 +92,12 @@ void register_apis() {
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char ipAddress[INET_ADDRSTRLEN];
+    char buffer[S_BUFFER_LEN];
+#ifdef _VERSION_
+    snprintf(buffer, sizeof(buffer), "%s", _VERSION_);
+#else
+    snprintf(buffer, sizeof(buffer), "%s", TLV_VALUE_APP_VERSION);
+#endif
     if (tool_addr) {
         inet_ntop(AF_INET, &(tool_addr->sin_addr), ipAddress, INET_ADDRSTRLEN);
         indigo_logger(LOG_LEVEL_DEBUG, "Tool Control IP address on DUT network path: %s", ipAddress);
@@ -100,7 +106,7 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_CONTROL_APP_VERSION, strlen(TLV_VALUE_APP_VERSION), TLV_VALUE_APP_VERSION);
+    fill_wrapper_tlv_bytes(resp, TLV_CONTROL_APP_VERSION, strlen(buffer), buffer);
     return 0;
 }
 
@@ -449,6 +455,20 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
+        /* wps er support. upnp */
+        if (tlv->id == TLV_WPS_ER_SUPPORT) {
+            memset(cfg_item, 0, sizeof(cfg_item));
+            sprintf(cfg_item, "upnp_iface=%s\n", wlanp->ifname);
+            strcat(output, cfg_item);
+            memset(cfg_item, 0, sizeof(cfg_item));
+            sprintf(cfg_item, "friendly_name=WPS Access Point\n");
+            strcat(output, cfg_item);
+            memset(cfg_item, 0, sizeof(cfg_item));
+            sprintf(cfg_item, "model_description=Wireless Access Point\n");
+            strcat(output, cfg_item);
+            continue;
+        }
+
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
@@ -639,6 +659,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     if (enable_ac == 0 && enable_ax == 0)
         chwidth = 0;
 
+    /* Add country IE if there is no country config */
+    if (strlen(country) == 0) {
+        strcat(output, "ieee80211d=1\n");
+        strcat(output, "country_code=US\n");
+    }
+
     if (is_6g_only) {
         if (chwidthset == 0) {
             sprintf(buffer, "he_oper_chwidth=%d\n", chwidth);
@@ -656,10 +682,8 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         } else {
             strcat(output, "fils_discovery_max_interval=20\n");
         }
-        /* Enable bss_color and country IE */
+        /* Enable bss_color IE */
         strcat(output, "he_bss_color=19\n");
-        strcat(output, "ieee80211d=1\n");
-        strcat(output, "country_code=US\n");
     } else if (strstr(band, "a")) {
         if (is_ht40plus_chan(channel))
             strcat(output, "ht_capab=[HT40+]\n");
@@ -671,9 +695,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             int center_freq = get_center_freq_index(channel, chwidth);
 #ifndef _WTS_OPENWRT_
             if (chwidth == 2) {
-                /* 160M: Need to enable 11h for DFS and enable 11d for 11h */
-                strcat(output, "ieee80211d=1\n");
-                strcat(output, "country_code=US\n");
+                /* 160M: Need to enable 11h for DFS */
                 strcat(output, "ieee80211h=1\n");
             }
 #endif
