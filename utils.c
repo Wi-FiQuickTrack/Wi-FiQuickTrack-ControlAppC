@@ -1456,6 +1456,8 @@ int get_6g_center_freq_index(int channel, int width) {
         if (channel >= i && channel < i + chwidth/5)
             return i + (chwidth - 20)/10;
     }
+
+    return -1;
 }
 
 int is_ht40plus_chan(int chan) {
