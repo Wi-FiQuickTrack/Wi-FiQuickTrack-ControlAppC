@@ -493,4 +493,6 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
             return NULL;
         }
     }
+
+    return NULL;
 }
