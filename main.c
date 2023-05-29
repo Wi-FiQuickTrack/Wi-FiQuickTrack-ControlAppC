@@ -86,7 +86,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     int ret;                          // return code
     int fromlen, len;                 // structure size and received length
     struct sockaddr_storage from;     // source address of the message
-    unsigned char buffer[BUFFER_LEN]; // buffer to receive the message
+    char buffer[BUFFER_LEN]; // buffer to receive the message
     struct packet_wrapper req, resp;  // packet wrapper for the received message and response
     struct indigo_api *api = NULL;    // used for API search, validation and handler call
 

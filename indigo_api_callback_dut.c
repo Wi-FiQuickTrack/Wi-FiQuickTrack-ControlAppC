@@ -301,7 +301,8 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, struct interface_info* wlanp) {
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups = 0;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
-    int i, enable_ac = 0, enable_11h = 0, enable_hs20 = 0;
+    int enable_ac = 0, enable_11h = 0, enable_hs20 = 0;
+    size_t i;
     int enable_wps = 0, use_mbss = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*BUFFER_LEN];
     char band[64], value[16];
@@ -1864,7 +1865,7 @@ static void append_wpas_network_default_config(struct packet_wrapper *wrapper) {
 #endif /* _RESERVED_ */
 
 static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
-    int i, j;
+    size_t i, j;
     char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN], buf[S_BUFFER_LEN];
     int ieee80211w_configured = 0;
     int transition_mode_enabled = 0;
@@ -2097,8 +2098,8 @@ done:
 }
 
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK, i;
-    size_t resp_len;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len, i;
     char *message = NULL;
     char buffer[BUFFER_LEN];
     char response[BUFFER_LEN];
@@ -2210,7 +2211,7 @@ done:
 }
 
 static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
     char buffer[1024];
     char response[1024];
@@ -2218,7 +2219,7 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
     char anqp_info_id[256];
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
-    size_t resp_len;
+    size_t resp_len, i;
     char *token = NULL;
     char *delimit = ";";
     char realm[S_BUFFER_LEN];
@@ -2647,13 +2648,13 @@ done:
 }
 
 static int sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i;
+    int len, status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_WPA_S_SCAN_NOT_OK;
     char buffer[1024];
     char response[1024];
     struct tlv_hdr *tlv = NULL;
     struct wpa_ctrl *w = NULL;
-    size_t resp_len;
+    size_t resp_len, i;
     struct tlv_to_config_name* cfg = NULL;
     char value[TLV_VALUE_SIZE], cfg_item[2*S_BUFFER_LEN];
 
@@ -2777,8 +2778,8 @@ done:
 static int sta_add_credential_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_WPA_S_ADD_CRED_NOT_OK;
     char buffer[BUFFER_LEN];
-    int len, status = TLV_VALUE_STATUS_NOT_OK, i, cred_id, wpa_ret;
-    size_t resp_len;
+    int len, status = TLV_VALUE_STATUS_NOT_OK, cred_id, wpa_ret;
+    size_t resp_len, i;
     char response[BUFFER_LEN];
     char param_value[256];
     struct tlv_hdr *tlv = NULL;
@@ -3709,7 +3710,8 @@ static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrap
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
     char buffer[L_BUFFER_LEN];
     char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN], buf[S_BUFFER_LEN];
-    int i, len = 0, status = TLV_VALUE_STATUS_NOT_OK;
+    int len = 0, status = TLV_VALUE_STATUS_NOT_OK;
+    size_t i = 0;
     struct tlv_hdr *tlv = NULL;
     struct tlv_to_config_name* cfg = NULL;
 

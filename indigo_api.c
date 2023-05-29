@@ -277,7 +277,7 @@ struct indigo_tlv indigo_tlv_list[] = {
 
 /* Find the type of the API stucture by the ID from the list */
 char* get_api_type_by_id(int id) {
-    int i = 0;
+    unsigned int i = 0;
     for (i = 0; i < sizeof(indigo_api_list)/sizeof(struct indigo_api); i++) {
         if (id == indigo_api_list[i].type) {
             return indigo_api_list[i].name;
@@ -288,7 +288,7 @@ char* get_api_type_by_id(int id) {
 
 /* Find the API stucture by the ID from the list */
 struct indigo_api* get_api_by_id(int id) {
-    int i = 0;
+    unsigned int i = 0;
     for (i = 0; i < sizeof(indigo_api_list)/sizeof(struct indigo_api); i++) {
         if (id == indigo_api_list[i].type) {
             return &indigo_api_list[i];
@@ -299,7 +299,7 @@ struct indigo_api* get_api_by_id(int id) {
 
 /* Find the TLV by the ID from the list */
 struct indigo_tlv* get_tlv_by_id(int id) {
-    int i = 0;
+    unsigned int i = 0;
 
     for (i = 0; i < sizeof(indigo_tlv_list)/sizeof(struct indigo_tlv); i++) {
         if (id == indigo_tlv_list[i].id) {
