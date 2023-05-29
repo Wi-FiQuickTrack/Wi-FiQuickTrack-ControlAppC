@@ -301,7 +301,10 @@ static void append_hostapd_default_config(struct packet_wrapper *wrapper) {
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, struct interface_info* wlanp) {
     int has_sae = 0, has_wpa = 0, has_pmf = 0, has_owe = 0, has_transition = 0, has_sae_groups = 0;
     int channel = 0, chwidth = 1, enable_ax = 0, chwidthset = 0, enable_muedca = 0, vht_chwidthset = 0;
-    int enable_ac = 0, enable_11h = 0, enable_hs20 = 0;
+    int enable_ac = 0,enable_hs20 = 0;
+#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
+    int enable_11h = 0;
+#endif
     size_t i;
     int enable_wps = 0, use_mbss = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*BUFFER_LEN];
@@ -553,7 +556,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 #ifdef _WTS_OPENWRT_
             continue;
 #endif
+#if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
             enable_11h = 1;
+#endif
         }
 
 #ifdef _WTS_OPENWRT_
@@ -1984,7 +1989,7 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
     char buffer[256];
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
 
 #ifdef _OPENWRT_
 #else
@@ -2004,7 +2009,7 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
         get_wpas_conf_file(),
         get_wpas_debug_arguments(),
         get_wireless_interface());
-    len = system(buffer);
+    system(buffer);
     sleep(2);
 
     status = TLV_VALUE_STATUS_OK;
