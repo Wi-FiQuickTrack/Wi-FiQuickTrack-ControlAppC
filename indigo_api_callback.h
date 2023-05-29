@@ -234,8 +234,6 @@ struct tlv_to_config_name* find_generic_tlv_config(int tlv_id, struct tlv_to_con
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int stop_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int create_bridge_network_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -253,14 +251,12 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
 static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_wsc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* STA */
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -270,11 +266,7 @@ static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_w
 static int set_sta_hs2_associate_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int sta_add_credential_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_sta_channel_width_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* P2P */
 static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
