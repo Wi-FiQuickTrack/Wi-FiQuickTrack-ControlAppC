@@ -57,7 +57,7 @@ int configured_interface_count = 0;
 struct interface_info interfaces[16];
 int band_mbssid_cnt[16];
 struct interface_info* default_interface;
-static struct loopback_info loopback = {};
+static struct loopback_info loopback;
 /* bridge used for wireless interfaces */
 char wlans_bridge[32];
 
