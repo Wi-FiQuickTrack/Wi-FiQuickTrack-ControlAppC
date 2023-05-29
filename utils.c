@@ -1073,7 +1073,7 @@ char* get_hapd_ctrl_path_by_id(struct interface_info* wlan) {
     else {
         sprintf(hapd_full_ctrl_path, "%s/%s", hapd_ctrl_path, get_default_wireless_interface_info());
     }
-    printf("hapd_full_ctrl_path: %s, wlan %p\n", hapd_full_ctrl_path, wlan);
+    printf("hapd_full_ctrl_path: %s, wlan %p\n", hapd_full_ctrl_path, (void *)wlan);
     return hapd_full_ctrl_path;
 }
 
