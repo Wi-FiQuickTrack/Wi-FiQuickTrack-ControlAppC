@@ -174,7 +174,7 @@ struct anqp_tlv_to_config_name anqp_maps[] = {
 };
 
 char* find_tlv_config_name(int tlv_id) {
-    int i;
+    unsigned int i;
     for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
         if (tlv_id == maps[i].tlv_id) {
             return maps[i].config_name;
@@ -184,7 +184,7 @@ char* find_tlv_config_name(int tlv_id) {
 }
 
 struct tlv_to_config_name* find_tlv_config(int tlv_id) {
-    int i;
+    unsigned int i;
     for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
         if (tlv_id == maps[i].tlv_id) {
             return &maps[i];
@@ -211,7 +211,7 @@ struct tlv_to_config_name wpas_global_maps[] = {
 };
 
 struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
-    int i;
+    unsigned int i;
     for (i = 0; i < sizeof(wpas_global_maps)/sizeof(struct tlv_to_config_name); i++) {
         if (tlv_id == wpas_global_maps[i].tlv_id) {
             return &wpas_global_maps[i];

@@ -26,8 +26,9 @@ int capture_packet = 0, capture_count = 0;  /* debug. Write the received packets
 int debug_packet = 0;                       /* used by the packet hexstring print */
 
 /* Parse the QuickTrack message from the packet to the wrapper */
-int parse_packet(struct packet_wrapper *req, char *packet, int packet_len) {
-    int i = 0, parser = 0, ret = 0;
+int parse_packet(struct packet_wrapper *req, char *packet, size_t packet_len) {
+    int parser = 0, ret = 0;
+    size_t i = 0;
     struct indigo_api *api = NULL;
     struct indigo_tlv *tlv = NULL;
 
@@ -143,7 +144,7 @@ int free_packet_wrapper(struct packet_wrapper *wrapper) {
 }
 
 /* Parse the message header */
-int parse_message_hdr(struct message_hdr *hdr, char *message, int message_len) {
+int parse_message_hdr(struct message_hdr *hdr, char *message, size_t message_len) {
     if (message_len < sizeof(struct message_hdr)) {
         return -1;
     }
@@ -158,7 +159,7 @@ int parse_message_hdr(struct message_hdr *hdr, char *message, int message_len) {
 }
 
 /* Convert the packet message header from the structure */
-int gen_message_hdr(char *message, int message_len, struct message_hdr *hdr) {
+int gen_message_hdr(char *message, size_t message_len, struct message_hdr *hdr) {
     int len = 0;
 
     if (message_len < sizeof(struct message_hdr)) {
@@ -186,8 +187,8 @@ void print_message_hdr(struct message_hdr *hdr) {
 }
 
 /* Print the hexstring of the specific range */
-int print_hex(char *message, int message_len) {
-    int i;
+int print_hex(char *message, size_t message_len) {
+    size_t i;
     for(i = 0; i < message_len; i++)  {
         printf("0x%02x ", (unsigned char)message[i]);
     }
@@ -196,7 +197,7 @@ int print_hex(char *message, int message_len) {
 }
 
 /* Add the TLV to the wrapper */
-int add_wrapper_tlv(struct packet_wrapper *wrapper, int id, int len, char *value) {
+int add_wrapper_tlv(struct packet_wrapper *wrapper, int id, size_t len, char *value) {
     if (add_tlv(wrapper->tlv[wrapper->tlv_num], id, len, value) == 0) {
         wrapper->tlv_num++;
         return 0;
@@ -205,7 +206,7 @@ int add_wrapper_tlv(struct packet_wrapper *wrapper, int id, int len, char *value
 }
 
 /* Fill the TLV with the ID, length and value */
-int add_tlv(struct tlv_hdr *tlv, int id, int len, char *value) {
+int add_tlv(struct tlv_hdr *tlv, int id, size_t len, char *value) {
     if (!tlv)
         return 1;
     tlv->id = id;
@@ -216,7 +217,7 @@ int add_tlv(struct tlv_hdr *tlv, int id, int len, char *value) {
 }
 
 /* Parse the TLV from the packet to the structure */
-int parse_tlv(struct tlv_hdr *tlv, char *packet, int packet_len) {
+int parse_tlv(struct tlv_hdr *tlv, char *packet, size_t packet_len) {
     if (packet_len < 3) {
         return -1;
     }
@@ -230,10 +231,10 @@ int parse_tlv(struct tlv_hdr *tlv, char *packet, int packet_len) {
 }
 
 /* Convert the TLV structure to the packet */
-int gen_tlv(char *packet, int packet_size, struct tlv_hdr *t) {
-    int len = 0;
+int gen_tlv(char *packet, size_t packet_size, struct tlv_hdr *t) {
+    size_t len = 0;
 
-    if (packet_size < t->len + 3) {
+    if (packet_size < (size_t)t->len + 3) {
         return -1;
     }
 
@@ -269,8 +270,9 @@ void print_tlv(struct tlv_hdr *t) {
 }
 
 /* Convert the wrapper to the packet includes the message header and all TLVs. Used by the ACK and resposne */
-int assemble_packet(char *packet, int packet_size, struct packet_wrapper *wrapper) {
-    int i = 0, ret = 0, packet_len = 0;
+int assemble_packet(char *packet, size_t packet_size, struct packet_wrapper *wrapper) {
+    int ret = 0;
+    size_t packet_len = 0, i = 0;
 
     ret = gen_message_hdr(packet, packet_size, &wrapper->hdr);
     packet_len += ret;
