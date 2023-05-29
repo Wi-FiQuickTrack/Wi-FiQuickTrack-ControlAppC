@@ -111,7 +111,7 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
 }
 
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_RESET_NOT_OK;
     char buffer[TLV_VALUE_SIZE];
     char role[TLV_VALUE_SIZE], log_level[TLV_VALUE_SIZE], band[TLV_VALUE_SIZE];
@@ -314,6 +314,8 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     int semicolon_list_size = sizeof(semicolon_list) / sizeof(struct tlv_to_config_name);
     int hs20_icons_attached = 0;
     int is_multiple_bssid = 0;
+
+    (void) output_size;
 
 #if HOSTAPD_SUPPORT_MBSSID
     if ((wlanp->mbssid_enable && !wlanp->transmitter) || (band_first_wlan[wlanp->band])) {
@@ -875,7 +877,6 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char *message = TLV_VALUE_HOSTAPD_START_OK;
     char buffer[S_BUFFER_LEN];
     int len;
-    int status = TLV_VALUE_STATUS_OK;
     int swap_hostapd = 0;
 
 #ifdef _WTS_OPENWRT_
@@ -1096,7 +1097,6 @@ done:
 /* deprecated */
 static int create_bridge_network_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int err = 0;
-    char cmd[S_BUFFER_LEN];
     char static_ip[S_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *message = TLV_VALUE_CREATE_BRIDGE_OK;
@@ -1355,7 +1355,6 @@ done:
 }
 
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    struct tlv_hdr *tlv;
     char local_ip[256];
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_LOOPBACK_SVR_START_NOT_OK;
@@ -1767,7 +1766,6 @@ static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper
         message = TLV_VALUE_NOT_OK;
     }
 
-done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
@@ -1865,15 +1863,15 @@ static void append_wpas_network_default_config(struct packet_wrapper *wrapper) {
 #endif /* _RESERVED_ */
 
 static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
-    size_t i, j;
+    size_t i;
     char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN], buf[S_BUFFER_LEN];
     int ieee80211w_configured = 0;
     int transition_mode_enabled = 0;
     int owe_configured = 0;
     int sae_only = 0;
-    struct tlv_hdr *tlv = NULL;
     struct tlv_to_config_name* cfg = NULL;
-    int len = 0, conf_methods = 0, count = 0;
+
+    (void) buffer_size;
 
     sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
 
@@ -1961,14 +1959,12 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 
     strcat(buffer, "}\n");
 
-done:
     return strlen(buffer);
 }
 
 static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len;
     char buffer[L_BUFFER_LEN];
-    struct tlv_hdr *tlv;
     char *message = "DUT configured as STA : Configuration file created";
 
     memset(buffer, 0, sizeof(buffer));
@@ -2014,7 +2010,6 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_WPA_S_START_UP_OK;
 
-done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
@@ -2025,7 +2020,7 @@ static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_DISCONNECT_NOT_OK;
     char buffer[256], response[1024];
-    int status, i;
+    int status;
     size_t resp_len;
 
     /* Open WPA supplicant UDS socket */
@@ -2063,7 +2058,7 @@ static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_
     struct wpa_ctrl *w = NULL;
     char *message = TLV_VALUE_WPA_S_RECONNECT_NOT_OK;
     char buffer[256], response[1024];
-    int len, status, i;
+    int status;
     size_t resp_len;
 
     /* Open WPA supplicant UDS socket */
@@ -2369,7 +2364,6 @@ static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrappe
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_WPA_S_START_UP_OK;
 
-done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
@@ -2905,7 +2899,7 @@ static int run_hs20_osu_client(const char *params)
 static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_HS2_INSTALL_PPSMO_NOT_OK;
-    int len, i;
+    int len;
     char buffer[L_BUFFER_LEN], ppsmo_file[S_BUFFER_LEN];
     struct tlv_hdr *tlv;
     char *fqdn = NULL;
@@ -2999,7 +2993,7 @@ done:
 static int p2p_connect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
-    char pin_code[64], if_name[32];
+    char pin_code[64];
     char method[16], mac[32], type[16];
     size_t resp_len;
     int status = TLV_VALUE_STATUS_NOT_OK;
@@ -3151,7 +3145,6 @@ done:
 static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_NOT_OK;
-    char buffer[S_BUFFER_LEN];
     char role[8];
     struct tlv_hdr *tlv = NULL;
     char if_name[32];
@@ -3267,7 +3260,6 @@ static int get_p2p_intent_value_handler(struct packet_wrapper *req, struct packe
     snprintf(response, sizeof(response), "%d", P2P_GO_INTENT);
 
 
-done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
@@ -3280,7 +3272,7 @@ done:
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
-    char pin_code[64], if_name[32];
+    char pin_code[64];
     size_t resp_len;
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_AP_START_WPS_NOT_OK;
@@ -3296,7 +3288,7 @@ static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrappe
          * identify the invalid PIN code and DONOT start wps.
          * */
         #define WPS_PIN_VALIDATION_FILE "/tmp/pin_checksum.sh"
-        int len = 0, is_valid = 0;
+        int len = 0;
         char pipebuf[S_BUFFER_LEN];
         char *parameter[] = {"sh", WPS_PIN_VALIDATION_FILE, pin_code, NULL};
         memset(pipebuf, 0, sizeof(pipebuf));
@@ -3424,7 +3416,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_NOT_OK;
     char *pos = NULL, *data = NULL, value[16];
-    int i, len, ret = -1, count = 0, role = 0;
+    int i, len, count = 0, role = 0;
     struct tlv_hdr *tlv = NULL;
     struct _cfg_cred *p_cfg = NULL;
 
@@ -3709,7 +3701,7 @@ done:
 static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
     char buffer[L_BUFFER_LEN];
-    char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN], buf[S_BUFFER_LEN];
+    char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
     int len = 0, status = TLV_VALUE_STATUS_NOT_OK;
     size_t i = 0;
     struct tlv_hdr *tlv = NULL;
@@ -3781,7 +3773,6 @@ static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrap
     status = TLV_VALUE_STATUS_OK;
     message = TLV_VALUE_WPA_S_START_UP_OK;
 
-done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);

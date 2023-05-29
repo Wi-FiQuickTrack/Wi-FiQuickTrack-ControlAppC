@@ -90,6 +90,9 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     struct packet_wrapper req, resp;  // packet wrapper for the received message and response
     struct indigo_api *api = NULL;    // used for API search, validation and handler call
 
+    (void) eloop_ctx;
+    (void) sock_ctx;
+
     /* Receive request */
     fromlen = sizeof(from);
     len = recvfrom(sock, buffer, BUFFER_LEN, 0, (struct sockaddr *) &from, (socklen_t*)&fromlen);
@@ -265,6 +268,8 @@ static int parse_parameters(int argc, char *argv[]) {
 
 static void handle_term(int sig, void *eloop_ctx, void *signal_ctx) {
     indigo_logger(LOG_LEVEL_INFO, "Signal %d received - terminating\n", sig);
+    (void) eloop_ctx;
+    (void) signal_ctx;
     eloop_terminate();
     vendor_deinit();
 }
