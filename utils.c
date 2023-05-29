@@ -18,7 +18,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#ifdef _SYSLOG_
 #include <syslog.h>
+#endif
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/wait.h>
@@ -91,7 +93,9 @@ void debug_print_timestamp(void) {
 void indigo_logger(int level, const char *fmt, ...) {
     char *format, *log_type;
     int maxlen;
+#ifdef _SYSLOG_
     int priority;
+#endif
     va_list ap;
 
     maxlen = strlen(fmt) + 100;
@@ -139,6 +143,7 @@ void indigo_logger(int level, const char *fmt, ...) {
 #endif
     }
 
+#ifdef _SYSLOG_
     if (level >= stdout_level) {
         switch (level) {
         case LOG_LEVEL_DEBUG_VERBOSE:
@@ -162,6 +167,7 @@ void indigo_logger(int level, const char *fmt, ...) {
         vsyslog(priority, format, ap);
         va_end(ap);
     }
+#endif
 }
 
 void open_tc_app_log() {
