@@ -981,6 +981,9 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
     int i;
 
     for (i = 0; i < interface_count; i++) {
+        char ifname[16];
+
+        memcpy(ifname, interfaces[i].ifname, sizeof(ifname));
         if ((interfaces[i].band == bss->band) && 
              (interfaces[i].identifier == UNUSED_IDENTIFIER)) {
             configured_interface_count++;
@@ -991,7 +994,7 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
             band_mbssid_cnt[bss->band]++;
             memset(interfaces[i].hapd_conf_file, 0, sizeof(interfaces[i].hapd_conf_file));
             snprintf(interfaces[i].hapd_conf_file, sizeof(interfaces[i].hapd_conf_file),
-                     "%s/hostapd_%s.conf", HAPD_CONF_FILE_DEFAULT_PATH, interfaces[i].ifname);
+                     "%s/hostapd_%s.conf", HAPD_CONF_FILE_DEFAULT_PATH, ifname);
             return &interfaces[i];
         }
     }
