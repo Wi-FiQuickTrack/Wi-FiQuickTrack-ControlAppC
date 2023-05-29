@@ -237,6 +237,11 @@ char buffer[S_BUFFER_LEN], wifi_name[16];
     }
 
     system("uci commit");
+#else
+    (void) band;
+    (void) country;
+    (void) channel;
+    (void) chwidth;
 #endif
 }
 
@@ -245,11 +250,11 @@ char buffer[S_BUFFER_LEN], wifi_name[16];
  * Called by start_ap_handler() after invoking hostapd
  */
 void start_ap_set_wlan_params(void *if_info) {
+#ifdef _WTS_OPENWRT_
     char buffer[S_BUFFER_LEN];
     struct interface_info *wlan = (struct interface_info *) if_info;
 
     memset(buffer, 0, sizeof(buffer));
-#ifdef _WTS_OPENWRT_
     /* Workaround: openwrt has IOT issue with intel AX210 AX mode */
     sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", wlan->ifname);
     system(buffer);
@@ -258,8 +263,11 @@ void start_ap_set_wlan_params(void *if_info) {
     system(buffer);
     sprintf(buffer, "cfg80211tool %s twt_responder 0", wlan->ifname);
     system(buffer);
-#endif
+
     printf("set_wlan_params: %s\n", buffer);
+#else
+    (void) if_info;
+#endif
 }
 
 /* Return addr of P2P-device if there is no GO or client interface */
@@ -400,6 +408,8 @@ void save_wsc_setting(wps_setting *s, char *entry, int len)
 {
     char *p = NULL;
 
+    (void) len;
+
     p = strchr(entry, '\n');
     if (p)
         p++;
@@ -414,6 +424,8 @@ wps_setting* __get_wps_setting(int len, char *buffer, enum wps_device_role role)
     char *token = strtok(buffer , ",");
     wps_setting *s = NULL;
     int i = 0;
+
+    (void) len;
 
     if (role == WPS_AP) {
         memset(customized_wps_settings_ap, 0, sizeof(customized_wps_settings_ap));
@@ -442,7 +454,7 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
      * */
 #define WSC_SETTINGS_FILE_AP "/tmp/wsc_settings_APUT"
 #define WSC_SETTINGS_FILE_STA "/tmp/wsc_settings_STAUT"
-    int len = 0, is_valid = 0;
+    int len = 0;
     char pipebuf[S_BUFFER_LEN];
     char *parameter_ap[] = {"cat", WSC_SETTINGS_FILE_AP, NULL, NULL};
     char *parameter_sta[] = {"cat", WSC_SETTINGS_FILE_STA, NULL, NULL};

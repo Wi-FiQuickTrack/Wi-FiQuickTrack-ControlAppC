@@ -165,7 +165,9 @@ int wpa_ctrl_request(struct wpa_ctrl *ctrl, const char *cmd, size_t cmd_len,
 	int res;
 	fd_set rfds;
 	const char *_cmd;
+#ifdef CONFIG_CTRL_IFACE_UDP
 	char *cmd_buf = NULL;
+#endif /* CONFIG_CTRL_IFACE_UDP */
 	size_t _cmd_len;
 
 #ifdef CONFIG_CTRL_IFACE_UDP
@@ -281,6 +283,8 @@ int wpa_ctrl_pending(struct wpa_ctrl *ctrl)
 	FD_ZERO(&rfds);
 	FD_SET(ctrl->s, &rfds);
 	res = select(ctrl->s + 1, &rfds, NULL, NULL, &tv);
+	if (res < 0)
+		return -1;
 	return FD_ISSET(ctrl->s, &rfds);
 }
 

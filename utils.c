@@ -38,6 +38,7 @@
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <stdint.h>
+#include <errno.h>
 typedef uint8_t u_int8_t;
 typedef uint16_t u_int16_t;
 typedef uint32_t u_int32_t;
@@ -299,6 +300,9 @@ static void loopback_server_receive_message(int sock, void *eloop_ctx, void *soc
     unsigned char buffer[BUFFER_LEN];
     ssize_t fromlen, len;
 
+    (void)eloop_ctx;
+    (void)sock_ctx;
+
     fromlen = sizeof(from);
     len = recvfrom(sock, buffer, BUFFER_LEN, 0, (struct sockaddr *) &from, (socklen_t *)&fromlen);
     if (len < 0) {
@@ -315,6 +319,9 @@ static void loopback_server_receive_message(int sock, void *eloop_ctx, void *soc
 
 static void loopback_server_timeout(void *eloop_ctx, void *timeout_ctx) {
     int s = (intptr_t)eloop_ctx;
+
+    (void)timeout_ctx;
+
     eloop_unregister_read_sock(s);
     close(s);
     loopback_socket = 0;
@@ -488,6 +495,9 @@ void send_one_loopback_udp_packet(struct loopback_info *info) {
 
 void send_continuous_loopback_packet(void *eloop_ctx, void *sock_ctx) {
     struct loopback_info *info = (struct loopback_info *)eloop_ctx;
+
+    (void)eloop_ctx;
+    (void)sock_ctx;
 
     if (info->pkt_type == DATA_TYPE_ICMP) {
         send_one_loopback_icmp_packet(info);
@@ -749,6 +759,8 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
     struct sockaddr_in *sa;
     char *addr = NULL;
 
+    (void) ipaddr_len;
+
     getifaddrs(&ifap);
     for (ifa = ifap; ifa; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr && ifa->ifa_addr->sa_family == AF_INET && strcmp(ifa->ifa_name, name) == 0) {
@@ -767,6 +779,8 @@ int find_interface_ip(char *ipaddr, int ipaddr_len, char *name) {
 int get_mac_address(char *buffer, int size, char *interface) {
     struct ifreq s;
     int fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+
+    (void) size;
 
     if (fd <= 0) {
         goto done;
@@ -1183,6 +1197,9 @@ char* get_wpas_debug_arguments() {
 }
 
 int add_wireless_interface_info(int band, int bssid, char *name) {
+
+    (void) bssid;
+
     interfaces[interface_count].band = band;
     interfaces[interface_count].bssid = -1;
     interfaces[interface_count].identifier = UNUSED_IDENTIFIER;
@@ -1722,10 +1739,12 @@ int http_file_post(char *host, int port, char *path, char *file_name) {
         body = http_body_multipart(boundary, "wpasLogFile", file_name);
     else {
         indigo_logger(LOG_LEVEL_ERROR, "Tool doesn't support %s ?", path);
+        retval = -ENOTSUP;
         goto done;
     }
     /* Return if body is NULL */
     if (body == NULL) {
+        retval = -EINVAL;
         goto done;
     }
 
@@ -1734,11 +1753,13 @@ int http_file_post(char *host, int port, char *path, char *file_name) {
     socketfd = http_socket(host, port);
     if (send(socketfd, header, strlen(header), 0) == -1){
         indigo_logger(LOG_LEVEL_ERROR, "Failed to open HTTP socket");
+        retval = -EIO;
         goto done;
     }
 
     if (send(socketfd, body, strlen(body), 0) == -1){
         indigo_logger(LOG_LEVEL_ERROR, "Failed to upload file");
+        retval = -EIO;
         goto done;
     }
     
@@ -1758,6 +1779,8 @@ done:
     if (socketfd) {
         close(socketfd);
     }
+
+    return retval;
 }
 
 int file_exists(const char *fname)
