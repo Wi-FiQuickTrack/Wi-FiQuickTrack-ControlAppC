@@ -1,4 +1,3 @@
-
 /* Copyright (c) 2021 Wi-Fi Alliance                                                */
 
 /* Permission to use, copy, modify, and/or distribute this software for any         */
