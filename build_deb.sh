@@ -27,7 +27,7 @@ create_control() {
     echo "Package: ${package_name}" >"$control_file"
     echo "Version: ${version}-${revision}" >>"$control_file"
     echo "Architecture: all" >>"$control_file"
-    echo "Depends: build-essential, arping, isc-dhcp-server" >>"$control_file"
+    echo "Depends: build-essential, arping, isc-dhcp-server, iw" >>"$control_file"
     echo "Essential: no" >>"$control_file"
     echo "Conflicts: wfa-indigo-controlappc" >>"$control_file"
     echo "Priority: optional" >>"$control_file"
