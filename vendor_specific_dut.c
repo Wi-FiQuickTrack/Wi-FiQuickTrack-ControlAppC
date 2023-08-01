@@ -184,6 +184,7 @@ void openwrt_apply_radio_config(void) {
 }
 #endif
 
+#ifdef CONFIG_AP
 /* Called by configure_ap_handler() */
 void configure_ap_enable_mbssid() {
 #ifdef _WTS_OPENWRT_
@@ -269,6 +270,7 @@ void start_ap_set_wlan_params(void *if_info) {
     (void) if_info;
 #endif
 }
+#endif /* End Of CONFIG_AP*/
 
 #ifdef CONFIG_P2P
 /* Return addr of P2P-device if there is no GO or client interface */

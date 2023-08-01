@@ -167,9 +167,11 @@ int detect_third_radio(void);
 void create_sta_interface();
 void delete_sta_interface();
 
+#ifdef CONFIG_AP
 void configure_ap_enable_mbssid();
 void configure_ap_radio_params(char *band, char *country, int channel, int chwidth);
 void start_ap_set_wlan_params(void *if_info);
+#endif /* End Of CONFIG_AP */
 
 #ifdef CONFIG_P2P
 int get_p2p_mac_addr(char *mac_addr, size_t size);
