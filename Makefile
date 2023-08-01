@@ -36,7 +36,7 @@ endif
 
 # Feature flags
 # Enable by default
-CFLAGS += -DCONFIG_P2P
+CFLAGS += -DCONFIG_P2P -DCONFIG_WNM
 
 # Define the package version
 ifneq ($(VERSION),)

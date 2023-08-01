@@ -249,7 +249,9 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef CONFIG_WNM
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_WNM */
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_wsc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -259,7 +261,9 @@ static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapp
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef CONFIG_WNM
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_WNM */
 static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
