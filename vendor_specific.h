@@ -171,9 +171,11 @@ void configure_ap_enable_mbssid();
 void configure_ap_radio_params(char *band, char *country, int channel, int chwidth);
 void start_ap_set_wlan_params(void *if_info);
 
+#ifdef CONFIG_P2P
 int get_p2p_mac_addr(char *mac_addr, size_t size);
 int get_p2p_group_if(char *if_name, size_t size);
 int get_p2p_dev_if(char *if_name, size_t size);
+#endif /* End Of CONFIG_P2P */
 
 void start_dhcp_server(char *if_name, char *ip_addr);
 void stop_dhcp_server();

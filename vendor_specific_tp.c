@@ -493,6 +493,7 @@ const struct sta_driver_ops sta_driver_platform2_ops = {
 	.set_phy_mode           = set_phy_mode_platform2,
 };
 
+#ifdef CONFIG_P2P
 /* Return addr of P2P-device if there is no GO or client interface */
 int get_p2p_mac_addr(char *mac_addr, size_t size) {
     FILE *fp;
@@ -562,6 +563,7 @@ int get_p2p_group_if(char *if_name, size_t size) {
 
     return error;
 }
+#endif /* End Of CONFIG_P2P */
 
 /* Append IP range config and start dhcpd */
 void start_dhcp_server(char *if_name, char *ip_addr)

@@ -34,6 +34,10 @@ CFLAGS += -DCONFIG_CTRL_IFACE_UDP
 CFLAGS += -D_TEST_PLATFORM_
 endif
 
+# Feature flags
+# Enable by default
+CFLAGS += -DCONFIG_P2P
+
 # Define the package version
 ifneq ($(VERSION),)
 CFLAGS += -D_VERSION_='$(VERSION)'

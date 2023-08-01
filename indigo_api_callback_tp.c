@@ -68,7 +68,9 @@ void register_apis() {
     register_api(API_STA_SET_PHY_MODE, NULL, set_sta_phy_mode_handler);
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, set_sta_channel_width_handler);
     register_api(API_STA_POWER_SAVE, NULL, set_sta_power_save_handler);
+#ifdef CONFIG_P2P
     register_api(API_P2P_START_UP, NULL, start_up_p2p_handler);
+#endif /* End Of CONFIG_P2P */
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -986,11 +988,13 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
         if (tlv) {
             memcpy(role, tlv->value, tlv->len);
             if (atoi(role) == DUT_TYPE_P2PUT) {
+#ifdef CONFIG_P2P
                 /* Get P2P GO/Client or Device MAC */
                 if (get_p2p_mac_addr(mac_addr, sizeof(mac_addr))) {
                     indigo_logger(LOG_LEVEL_ERROR, "Failed to get TP P2P MAC address!");
                     get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
                 }
+#endif /* End Of CONFIG_P2P */
             }
         } else {
             get_mac_address(mac_addr, sizeof(mac_addr), get_wireless_interface());
@@ -1130,9 +1134,13 @@ static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapp
 
     /* Find network interface. If P2P Group or bridge exists, then use it. Otherwise, it uses the initiation value. */
     memset(local_ip, 0, sizeof(local_ip));
+#ifdef CONFIG_P2P
     if (get_p2p_group_if(if_name, sizeof(if_name)) == 0 && find_interface_ip(local_ip, sizeof(local_ip), if_name)) {
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", if_name);
     } else if (find_interface_ip(local_ip, sizeof(local_ip), get_wlans_bridge())) {
+#else
+    if (find_interface_ip(local_ip, sizeof(local_ip), get_wlans_bridge())) {
+#endif /* End Of CONFIG_P2P */
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wlans_bridge());
     } else if (find_interface_ip(local_ip, sizeof(local_ip), get_wireless_interface())) {
         indigo_logger(LOG_LEVEL_DEBUG, "use %s", get_wireless_interface());
@@ -1907,6 +1915,7 @@ done:
     return 0;
 }
 
+#ifdef CONFIG_P2P
 static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
     char buffer[S_BUFFER_LEN], response[1024], log_level[TLV_VALUE_SIZE], value[TLV_VALUE_SIZE];
@@ -1995,6 +2004,7 @@ done:
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
     return 0;
 }
+#endif /* End Of CONFIG_P2P */
 
 
 static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -2010,7 +2020,9 @@ static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper 
     if (tlv) {
         memcpy(role, tlv->value, tlv->len);
         if (atoi(role) == DUT_TYPE_P2PUT) {
+#ifdef CONFIG_P2P
             get_p2p_group_if(if_name, sizeof(if_name));
+#endif /* End Of CONFIG_P2P */
         } else {
         }
     } else {
@@ -2057,8 +2069,10 @@ static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *
     if (tlv) {
         memcpy(role, tlv->value, tlv->len);
         if (atoi(role) == DUT_TYPE_P2PUT) {
+#ifdef CONFIG_P2P
             if (get_p2p_group_if(if_name, sizeof(if_name)))
                 reset_interface_ip(if_name);
+#endif /* End Of CONFIG_P2P */
         } else {
         }
     } else {

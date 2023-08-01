@@ -270,6 +270,7 @@ void start_ap_set_wlan_params(void *if_info) {
 #endif
 }
 
+#ifdef CONFIG_P2P
 /* Return addr of P2P-device if there is no GO or client interface */
 int get_p2p_mac_addr(char *mac_addr, size_t size) {
     FILE *fp;
@@ -346,6 +347,7 @@ int get_p2p_dev_if(char *if_name, size_t size) {
 
     return 0;
 }
+#endif /* End Of CONFIG_P2P */
 
 /* Append IP range config and start dhcpd */
 void start_dhcp_server(char *if_name, char *ip_addr)
