@@ -56,7 +56,9 @@ void register_apis() {
     register_api(API_AP_TRIGGER_CHANSWITCH, NULL, trigger_ap_channel_switch);
     register_api(API_AP_SEND_DISCONNECT, NULL, send_ap_disconnect_handler);
     register_api(API_AP_SET_PARAM , NULL, set_ap_parameter_handler);
+#ifdef CONFIG_WNM
     register_api(API_AP_SEND_BTM_REQ, NULL, send_ap_btm_handler);
+#endif /* End Of CONFIG_WNM */
     register_api(API_AP_START_WPS, NULL, start_wps_ap_handler);
     register_api(API_AP_CONFIGURE_WSC, NULL, configure_ap_wsc_handler);
     /* STA */
@@ -66,7 +68,9 @@ void register_apis() {
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
     register_api(API_STA_REASSOCIATE, NULL, send_sta_reconnect_handler);
     register_api(API_STA_SET_PARAM, NULL, set_sta_parameter_handler);
+#ifdef CONFIG_WNM
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
+#endif /* End Of CONFIG_WNM */
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_SCAN, NULL, sta_scan_handler);
     register_api(API_STA_START_WPS, NULL, start_wps_sta_handler);
@@ -1545,6 +1549,7 @@ done:
     return 0;
 }
 
+#ifdef CONFIG_WNM
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     size_t resp_len;
@@ -1677,6 +1682,7 @@ done:
     }
     return 0;
 }
+#endif /* End Of CONFIG_WNM */
 
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
@@ -2172,6 +2178,7 @@ done:
     return 0;
 }
 
+#ifdef CONFIG_WNM
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     size_t resp_len;
@@ -2231,6 +2238,7 @@ done:
     }
     return 0;
 }
+#endif /* End Of CONFIG_WNM */
 
 static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
