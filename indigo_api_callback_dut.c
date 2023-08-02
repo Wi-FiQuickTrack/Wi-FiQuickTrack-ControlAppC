@@ -47,8 +47,12 @@ void register_apis() {
     register_api(API_DEVICE_RESET, NULL, reset_device_handler);
     register_api(API_START_DHCP, NULL, start_dhcp_handler);
     register_api(API_STOP_DHCP, NULL, stop_dhcp_handler);
+#ifdef CONFIG_WPS
     register_api(API_GET_WSC_PIN, NULL, get_wsc_pin_handler);
     register_api(API_GET_WSC_CRED, NULL, get_wsc_cred_handler);
+    register_api(API_STA_START_WPS, NULL, start_wps_sta_handler);
+    register_api(API_STA_ENABLE_WSC, NULL, enable_wsc_sta_handler);
+#endif /* End Of CONFIG_WPS */
 #ifdef CONFIG_AP
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
@@ -70,11 +74,10 @@ void register_apis() {
     register_api(API_STA_SEND_DISCONNECT, NULL, send_sta_disconnect_handler);
     register_api(API_STA_REASSOCIATE, NULL, send_sta_reconnect_handler);
     register_api(API_STA_SET_PARAM, NULL, set_sta_parameter_handler);
+    register_api(API_STA_SCAN, NULL, sta_scan_handler);
 #ifdef CONFIG_WNM
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
 #endif /* End Of CONFIG_WNM */
-    register_api(API_STA_SCAN, NULL, sta_scan_handler);
-    register_api(API_STA_START_WPS, NULL, start_wps_sta_handler);
 #ifdef CONFIG_HS20
     register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_HS2_ASSOCIATE, NULL, set_sta_hs2_associate_handler);
@@ -97,7 +100,6 @@ void register_apis() {
     register_api(API_P2P_SET_SERV_DISC, NULL, set_p2p_serv_disc_handler);
     register_api(API_P2P_SET_EXT_LISTEN, NULL, set_p2p_ext_listen_handler);
 #endif /*End Of CONFIG_P2P */
-    register_api(API_STA_ENABLE_WSC, NULL, enable_wsc_sta_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -3338,7 +3340,7 @@ done:
     return 0;
 }
 
-
+#ifdef CONFIG_WPS
 static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_NOT_OK;
@@ -3654,6 +3656,87 @@ done:
     }
     return 0;
 }
+static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
+    char buffer[L_BUFFER_LEN];
+    char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
+    int len = 0, status = TLV_VALUE_STATUS_NOT_OK;
+    unsigned int i = 0;
+    struct tlv_hdr *tlv = NULL;
+    struct tlv_to_config_name* cfg = NULL;
+
+#ifdef _OPENWRT_
+#else
+    system("rfkill unblock wlan");
+    sleep(1);
+#endif
+
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+    system(buffer);
+    sleep(3);
+
+    /* Generate configuration */
+    memset(buffer, 0, sizeof(buffer));
+    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
+
+    for (i = 0; i < req->tlv_num; i++) {
+        cfg = find_wpas_global_config_name(req->tlv[i]->id);
+        if (cfg) {
+            memset(value, 0, sizeof(value));
+            memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
+            sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
+            strcat(buffer, cfg_item);
+        }
+    }
+
+    /* wps settings */
+    tlv = find_wrapper_tlv_by_id(req, TLV_WPS_ENABLE);
+    if (tlv) {
+        memset(value, 0, sizeof(value));
+        memcpy(value, tlv->value, tlv->len);
+        /* To get STA wps vendor info */
+        wps_setting *s = get_vendor_wps_settings(WPS_STA);
+        if (!s) {
+            indigo_logger(LOG_LEVEL_WARNING, "Failed to get STAUT WPS settings");
+        } else if (atoi(value) == WPS_ENABLE_NORMAL) {
+            for (i = 0; i < STA_SETTING_NUM; i++) {
+                memset(cfg_item, 0, sizeof(cfg_item));
+                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
+                strcat(buffer, cfg_item);
+            }
+            indigo_logger(LOG_LEVEL_INFO, "STAUT Configure WPS");
+        } else {
+            indigo_logger(LOG_LEVEL_ERROR, "Invalid WPS TLV value: %d (TLV ID 0x%04x)", atoi(value), tlv->id);
+        }
+    } else {
+        indigo_logger(LOG_LEVEL_WARNING, "No WSC TLV found. Failed to append STA WSC data");
+    }
+
+    len = strlen(buffer);
+
+    if (len) {
+        write_file(get_wpas_conf_file(), buffer, len);
+    }
+
+    /* Start wpa supplicant */
+    memset(buffer, 0 ,sizeof(buffer));
+    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wireless_interface());
+    system(buffer);
+    sleep(2);
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_WPA_S_START_UP_OK;
+
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    return 0;
+}
+#endif /* End Of CONFIG_WPS */
 
 #ifdef CONFIG_P2P
 static int set_p2p_serv_disc_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -3762,83 +3845,3 @@ done:
 }
 #endif /* End OF CONFIG_P2P */
 
-static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
-    char buffer[L_BUFFER_LEN];
-    char value[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
-    int len = 0, status = TLV_VALUE_STATUS_NOT_OK;
-    size_t i = 0;
-    struct tlv_hdr *tlv = NULL;
-    struct tlv_to_config_name* cfg = NULL;
-
-#ifdef _OPENWRT_
-#else
-    system("rfkill unblock wlan");
-    sleep(1);
-#endif
-
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
-    system(buffer);
-    sleep(3);
-
-    /* Generate configuration */
-    memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
-
-    for (i = 0; i < req->tlv_num; i++) {
-        cfg = find_wpas_global_config_name(req->tlv[i]->id);
-        if (cfg) {
-            memset(value, 0, sizeof(value));
-            memcpy(value, req->tlv[i]->value, req->tlv[i]->len);
-            sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
-            strcat(buffer, cfg_item);
-        }
-    }
-
-    /* wps settings */
-    tlv = find_wrapper_tlv_by_id(req, TLV_WPS_ENABLE);
-    if (tlv) {
-        memset(value, 0, sizeof(value));
-        memcpy(value, tlv->value, tlv->len);
-        /* To get STA wps vendor info */
-        wps_setting *s = get_vendor_wps_settings(WPS_STA);
-        if (!s) {
-            indigo_logger(LOG_LEVEL_WARNING, "Failed to get STAUT WPS settings");
-        } else if (atoi(value) == WPS_ENABLE_NORMAL) {
-            for (i = 0; i < STA_SETTING_NUM; i++) {
-                memset(cfg_item, 0, sizeof(cfg_item));
-                sprintf(cfg_item, "%s=%s\n", s[i].wkey, s[i].value);
-                strcat(buffer, cfg_item);
-            }
-            indigo_logger(LOG_LEVEL_INFO, "STAUT Configure WPS");
-        } else {
-            indigo_logger(LOG_LEVEL_ERROR, "Invalid WPS TLV value: %d (TLV ID 0x%04x)", atoi(value), tlv->id);
-        }
-    } else {
-        indigo_logger(LOG_LEVEL_WARNING, "No WSC TLV found. Failed to append STA WSC data");
-    }
-
-    len = strlen(buffer);
-
-    if (len) {
-        write_file(get_wpas_conf_file(), buffer, len);
-    }
-
-    /* Start wpa supplicant */
-    memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
-        get_wpas_full_exec_path(),
-        get_wpas_conf_file(),
-        get_wireless_interface());
-    system(buffer);
-    sleep(2);
-
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_WPA_S_START_UP_OK;
-
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    return 0;
-}

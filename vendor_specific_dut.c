@@ -404,6 +404,7 @@ void stop_dhcp_client()
     system("killall dhclient 1>/dev/null 2>/dev/null");
 }
 
+#ifdef CONFIG_WPS
 wps_setting *p_wps_setting = NULL;
 wps_setting customized_wps_settings_ap[AP_SETTING_NUM];
 wps_setting customized_wps_settings_sta[STA_SETTING_NUM];
@@ -500,3 +501,4 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
 
     return NULL;
 }
+#endif /* End Of CONFIG_WPS */

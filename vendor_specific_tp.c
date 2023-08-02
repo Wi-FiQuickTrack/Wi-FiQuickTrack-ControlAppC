@@ -620,6 +620,7 @@ void stop_dhcp_client()
     system("killall dhclient 1>/dev/null 2>/dev/null");
 }
 
+#ifdef CONFIG_WPS
 wps_setting wps_settings_ap[GROUP_NUM][AP_SETTING_NUM] = {
     {
         /*
@@ -738,4 +739,5 @@ wps_setting* get_vendor_wps_settings_for_ie_frag_test(enum wps_device_role role)
     else
         return NULL;
 }
+#endif /* End Of CONFIG_WPS */
 #endif /* _TEST_PLATFORM_ */
