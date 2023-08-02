@@ -179,7 +179,7 @@ void open_tc_app_log() {
     }
     app_log = fopen(APP_LOG_FILE, "w");
     if (app_log == NULL) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to open the file %s", APP_LOG_FILE);    
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to open the file %s", APP_LOG_FILE);
     }
 #endif
 }
@@ -215,7 +215,7 @@ int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]) {
 
     if (pid == 0) {
         // Replace stdout with the write end of the pipe
-        dup2(pipefds[1], STDOUT_FILENO);  
+        dup2(pipefds[1], STDOUT_FILENO);
         // Close read to pipe, in child
         close(pipefds[0]);
         execv(cmd, parameter);
@@ -322,7 +322,7 @@ static void loopback_server_timeout(void *eloop_ctx, void *timeout_ctx) {
 
     (void)timeout_ctx;
 
-    eloop_unregister_read_sock(s);
+    qt_eloop_unregister_read_sock(s);
     close(s);
     loopback_socket = 0;
     indigo_logger(LOG_LEVEL_INFO, "Loopback server stops");
@@ -363,12 +363,12 @@ int loopback_server_start(char *local_ip, char *local_port, int timeout) {
     }
 
     /* Register to eloop and ready for the socket event */
-    if (eloop_register_read_sock(s, loopback_server_receive_message, NULL, NULL)) {
+    if (qt_eloop_register_read_sock(s, loopback_server_receive_message, NULL, NULL)) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to initiate ControlAppC");
         return -1;
     }
     loopback_socket = s;
-    eloop_register_timeout(timeout, 0, loopback_server_timeout, (void*)(intptr_t)s, NULL);
+    qt_eloop_register_timeout(timeout, 0, loopback_server_timeout, (void*)(intptr_t)s, NULL);
     indigo_logger(LOG_LEVEL_INFO, "Loopback Client starts ip %s port %s", local_ip, local_port);
 
     return 0;
@@ -376,8 +376,8 @@ int loopback_server_start(char *local_ip, char *local_port, int timeout) {
 
 int loopback_server_stop() {
     if (loopback_socket) {
-        eloop_cancel_timeout(loopback_server_timeout, (void*)(intptr_t)loopback_socket, NULL);
-        eloop_unregister_read_sock(loopback_socket);
+        qt_eloop_cancel_timeout(loopback_server_timeout, (void*)(intptr_t)loopback_socket, NULL);
+        qt_eloop_unregister_read_sock(loopback_socket);
         close(loopback_socket);
         loopback_socket = 0;
     }
@@ -403,7 +403,7 @@ unsigned short icmp_checksum(unsigned short *buf, int size)
     return ~sum;
 }
 
-void setup_icmphdr(u_int8_t type, u_int8_t code, u_int16_t id, 
+void setup_icmphdr(u_int8_t type, u_int8_t code, u_int16_t id,
     u_int16_t seq, struct icmphdr *icmphdr, int packet_size)
 {
     memset(icmphdr, 0, sizeof(struct icmphdr));
@@ -458,7 +458,7 @@ void send_one_loopback_icmp_packet(struct loopback_info *info) {
     }
 
 done:
-    eloop_register_timeout(0, info->rate * 1000000, send_continuous_loopback_packet, info, NULL);
+    qt_eloop_register_timeout(0, info->rate * 1000000, send_continuous_loopback_packet, info, NULL);
 }
 
 void send_one_loopback_udp_packet(struct loopback_info *info) {
@@ -473,7 +473,7 @@ void send_one_loopback_udp_packet(struct loopback_info *info) {
         indigo_logger(LOG_LEVEL_INFO, "Send failed on packet %d", info->pkt_sent);
         // In case Tool doesn't send stop or doesn't receive stop
         if (info->pkt_sent < 1000)
-            eloop_register_timeout(0, info->rate*1000000, send_continuous_loopback_packet, info, NULL);
+            qt_eloop_register_timeout(0, info->rate*1000000, send_continuous_loopback_packet, info, NULL);
         return;
     }
     indigo_logger(LOG_LEVEL_INFO, "Packet %d: Send loopback %d bytes data",
@@ -484,13 +484,13 @@ void send_one_loopback_udp_packet(struct loopback_info *info) {
         indigo_logger(LOG_LEVEL_INFO, "recv failed on packet %d", info->pkt_sent);
         // In case Tool doesn't send stop or doesn't receive stop
         if (info->pkt_sent < 1000)
-            eloop_register_timeout(0, info->rate*1000000, send_continuous_loopback_packet, info, NULL);
+            qt_eloop_register_timeout(0, info->rate*1000000, send_continuous_loopback_packet, info, NULL);
         return;
     }
     info->pkt_rcv++;
     indigo_logger(LOG_LEVEL_INFO, "Receive echo %d bytes data", recv_len);
 
-    eloop_register_timeout(0, info->rate*1000000, send_continuous_loopback_packet, info, NULL);
+    qt_eloop_register_timeout(0, info->rate*1000000, send_continuous_loopback_packet, info, NULL);
 }
 
 void send_continuous_loopback_packet(void *eloop_ctx, void *sock_ctx) {
@@ -512,7 +512,7 @@ int stop_loopback_data(int *pkt_sent)
     if (loopback.sock <= 0)
         return 0;
 
-    eloop_cancel_timeout(send_continuous_loopback_packet, &loopback, NULL);
+    qt_eloop_cancel_timeout(send_continuous_loopback_packet, &loopback, NULL);
     close(loopback.sock);
     loopback.sock = 0;
     if (pkt_sent)
@@ -582,7 +582,7 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
         memset(loopback.message, 0, sizeof(loopback.message));
         for (i = 0; (i < packet_size) && (i < (int)sizeof(loopback.message)); i++)
             loopback.message[i] = 0x0A;
-        eloop_register_timeout(0, 0, send_continuous_loopback_packet, &loopback, NULL);
+        qt_eloop_register_timeout(0, 0, send_continuous_loopback_packet, &loopback, NULL);
         indigo_logger(LOG_LEVEL_INFO, "Send continuous loopback data to ip %s port %u",
                       target_ip, target_port);
         return 0;
@@ -675,7 +675,7 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         snprintf(loopback.target_ip, sizeof(loopback.target_ip), "%s", target_ip);
         for (i = sizeof(struct icmphdr); (i < (size_t)packet_size) && (i < sizeof(loopback.message)); i++)
             loopback.message[i] = 0x0A;
-        eloop_register_timeout(0, 0, send_continuous_loopback_packet, &loopback, NULL);
+        qt_eloop_register_timeout(0, 0, send_continuous_loopback_packet, &loopback, NULL);
         indigo_logger(LOG_LEVEL_INFO, "Send continuous loopback data to ip %s", loopback.target_ip);
         return 0;
     }
@@ -787,8 +787,8 @@ int get_mac_address(char *buffer, int size, char *interface) {
     }
     strcpy(s.ifr_name, interface);
     if (0 == ioctl(fd, SIOCGIFHWADDR, &s)) {
-        sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x", 
-            (char)s.ifr_addr.sa_data[0]&0x00ff, (char)s.ifr_addr.sa_data[1]&0x00ff, (char)s.ifr_addr.sa_data[2]&0x00ff, 
+        sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x",
+            (char)s.ifr_addr.sa_data[0]&0x00ff, (char)s.ifr_addr.sa_data[1]&0x00ff, (char)s.ifr_addr.sa_data[2]&0x00ff,
             (char)s.ifr_addr.sa_data[3]&0x00ff, (char)s.ifr_addr.sa_data[4]&0x00ff, (char)s.ifr_addr.sa_data[5]&0x00ff);
         close(fd);
         return 0;
@@ -867,7 +867,7 @@ int reset_bridge(char *br) {
     control_interface(br, "down");
     sprintf(cmd, "brctl delbr %s", br);
     system(cmd);
- 
+
     bridge_created = 0;
 
     return 0;
@@ -897,7 +897,7 @@ int control_interface(char *ifname, char *op) {
     /* sprintf(cmd, "ifconfig %s %s", ifname, op); */
     sprintf(cmd, "ip link set %s %s", ifname, op);
     system(cmd);
- 
+
     return 0;
 }
 
@@ -908,7 +908,7 @@ int set_interface_ip(char *ifname, char *ip) {
     /* sprintf(cmd, "ifconfig %s %s", ifname, ip); */
     sprintf(cmd, "ip addr add %s dev %s", ip, ifname);
     system(cmd);
- 
+
     return 0;
 }
 
@@ -984,7 +984,7 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
         char ifname[16];
 
         memcpy(ifname, interfaces[i].ifname, sizeof(ifname));
-        if ((interfaces[i].band == bss->band) && 
+        if ((interfaces[i].band == bss->band) &&
              (interfaces[i].identifier == UNUSED_IDENTIFIER)) {
             configured_interface_count++;
             interfaces[i].identifier = bss->identifier;
@@ -1006,7 +1006,7 @@ struct interface_info* get_wireless_interface_info(int band, int identifier) {
     int i;
 
     for (i = 0; i < interface_count; i++) {
-        if ((interfaces[i].band == band) && 
+        if ((interfaces[i].band == band) &&
              ((interfaces[i].identifier != UNUSED_IDENTIFIER) &&
               (interfaces[i].identifier == identifier))) {
             return &interfaces[i];
@@ -1224,7 +1224,7 @@ int show_wireless_interface_info() {
             band = "6GHz";
         }
 
-        indigo_logger(LOG_LEVEL_INFO, "Interface Name: %s, Band: %s, identifier %d", 
+        indigo_logger(LOG_LEVEL_INFO, "Interface Name: %s, Band: %s, identifier %d",
             interfaces[i].ifname, band, interfaces[i].identifier);
     }
     return 0;
@@ -1235,7 +1235,7 @@ int parse_wireless_interface_info(char *info) {
     char *delimit = ",";
 
     token = strtok(info, delimit);
-  
+
     while(token != NULL) {
         if (strncmp(token, "2:", 2) == 0) {
             add_wireless_interface_info(BAND_24GHZ, -1, token+2);
@@ -1279,7 +1279,7 @@ void set_default_wireless_interface_info(int band) {
 }
 
 void reset_default_wireless_interface_info() {
-    default_interface = NULL;    
+    default_interface = NULL;
 }
 
 /* Parse BSS IDENTIFIER TLV */
@@ -1389,8 +1389,8 @@ int set_service_port(int port) {
 
 /* Channel functions */
 struct channel_info band_24[] = { {1, 2412}, {2, 2417}, {3, 2422}, {4, 2427}, {5, 2432}, {6, 2437}, {7, 2442}, {8, 2447}, {9, 2452}, {10, 2457}, {11, 2462} };
-struct channel_info band_5[] = { {36, 5180}, {40, 5200}, {44, 5220}, {48, 5240}, {52, 5260}, {56, 5280}, {60, 5300}, {64, 5320}, {100, 5500}, {104, 5520}, {108, 5540}, 
-                                 {112, 5560}, {116, 5580}, {120, 5600}, {124, 5620}, {128, 5640}, {132, 5660}, {136, 5680}, {140, 5700}, {144, 5720}, {149, 5745}, 
+struct channel_info band_5[] = { {36, 5180}, {40, 5200}, {44, 5220}, {48, 5240}, {52, 5260}, {56, 5280}, {60, 5300}, {64, 5320}, {100, 5500}, {104, 5520}, {108, 5540},
+                                 {112, 5560}, {116, 5580}, {120, 5600}, {124, 5620}, {128, 5640}, {132, 5660}, {136, 5680}, {140, 5700}, {144, 5720}, {149, 5745},
                                  {153, 5765}, {157, 5785}, {161, 5805}, {165, 8525} };
 
 int verify_band_from_freq(int freq, int band) {
@@ -1574,7 +1574,7 @@ int insert_wpa_network_config(char *config) {
     char buffer[S_BUFFER_LEN];
 
     f_ptr = fopen(path, "r");
-    f_tmp_ptr = fopen(tmp_path, "w");    
+    f_tmp_ptr = fopen(tmp_path, "w");
 
     if (f_ptr == NULL || f_tmp_ptr == NULL) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to open the files");
@@ -1584,7 +1584,7 @@ int insert_wpa_network_config(char *config) {
     memset(buffer, 0, sizeof(buffer));
     while ((fgets(buffer, S_BUFFER_LEN, f_ptr)) != NULL) {
         if (strstr(buffer, target_str) != NULL) {
-            indigo_logger(LOG_LEVEL_DEBUG, 
+            indigo_logger(LOG_LEVEL_DEBUG,
                 "insert config: %s into the wpa_supplicant conf.", config);
             fputs(config, f_tmp_ptr);
         }
@@ -1767,13 +1767,13 @@ int http_file_post(char *host, int port, char *path, char *file_name) {
         retval = -EIO;
         goto done;
     }
-    
+
     while ((numbytes=recv(socketfd, response, sizeof(response), 0)) > 0) {
         response[numbytes] = '\0';
         indigo_logger(LOG_LEVEL_DEBUG, "Server response: %s", response);
     }
     indigo_logger(LOG_LEVEL_INFO, "Upload completes");
-    
+
 done:
     if (header) {
         free(header);
