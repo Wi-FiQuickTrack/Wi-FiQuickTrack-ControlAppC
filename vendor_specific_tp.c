@@ -38,7 +38,7 @@ const char *desc_platform2 = "Qualcomm Device 1101";
 static void check_platform1_default_conf();
 
 /**
- * Generic platform dependent API implementation 
+ * Generic platform dependent API implementation
  */
 
 /* support multiple STA platforms detection */
@@ -82,7 +82,7 @@ void detect_sta_vendor() {
     } else {
         /* set to platform 1 by default */
         sta_drv_ops = &sta_driver_platform1_ops;
-        indigo_logger(LOG_LEVEL_INFO, 
+        indigo_logger(LOG_LEVEL_INFO,
             "Unable to find any supported drivers, hook the default platform handlers");
     }
 
@@ -266,9 +266,9 @@ void configure_ap_enable_mbssid() {
     /*
      * the following uci commands need to reboot openwrt
      *    so it can not be configured by controlApp
-     * 
+     *
      * Manually enable MBSSID on OpenWRT when need to test MBSSID
-     * 
+     *
     system("uci set wireless.qcawifi=qcawifi");
     system("uci set wireless.qcawifi.mbss_ie_enable=1");
     system("uci commit");
@@ -303,7 +303,7 @@ void set_phy_mode() {
     } else {
         if (sta_drv_ops && sta_drv_ops->set_phy_mode != NULL) {
             sta_drv_ops->set_phy_mode();
-        }        
+        }
     }
 
     /* reset the flag for phymode */
@@ -311,7 +311,7 @@ void set_phy_mode() {
 }
 
 /**
- * Platform-dependent implementation for STA platform 1 
+ * Platform-dependent implementation for STA platform 1
  */
 
 struct he_chwidth_config {
@@ -368,7 +368,7 @@ static int set_he_channel_width(int chwidth) {
     char buffer[S_BUFFER_LEN];
 
     f_ptr  = fopen(path, "r");
-    f_tmp_ptr = fopen(tmp_path, "w");    
+    f_tmp_ptr = fopen(tmp_path, "w");
 
     if (f_ptr == NULL || f_tmp_ptr == NULL) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to open the files");
@@ -390,9 +390,9 @@ static int set_he_channel_width(int chwidth) {
                 continue;
             } else {
                 memset(buffer, 0, sizeof(buffer));
-                snprintf(buffer, sizeof(buffer), "%s%s", 
-                    he_ie_str, he_chwidth_config_list[chwidth].config);            
-                indigo_logger(LOG_LEVEL_DEBUG, 
+                snprintf(buffer, sizeof(buffer), "%s%s",
+                    he_ie_str, he_chwidth_config_list[chwidth].config);
+                indigo_logger(LOG_LEVEL_DEBUG,
                     "replace he_phy_cap setting[%d]:%s\n", chwidth, buffer);
             }
         }
@@ -402,10 +402,10 @@ static int set_he_channel_width(int chwidth) {
 
     if (is_found == 0 && chwidth != CHWIDTH_AUTO) {
         memset(buffer, 0, sizeof(buffer));
-        snprintf(buffer, sizeof(buffer), "%s%s", 
+        snprintf(buffer, sizeof(buffer), "%s%s",
                 he_ie_str, he_chwidth_config_list[chwidth].config);
-        indigo_logger(LOG_LEVEL_DEBUG, 
-                    "set he_phy_cap setting:%s\n", buffer);        
+        indigo_logger(LOG_LEVEL_DEBUG,
+                    "set he_phy_cap setting:%s\n", buffer);
         fputs(buffer, f_tmp_ptr);
     }
 
@@ -423,8 +423,8 @@ static int set_he_channel_width(int chwidth) {
 
 static int set_channel_width_platform1() {
     int ret = 0;
-    if ((sta_hw_config.phymode == PHYMODE_11AXA || 
-            sta_hw_config.phymode == PHYMODE_11AXG || 
+    if ((sta_hw_config.phymode == PHYMODE_11AXA ||
+            sta_hw_config.phymode == PHYMODE_11AXG ||
             sta_hw_config.phymode == PHYMODE_AUTO)) {
         ret = set_he_channel_width(sta_hw_config.chwidth);
     } else if ((sta_hw_config.chwidth == CHWIDTH_20 &&
@@ -444,7 +444,7 @@ static void set_phy_mode_platform1() {
     } else if (sta_hw_config.phymode == PHYMODE_11NA) {
         insert_wpa_network_config("disable_vht=1\n");
         disable_11ax();
-    } else if (sta_hw_config.phymode == PHYMODE_11AXG || 
+    } else if (sta_hw_config.phymode == PHYMODE_11AXG ||
         sta_hw_config.phymode == PHYMODE_11AXA || sta_hw_config.phymode == PHYMODE_AUTO) {
         reload_driver();
     }
@@ -457,8 +457,8 @@ static void set_phy_mode_platform1() {
 
 static int set_channel_width_platform2() {
     int ret = 0;
-    if ((sta_hw_config.phymode == PHYMODE_11AXA || 
-            sta_hw_config.phymode == PHYMODE_11AXG || 
+    if ((sta_hw_config.phymode == PHYMODE_11AXA ||
+            sta_hw_config.phymode == PHYMODE_11AXG ||
             sta_hw_config.phymode == PHYMODE_AUTO)) {
         /* HE channel width setting */
     } else if ((sta_hw_config.chwidth == CHWIDTH_20 &&
@@ -476,7 +476,7 @@ static void set_phy_mode_platform2() {
         insert_wpa_network_config("disable_ht=1\n");
     } else if (sta_hw_config.phymode == PHYMODE_11NA) {
         insert_wpa_network_config("disable_vht=1\n");
-    } else if (sta_hw_config.phymode == PHYMODE_11AXG || 
+    } else if (sta_hw_config.phymode == PHYMODE_11AXG ||
         sta_hw_config.phymode == PHYMODE_11AXA || sta_hw_config.phymode == PHYMODE_AUTO) {
         /* reset to HE */
     }
@@ -485,7 +485,7 @@ static void set_phy_mode_platform2() {
 const struct sta_driver_ops sta_driver_platform1_ops = {
 	.name			        = "platform1",
 	.set_channel_width      = set_channel_width_platform1,
-	.set_phy_mode           = set_phy_mode_platform1,    
+	.set_phy_mode           = set_phy_mode_platform1,
 };
 
 

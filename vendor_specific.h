@@ -143,7 +143,7 @@ typedef struct _wps_setting {
  * struct sta_driver_ops - Driver interface API wrapper definition
  *
  * This structure defines the API that each driver interface needs to implement
- * for indigo c control application. 
+ * for indigo c control application.
  */
 struct sta_driver_ops {
     const char *name;

@@ -173,7 +173,7 @@ int gen_message_hdr(char *message, size_t message_len, struct message_hdr *hdr) 
     message[len++] = (char) (hdr->seq & 0x00ff);
     message[len++] = hdr->reserved;
     message[len++] = hdr->reserved2;
-    
+
     return sizeof(struct message_hdr);
 }
 
@@ -243,7 +243,7 @@ int gen_tlv(char *packet, size_t packet_size, struct tlv_hdr *t) {
     packet[len++] = t->len;
     memcpy(&packet[len], t->value, t->len);
     len += t->len;
-    
+
     return len;
 }
 

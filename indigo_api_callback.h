@@ -132,7 +132,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_STA_OWE_GROUP, "owe_group", 0 },
     { TLV_BSSID, "bssid", 0 },
     { TLV_REALM, "realm", 1 },
-    { TLV_IMSI, "imsi", 1 },    
+    { TLV_IMSI, "imsi", 1 },
     { TLV_MILENAGE, "milenage", 1 },
     { TLV_BSSID_FILTER_LIST, "bssid_filter", 0 },
     { TLV_USERNAME, "username", 1 },

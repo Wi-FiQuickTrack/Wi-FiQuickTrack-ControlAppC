@@ -58,7 +58,7 @@ void register_apis() {
 #ifdef CONFIG_WPS
     register_api(API_GET_WSC_CRED, NULL, get_wsc_cred_handler);
 #endif /* End Of CONFIG_WPS */
-#ifdef CONFIG_HS20    
+#ifdef CONFIG_HS20
     register_api(API_STA_SEND_ICON_REQ, NULL, send_sta_icon_req_handler);
 #endif /* End Of CONFIG_HS20 */
 #ifdef CONFIG_AP
@@ -91,7 +91,7 @@ static int get_control_app_handler(struct packet_wrapper *req, struct packet_wra
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, TLV_VALUE_STATUS_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(TLV_VALUE_OK), TLV_VALUE_OK);
-    fill_wrapper_tlv_bytes(resp, TLV_TEST_PLATFORM_APP_VERSION, 
+    fill_wrapper_tlv_bytes(resp, TLV_TEST_PLATFORM_APP_VERSION,
         strlen(buffer), buffer);
     return 0;
 }
@@ -127,7 +127,7 @@ void upload_wlan_hapd_conf(void *if_info) {
 }
 
 #ifdef CONFIG_AP
-// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'}
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0, id = 0;
     char buffer[S_BUFFER_LEN], reset_type[16], log_name[128];
@@ -248,7 +248,7 @@ static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *re
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-   
+
     return 0;
 }
 
@@ -364,7 +364,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
-        /* This is used when hostapd will use multiple lines to 
+        /* This is used when hostapd will use multiple lines to
          * configure multiple items in the same configuration parameter
          * (use semicolon to separate multiple configurations) */
         cfg = find_generic_tlv_config(tlv->id, semicolon_list, semicolon_list_size);
@@ -373,7 +373,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 
             memcpy(buffer, tlv->value, tlv->len);
             token = strtok(buffer, delimit);
- 
+
             while(token != NULL) {
                 sprintf(cfg_item, "%s=%s\n", cfg->config_name, token);
                 strcat(output, cfg_item);
@@ -576,7 +576,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             if (NULL == wlan) {
                 wlan = assign_wireless_interface_info(&bss_info);
             }
-            indigo_logger(LOG_LEVEL_DEBUG, "TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n", 
+            indigo_logger(LOG_LEVEL_DEBUG, "TLV_OWE_TRANSITION_BSS_IDENTIFIER: TLV_BSS_IDENTIFIER 0x%x identifier %d mapping ifname %s\n",
                     bss_identifier,
                     bss_info.identifier,
                     wlan ? wlan->ifname : "n/a"
@@ -710,7 +710,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     return strlen(output);
 }
 
-// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'} 
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'DUT configured as AP : Configuration file created'}
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int band, len;
     char hw_mode_str[8], op_class[8];
@@ -741,7 +741,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
                 band_transmitter[bss_info.band] = wlan;
             }
         }
-        indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n", 
+        indigo_logger(LOG_LEVEL_DEBUG, "TLV_BSS_IDENTIFIER 0x%x band %d multiple_bssid %d transmitter %d identifier %d\n",
                bss_identifier,
                bss_info.band,
                bss_info.mbssid_enable,
@@ -774,7 +774,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
         }
     }
     if (wlan) {
-        indigo_logger(LOG_LEVEL_DEBUG, "ifname %s hostapd conf file %s\n", 
+        indigo_logger(LOG_LEVEL_DEBUG, "ifname %s hostapd conf file %s\n",
                wlan ? wlan->ifname : "n/a",
                wlan ? wlan->hapd_conf_file: "n/a"
                );
@@ -819,7 +819,7 @@ static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrappe
     return 0;
 }
 
-// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'} 
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP is up : Hostapd service is active'}
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_HOSTAPD_START_OK;
     char buffer[S_BUFFER_LEN], g_ctrl_iface[64], log_level[TLV_VALUE_SIZE];
@@ -913,7 +913,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 #endif /* End Of CONFIG_AP */
 
 // Bytes to DUT : 01 50 06 00 ed ff ff 00 55 0c 31 39 32 2e 31 36 38 2e 31 30 2e 33
-// RESP :{<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'} 
+// RESP :{<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'}
 static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0;
     char buffer[64];
@@ -959,9 +959,9 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     return 0;
 }
 
-// Bytes to DUT : 01 50 01 00 ee ff ff 
-// ACK:  Bytes from DUT : 01 00 01 00 ee ff ff a0 01 01 30 a0 00 15 41 43 4b 3a 20 43 6f 6d 6d 61 6e 64 20 72 65 63 65 69 76 65 64 
-// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: '9c:b6:d0:19:40:c7', <ResponseTLV.DUT_MAC_ADDR: 40963>: '9c:b6:d0:19:40:c7'} 
+// Bytes to DUT : 01 50 01 00 ee ff ff
+// ACK:  Bytes from DUT : 01 00 01 00 ee ff ff a0 01 01 30 a0 00 15 41 43 4b 3a 20 43 6f 6d 6d 61 6e 64 20 72 65 63 65 69 76 65 64
+// RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: '9c:b6:d0:19:40:c7', <ResponseTLV.DUT_MAC_ADDR: 40963>: '9c:b6:d0:19:40:c7'}
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char mac_addr[S_BUFFER_LEN];
     struct bss_identifier_info bss_info;
@@ -991,7 +991,7 @@ static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrappe
             indigo_logger(LOG_LEVEL_DEBUG, "Get mac_addr %s\n", mac_addr);
             status = TLV_VALUE_STATUS_OK;
             message = TLV_VALUE_OK;
-        } 
+        }
     } else {
         /* TLV: TLV_ROLE */
         memset(role, 0, sizeof(role));
@@ -1414,7 +1414,7 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-   
+
     return 0;
 }
 
@@ -1515,7 +1515,7 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
                 sprintf(cfg_item, "%s=%s\n", cfg->config_name, value);
                 strcat(buffer, cfg_item);
             }
-        }        
+        }
     }
 
     if (ieee80211w_configured == 0) {
@@ -1605,7 +1605,7 @@ static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapp
     /* Start WPA supplicant */
     memset(buffer, 0 ,sizeof(buffer));
     sprintf(buffer, "%s -B -t -c %s %s -i %s -f %s",
-        get_wpas_full_exec_path(), 
+        get_wpas_full_exec_path(),
         get_wpas_conf_file(),
         get_wpas_debug_arguments(),
         get_wireless_interface(),
@@ -1900,7 +1900,7 @@ static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_
     memset(buffer, 0, sizeof(buffer));
     sprintf(conf, "%s", !strcmp(param_value, "False") ? "off" : "on");
     iface = get_wireless_interface();
-    sprintf(buffer, "iw dev %s set power_save %s && iw dev %s get power_save", 
+    sprintf(buffer, "iw dev %s set power_save %s && iw dev %s get power_save",
             iface, (char *)&conf, iface);
     indigo_logger(LOG_LEVEL_DEBUG, "cmd: %s", buffer);
     system(buffer);

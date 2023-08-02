@@ -272,7 +272,7 @@ struct indigo_tlv indigo_tlv_list[] = {
     { TLV_CAPTURE_OUTFILE, "CAPTURE_OUTFILE" },
     { TLV_TP_IP_ADDRESS, "TP_IP_ADDRESS" },
     { TLV_WPS_ER_SUPPORT, "WPS_ER_SUPPORT" },
-    { TLV_ADDITIONAL_TEST_PLATFORM_ID, "ADDITIONAL_TEST_PLATFORM_ID" },    
+    { TLV_ADDITIONAL_TEST_PLATFORM_ID, "ADDITIONAL_TEST_PLATFORM_ID" },
 };
 
 /* Find the type of the API stucture by the ID from the list */
