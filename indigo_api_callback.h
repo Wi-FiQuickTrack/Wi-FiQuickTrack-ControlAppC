@@ -241,8 +241,6 @@ static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 
 #ifdef CONFIG_AP
 /* AP */
@@ -255,8 +253,11 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif /* End Of CONFIG_WNM */
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef CONFIG_WPS
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_wsc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_WPS */
 #endif /* End Of CONFIG_AP */
 
 /* STA */
@@ -277,8 +278,12 @@ static int sta_add_credential_handler(struct packet_wrapper *req, struct packet_
 static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif /* End Of CONFIG_HS20 */
+#ifdef CONFIG_WPS
 static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_WPS */
 
 #ifdef CONFIG_P2P
 /* P2P */
