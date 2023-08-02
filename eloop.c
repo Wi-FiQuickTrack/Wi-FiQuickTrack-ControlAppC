@@ -207,6 +207,7 @@ int eloop_cancel_timeout(void (*handler)(void *eloop_ctx, void *sock_ctx),
 #ifndef CONFIG_NATIVE_WINDOWS
 static void eloop_handle_alarm(int sig)
 {
+	(void) sig;
 	fprintf(stderr, "eloop: could not process SIGINT or SIGTERM in two "
 		"seconds. Looks like there\n"
 		"is a bug that ends up in a busy loop that "
