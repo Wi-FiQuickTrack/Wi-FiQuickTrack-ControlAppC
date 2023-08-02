@@ -1440,7 +1440,7 @@ int get_6g_center_freq_index(int channel, int width) {
 
 int is_ht40plus_chan(int chan) {
     if (chan == 36 || chan == 44 || chan == 52 || chan == 60 ||
-        chan == 100 || chan == 108 || chan == 116 | chan == 124 ||
+        chan == 100 || chan == 108 || chan == 116 || chan == 124 ||
         chan == 132 || chan == 140 || chan == 149 || chan == 157)
         return 1;
     else
@@ -1449,7 +1449,7 @@ int is_ht40plus_chan(int chan) {
 
 int is_ht40minus_chan(int chan) {
     if (chan == 40 || chan == 48 || chan == 56 || chan == 64 ||
-        chan == 104 || chan == 112 || chan == 120 | chan == 128 ||
+        chan == 104 || chan == 112 || chan == 120 || chan == 128 ||
         chan == 136 || chan == 144 || chan == 153 || chan == 161)
         return 1;
     else
