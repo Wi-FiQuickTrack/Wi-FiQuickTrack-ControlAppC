@@ -253,7 +253,9 @@ static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wr
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif /* End Of CONFIG_WNM */
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef _TEST_PLATFORM_
 static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of _TEST_PLATFORM_ */
 #ifdef CONFIG_WPS
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_wsc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -276,7 +278,9 @@ static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet
 static int set_sta_hs2_associate_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int sta_add_credential_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef _TEST_PLATFORM_
 static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of _TEST_PLATFORM_ */
 #endif /* End Of CONFIG_HS20 */
 #ifdef CONFIG_WPS
 static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
