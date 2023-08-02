@@ -6,7 +6,7 @@ ROLE = dut
 VERSION = "2.1.0.42"
 
 OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o
-CFLAGS += -g
+CFLAGS += -g -Wall -Wextra -Wpedantic -Werror
 
 ifeq ($(TYPE),laptop)
 CC = gcc
