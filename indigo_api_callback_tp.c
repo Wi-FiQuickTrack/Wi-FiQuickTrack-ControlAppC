@@ -54,7 +54,9 @@ void register_apis() {
     register_api(API_START_DHCP, NULL, start_dhcp_handler);
     register_api(API_STOP_DHCP, NULL, stop_dhcp_handler);
     register_api(API_GET_WSC_CRED, NULL, get_wsc_cred_handler);
+#ifdef CONFIG_HS20    
     register_api(API_STA_SEND_ICON_REQ, NULL, send_sta_icon_req_handler);
+#endif /* End Of CONFIG_HS20 */
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
@@ -2206,6 +2208,7 @@ done:
 }
 
 
+#ifdef CONFIG_HS20
 static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK, i;
     char *message = TLV_VALUE_NOT_OK;
@@ -2305,3 +2308,4 @@ done:
     }
     return 0;
 }
+#endif /* End Of CONFIG_HS20 */

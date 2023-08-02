@@ -264,12 +264,15 @@ static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_
 #ifdef CONFIG_WNM
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif /* End Of CONFIG_WNM */
-static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef CONFIG_HS20
+static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_hs2_associate_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int sta_add_credential_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_HS20 */
 static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #ifdef CONFIG_P2P

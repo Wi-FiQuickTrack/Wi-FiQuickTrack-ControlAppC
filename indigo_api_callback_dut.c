@@ -71,12 +71,14 @@ void register_apis() {
 #ifdef CONFIG_WNM
     register_api(API_STA_SEND_BTM_QUERY, NULL, send_sta_btm_query_handler);
 #endif /* End Of CONFIG_WNM */
-    register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_SCAN, NULL, sta_scan_handler);
     register_api(API_STA_START_WPS, NULL, start_wps_sta_handler);
+#ifdef CONFIG_HS20
+    register_api(API_STA_SEND_ANQP_QUERY, NULL, send_sta_anqp_query_handler);
     register_api(API_STA_HS2_ASSOCIATE, NULL, set_sta_hs2_associate_handler);
     register_api(API_STA_ADD_CREDENTIAL, NULL, sta_add_credential_handler);
     register_api(API_STA_INSTALL_PPSMO, NULL, set_sta_install_ppsmo_handler);
+#endif /* End Of CONFIG_HS20 */
     /* TODO: Add the handlers */
     register_api(API_STA_SET_CHANNEL_WIDTH, NULL, NULL);
     register_api(API_STA_POWER_SAVE, NULL, NULL);
@@ -2240,123 +2242,6 @@ done:
 }
 #endif /* End Of CONFIG_WNM */
 
-static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int len, status = TLV_VALUE_STATUS_NOT_OK;
-    char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
-    char buffer[1024];
-    char response[1024];
-    char bssid[256];
-    char anqp_info_id[256];
-    struct tlv_hdr *tlv = NULL;
-    struct wpa_ctrl *w = NULL;
-    size_t resp_len, i;
-    char *token = NULL;
-    char *delimit = ";";
-    char realm[S_BUFFER_LEN];
-
-    /* It may need to check whether to just scan */
-    memset(buffer, 0, sizeof(buffer));
-    len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
-    if (len) {
-        write_file(get_wpas_conf_file(), buffer, len);
-    }
-
-    memset(buffer, 0 ,sizeof(buffer));
-    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
-        get_wpas_full_exec_path(),
-        get_wpas_conf_file(),
-        get_wireless_interface());
-    len = system(buffer);
-    sleep(2);
-
-    /* Open wpa_supplicant UDS socket */
-    w = wpa_ctrl_open(get_wpas_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
-        goto done;
-    }
-    // SCAN
-    memset(buffer, 0, sizeof(buffer));
-    memset(response, 0, sizeof(response));
-    sprintf(buffer, "SCAN");
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        goto done;
-    }
-    sleep(10);
-
-    /* TLV: BSSID */
-    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
-    if (tlv) {
-        memset(bssid, 0, sizeof(bssid));
-        memcpy(bssid, tlv->value, tlv->len);
-    } else {
-        goto done;
-    }
-
-    /* TLV: ANQP_INFO_ID */
-    tlv = find_wrapper_tlv_by_id(req, TLV_ANQP_INFO_ID);
-    if (tlv) {
-        memset(anqp_info_id, 0, sizeof(anqp_info_id));
-        memcpy(anqp_info_id, tlv->value, tlv->len);
-    }
-
-    if (strcmp(anqp_info_id, "NAIHomeRealm") == 0) {
-        /* TLV: REALM */
-        memset(realm, 0, sizeof(realm));
-        tlv = find_wrapper_tlv_by_id(req, TLV_REALM);
-        if (tlv) {
-            memcpy(realm, tlv->value, tlv->len);
-            sprintf(buffer, "HS20_GET_NAI_HOME_REALM_LIST %s realm=%s", bssid, realm);
-        } else {
-            goto done;
-        }
-    } else {
-        token = strtok(anqp_info_id, delimit);
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, "ANQP_GET %s ", bssid);
-        while(token != NULL) {
-            for (i = 0; i < sizeof(anqp_maps)/sizeof(struct anqp_tlv_to_config_name); i++) {
-                if (strcmp(token, anqp_maps[i].element) == 0) {
-                    strcat(buffer, anqp_maps[i].config);
-                }
-            }
-
-            token = strtok(NULL, delimit);
-            if (token != NULL) {
-                strcat(buffer, ",");
-            }
-        }
-    }
-
-    /* Send command to wpa_supplicant UDS socket */
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
-
-    indigo_logger(LOG_LEVEL_DEBUG, "%s -> resp: %s\n", buffer, response);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        goto done;
-    }
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_OK;
-    
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
-    return 0;
-}
-
 #ifdef CONFIG_P2P
 static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     char *message = TLV_VALUE_WPA_S_START_UP_NOT_OK;
@@ -2957,6 +2842,124 @@ done:
     return 0;
 }
 
+#ifdef CONFIG_HS20
+static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int len, status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_WPA_S_BTM_QUERY_NOT_OK;
+    char buffer[1024];
+    char response[1024];
+    char bssid[256];
+    char anqp_info_id[256];
+    struct tlv_hdr *tlv = NULL;
+    struct wpa_ctrl *w = NULL;
+    size_t resp_len, i;
+    char *token = NULL;
+    char *delimit = ";";
+    char realm[S_BUFFER_LEN];
+
+    /* It may need to check whether to just scan */
+    memset(buffer, 0, sizeof(buffer));
+    len = sprintf(buffer, "ctrl_interface=%s\nap_scan=1\n", WPAS_CTRL_PATH_DEFAULT);
+    if (len) {
+        write_file(get_wpas_conf_file(), buffer, len);
+    }
+
+    memset(buffer, 0 ,sizeof(buffer));
+    sprintf(buffer, "%s -B -t -c %s -i %s -f /var/log/supplicant.log",
+        get_wpas_full_exec_path(),
+        get_wpas_conf_file(),
+        get_wireless_interface());
+    len = system(buffer);
+    sleep(2);
+
+    /* Open wpa_supplicant UDS socket */
+    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
+        goto done;
+    }
+    // SCAN
+    memset(buffer, 0, sizeof(buffer));
+    memset(response, 0, sizeof(response));
+    sprintf(buffer, "SCAN");
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+    /* Check response */
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+    sleep(10);
+
+    /* TLV: BSSID */
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
+    if (tlv) {
+        memset(bssid, 0, sizeof(bssid));
+        memcpy(bssid, tlv->value, tlv->len);
+    } else {
+        goto done;
+    }
+
+    /* TLV: ANQP_INFO_ID */
+    tlv = find_wrapper_tlv_by_id(req, TLV_ANQP_INFO_ID);
+    if (tlv) {
+        memset(anqp_info_id, 0, sizeof(anqp_info_id));
+        memcpy(anqp_info_id, tlv->value, tlv->len);
+    }
+
+    if (strcmp(anqp_info_id, "NAIHomeRealm") == 0) {
+        /* TLV: REALM */
+        memset(realm, 0, sizeof(realm));
+        tlv = find_wrapper_tlv_by_id(req, TLV_REALM);
+        if (tlv) {
+            memcpy(realm, tlv->value, tlv->len);
+            sprintf(buffer, "HS20_GET_NAI_HOME_REALM_LIST %s realm=%s", bssid, realm);
+        } else {
+            goto done;
+        }
+    } else {
+        token = strtok(anqp_info_id, delimit);
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "ANQP_GET %s ", bssid);
+        while(token != NULL) {
+            for (i = 0; i < sizeof(anqp_maps)/sizeof(struct anqp_tlv_to_config_name); i++) {
+                if (strcmp(token, anqp_maps[i].element) == 0) {
+                    strcat(buffer, anqp_maps[i].config);
+                }
+            }
+
+            token = strtok(NULL, delimit);
+            if (token != NULL) {
+                strcat(buffer, ",");
+            }
+        }
+    }
+
+    /* Send command to wpa_supplicant UDS socket */
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+
+    indigo_logger(LOG_LEVEL_DEBUG, "%s -> resp: %s\n", buffer, response);
+    /* Check response */
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        goto done;
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+
 static int set_sta_hs2_associate_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     size_t resp_len;
@@ -3228,6 +3231,7 @@ done:
 
     return 0;
 }
+#endif /* End Of CONFIG_HS20 */
 
 
 static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
