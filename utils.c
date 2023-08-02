@@ -1189,7 +1189,7 @@ int add_wireless_interface_info(int band, int bssid, char *name) {
 
 int show_wireless_interface_info() {
     int i;
-    char *band;
+    char *band = "Unknown";
     indigo_logger(LOG_LEVEL_INFO, "interface_count=%d", interface_count);
 
     for (i = 0; i < interface_count; i++) {
