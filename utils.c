@@ -546,8 +546,12 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
     }
     if (is_bridge_created()) {
         snprintf(ifname, sizeof(ifname), "%s", get_wlans_bridge());
+#ifdef CONFIG_P2P
     } else if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
         snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+#else
+    }
+#endif /* End Of CONFIG_P2P */
     const int len = strnlen(ifname, IFNAMSIZ);
     if (setsockopt(s, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
@@ -653,8 +657,12 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
 
     if (is_bridge_created()) {
         snprintf(ifname, sizeof(ifname), "%s", get_wlans_bridge());
+#ifdef CONFIG_P2P
     } else if (get_p2p_group_if(ifname, sizeof(ifname)) != 0)
         snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+#else
+    }
+#endif /* End Of CONFIG_P2P */
     const int len = strnlen(ifname, IFNAMSIZ);
     if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, ifname, len) < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "failed to bind the interface %s", ifname);
