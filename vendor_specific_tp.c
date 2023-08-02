@@ -259,6 +259,7 @@ void vendor_deinit() {
     system(buffer);
 }
 
+#ifdef CONFIG_AP
 /* Called by configure_ap_handler() */
 void configure_ap_enable_mbssid() {
 #ifdef _WTS_OPENWRT_
@@ -279,6 +280,7 @@ void configure_ap_enable_mbssid() {
 #endif
 #endif
 }
+#endif /* End Of CONFIG_AP */
 
 int set_channel_width() {
     int ret = -1;

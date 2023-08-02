@@ -57,11 +57,13 @@ void register_apis() {
 #ifdef CONFIG_HS20    
     register_api(API_STA_SEND_ICON_REQ, NULL, send_sta_icon_req_handler);
 #endif /* End Of CONFIG_HS20 */
+#ifdef CONFIG_AP
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
     register_api(API_AP_CONFIGURE, NULL, configure_ap_handler);
     register_api(API_AP_SEND_ARP_MSGS, NULL, send_ap_arp_handler);
+#endif /* End Of CONFIG_AP */
     /* STA */
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
@@ -120,6 +122,7 @@ void upload_wlan_hapd_conf(void *if_info) {
     }
 }
 
+#ifdef CONFIG_AP
 // RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0, id = 0;
@@ -902,6 +905,7 @@ static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *r
 
     return 0;
 }
+#endif /* End Of CONFIG_AP */
 
 // Bytes to DUT : 01 50 06 00 ed ff ff 00 55 0c 31 39 32 2e 31 36 38 2e 31 30 2e 33
 // RESP :{<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'Static Ip successfully assigned to wireless interface'} 
@@ -2129,6 +2133,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (role == DUT_TYPE_APUT) {
+#ifdef CONFIG_AP
         // Test Platform: STA
         struct _cfg_cred cfg_creds[] = {
             {"ssid", "ssid=", {0}, TLV_WSC_SSID},
@@ -2142,6 +2147,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
             indigo_logger(LOG_LEVEL_ERROR, "Fail to read file: %s", get_wpas_conf_file());
             goto done;
         }
+#endif /* End Of CONFIG_AP */
     } else if (role == DUT_TYPE_STAUT) {
         // Test Platform: AP
         struct _cfg_cred cfg_creds[] = {

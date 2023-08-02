@@ -49,6 +49,7 @@ void register_apis() {
     register_api(API_STOP_DHCP, NULL, stop_dhcp_handler);
     register_api(API_GET_WSC_PIN, NULL, get_wsc_pin_handler);
     register_api(API_GET_WSC_CRED, NULL, get_wsc_cred_handler);
+#ifdef CONFIG_AP
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
@@ -61,6 +62,7 @@ void register_apis() {
 #endif /* End Of CONFIG_WNM */
     register_api(API_AP_START_WPS, NULL, start_wps_ap_handler);
     register_api(API_AP_CONFIGURE_WSC, NULL, configure_ap_wsc_handler);
+#endif /* End Of CONFIG_AP */
     /* STA */
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
@@ -159,6 +161,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         sta_configured = 0;
         sta_started = 0;
     } else if (atoi(role) == DUT_TYPE_APUT) {
+#ifdef CONFIG_AP
         /* stop the hostapd and release IP address */
         memset(buffer, 0, sizeof(buffer));
         sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_hapd_exec_file());
@@ -171,6 +174,7 @@ static int reset_device_handler(struct packet_wrapper *req, struct packet_wrappe
         reset_bridge(get_wlans_bridge());
         /* reset interfaces info */
         clear_interfaces_resource();
+#endif /* End Of CONFIG_AP */
     } else if (atoi(role) == DUT_TYPE_P2PUT) {
 #ifdef CONFIG_P2P
         /* If TP is P2P client, GO can't stop before client removes group monitor if */
@@ -208,6 +212,8 @@ done:
     return 0;
 }
 
+
+#ifdef CONFIG_AP
 // RESP: {<ResponseTLV.STATUS: 40961>: '0', <ResponseTLV.MESSAGE: 40960>: 'AP stop completed : Hostapd service is inactive.'} 
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len = 0, reset = 0;
@@ -1108,6 +1114,141 @@ done:
 
     return 0;
 }
+#ifdef CONFIG_WNM
+static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    size_t resp_len;
+    char *message = NULL;
+    struct tlv_hdr *tlv = NULL;
+    struct wpa_ctrl *w = NULL;
+    char request[4096];
+    char response[4096];
+    char buffer[1024];
+
+    char bssid[256];
+    char disassoc_imminent[256];
+    char disassoc_timer[256];
+    char candidate_list[256];
+    char reassoc_retry_delay[256];
+    char bss_term_bit[256];
+    char bss_term_tsf[256];
+    char bss_term_duration[256];
+
+    memset(bssid, 0, sizeof(bssid));
+    memset(disassoc_imminent, 0, sizeof(disassoc_imminent));
+    memset(disassoc_timer, 0, sizeof(disassoc_timer));
+    memset(candidate_list, 0, sizeof(candidate_list));
+    memset(reassoc_retry_delay, 0, sizeof(reassoc_retry_delay));
+    memset(bss_term_bit, 0, sizeof(bss_term_bit));
+    memset(bss_term_tsf, 0, sizeof(bss_term_tsf));
+    memset(bss_term_duration, 0, sizeof(bss_term_duration));
+
+    /* ControlApp on DUT */
+    /* TLV: BSSID (required) */
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
+    if (tlv) {
+        memcpy(bssid, tlv->value, tlv->len);
+    }
+    /* DISASSOC_IMMINENT            disassoc_imminent=%s */
+    tlv = find_wrapper_tlv_by_id(req, TLV_DISASSOC_IMMINENT);
+    if (tlv) {
+        memcpy(disassoc_imminent, tlv->value, tlv->len);
+    }
+    /* DISASSOC_TIMER               disassoc_timer=%s */
+    tlv = find_wrapper_tlv_by_id(req, TLV_DISASSOC_TIMER);
+    if (tlv) {
+        memcpy(disassoc_timer, tlv->value, tlv->len);
+    }
+    /* REASSOCIAITION_RETRY_DELAY   mbo=0:{}:0 */
+    tlv = find_wrapper_tlv_by_id(req, TLV_REASSOCIAITION_RETRY_DELAY);
+    if (tlv) {
+        memcpy(reassoc_retry_delay, tlv->value, tlv->len);
+    }
+    /* CANDIDATE_LIST              pref=1 */
+    tlv = find_wrapper_tlv_by_id(req, TLV_CANDIDATE_LIST);
+    if (tlv) {
+        memcpy(candidate_list, tlv->value, tlv->len);
+    }
+    /* BSS_TERMINATION              bss_term_bit */
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_TERMINATION);
+    if (tlv) {
+        memcpy(bss_term_bit, tlv->value, tlv->len);
+    }
+    /* BSS_TERMINATION_TSF          bss_term_tsf */
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_TERMINATION_TSF);
+    if (tlv) {
+        memcpy(bss_term_tsf, tlv->value, tlv->len);
+    }
+    /* BSS_TERMINATION_DURATION     bss_term_duration */
+    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_TERMINATION_DURATION);
+    if (tlv) {
+        memcpy(bss_term_duration, tlv->value, tlv->len);
+    }
+
+    /* Assemble hostapd command for BSS_TM_REQ */
+    memset(request, 0, sizeof(request));
+    sprintf(request, "BSS_TM_REQ %s", bssid);
+    /*  disassoc_imminent=%s */
+    if (strlen(disassoc_imminent)) {
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, " disassoc_imminent=%s", disassoc_imminent);
+        strcat(request, buffer);
+    }
+    /* disassoc_timer=%s */
+    if (strlen(disassoc_timer)) {
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, " disassoc_timer=%s", disassoc_timer);
+        strcat(request, buffer);
+    }
+    /* reassoc_retry_delay=%s */
+    if (strlen(reassoc_retry_delay)) {
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, " mbo=0:%s:0", reassoc_retry_delay);
+        strcat(request, buffer);
+    }
+    /* if bss_term_bit && bss_term_tsf && bss_term_duration, then bss_term={bss_term_tsf},{bss_term_duration} */
+    if (strlen(bss_term_bit) && strlen(bss_term_tsf) && strlen(bss_term_duration) ) {
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, " bss_term=%s,%s", bss_term_tsf, bss_term_duration);
+        strcat(request, buffer);
+    }
+    /* candidate_list */
+    if (strlen(candidate_list) && atoi(candidate_list) == 1) {
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, " pref=1");
+        strcat(request, buffer);
+    }
+    indigo_logger(LOG_LEVEL_DEBUG, "cmd:%s", request);
+
+    /* Open hostapd UDS socket */
+    w = wpa_ctrl_open(get_hapd_ctrl_path());
+    if (!w) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to hostapd");
+        status = TLV_VALUE_STATUS_NOT_OK;
+        message = TLV_VALUE_HOSTAPD_CTRL_NOT_OK;
+        goto done;
+    }
+    resp_len = sizeof(response) - 1;
+    wpa_ctrl_request(w, request, strlen(request), response, &resp_len, NULL);
+    /* Check response */
+    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
+        message = TLV_VALUE_HOSTAPD_RESP_NOT_OK;
+        goto done;
+    }
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+    if (w) {
+        wpa_ctrl_close(w);
+    }
+    return 0;
+}
+#endif /* End Of CONFIG_WNM */
+#endif /* End Of CONFIG_AP */
 
 /* deprecated */
 static int create_bridge_network_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -1427,6 +1568,7 @@ static int stop_loop_back_server_handler(struct packet_wrapper *req, struct pack
     return 0;
 }
 
+#ifdef CONFIG_AP
 static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int len, status = TLV_VALUE_STATUS_NOT_OK;
     char buffer[S_BUFFER_LEN];
@@ -1551,141 +1693,6 @@ done:
     return 0;
 }
 
-#ifdef CONFIG_WNM
-static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
-    int status = TLV_VALUE_STATUS_NOT_OK;
-    size_t resp_len;
-    char *message = NULL;
-    struct tlv_hdr *tlv = NULL;
-    struct wpa_ctrl *w = NULL;
-    char request[4096];
-    char response[4096];
-    char buffer[1024];
-
-    char bssid[256];
-    char disassoc_imminent[256];
-    char disassoc_timer[256];
-    char candidate_list[256];
-    char reassoc_retry_delay[256];
-    char bss_term_bit[256];
-    char bss_term_tsf[256];
-    char bss_term_duration[256];
-
-    memset(bssid, 0, sizeof(bssid));
-    memset(disassoc_imminent, 0, sizeof(disassoc_imminent));
-    memset(disassoc_timer, 0, sizeof(disassoc_timer));
-    memset(candidate_list, 0, sizeof(candidate_list));
-    memset(reassoc_retry_delay, 0, sizeof(reassoc_retry_delay));
-    memset(bss_term_bit, 0, sizeof(bss_term_bit));
-    memset(bss_term_tsf, 0, sizeof(bss_term_tsf));
-    memset(bss_term_duration, 0, sizeof(bss_term_duration));
-
-    /* ControlApp on DUT */
-    /* TLV: BSSID (required) */
-    tlv = find_wrapper_tlv_by_id(req, TLV_BSSID);
-    if (tlv) {
-        memcpy(bssid, tlv->value, tlv->len);
-    }
-    /* DISASSOC_IMMINENT            disassoc_imminent=%s */
-    tlv = find_wrapper_tlv_by_id(req, TLV_DISASSOC_IMMINENT);
-    if (tlv) {
-        memcpy(disassoc_imminent, tlv->value, tlv->len);
-    }
-    /* DISASSOC_TIMER               disassoc_timer=%s */
-    tlv = find_wrapper_tlv_by_id(req, TLV_DISASSOC_TIMER);
-    if (tlv) {
-        memcpy(disassoc_timer, tlv->value, tlv->len);
-    }
-    /* REASSOCIAITION_RETRY_DELAY   mbo=0:{}:0 */
-    tlv = find_wrapper_tlv_by_id(req, TLV_REASSOCIAITION_RETRY_DELAY);
-    if (tlv) {
-        memcpy(reassoc_retry_delay, tlv->value, tlv->len);
-    }
-    /* CANDIDATE_LIST              pref=1 */
-    tlv = find_wrapper_tlv_by_id(req, TLV_CANDIDATE_LIST);
-    if (tlv) {
-        memcpy(candidate_list, tlv->value, tlv->len);
-    }
-    /* BSS_TERMINATION              bss_term_bit */
-    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_TERMINATION);
-    if (tlv) {
-        memcpy(bss_term_bit, tlv->value, tlv->len);
-    }
-    /* BSS_TERMINATION_TSF          bss_term_tsf */
-    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_TERMINATION_TSF);
-    if (tlv) {
-        memcpy(bss_term_tsf, tlv->value, tlv->len);
-    }
-    /* BSS_TERMINATION_DURATION     bss_term_duration */
-    tlv = find_wrapper_tlv_by_id(req, TLV_BSS_TERMINATION_DURATION);
-    if (tlv) {
-        memcpy(bss_term_duration, tlv->value, tlv->len);
-    }
-
-    /* Assemble hostapd command for BSS_TM_REQ */
-    memset(request, 0, sizeof(request));
-    sprintf(request, "BSS_TM_REQ %s", bssid);
-    /*  disassoc_imminent=%s */
-    if (strlen(disassoc_imminent)) {
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, " disassoc_imminent=%s", disassoc_imminent);
-        strcat(request, buffer);
-    }
-    /* disassoc_timer=%s */
-    if (strlen(disassoc_timer)) {
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, " disassoc_timer=%s", disassoc_timer);
-        strcat(request, buffer);
-    }
-    /* reassoc_retry_delay=%s */
-    if (strlen(reassoc_retry_delay)) {
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, " mbo=0:%s:0", reassoc_retry_delay);
-        strcat(request, buffer);
-    }
-    /* if bss_term_bit && bss_term_tsf && bss_term_duration, then bss_term={bss_term_tsf},{bss_term_duration} */
-    if (strlen(bss_term_bit) && strlen(bss_term_tsf) && strlen(bss_term_duration) ) {
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, " bss_term=%s,%s", bss_term_tsf, bss_term_duration);
-        strcat(request, buffer);
-    }
-    /* candidate_list */
-    if (strlen(candidate_list) && atoi(candidate_list) == 1) {
-        memset(buffer, 0, sizeof(buffer));
-        sprintf(buffer, " pref=1");
-        strcat(request, buffer);
-    }
-    indigo_logger(LOG_LEVEL_DEBUG, "cmd:%s", request);
-
-    /* Open hostapd UDS socket */
-    w = wpa_ctrl_open(get_hapd_ctrl_path());
-    if (!w) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to hostapd");
-        status = TLV_VALUE_STATUS_NOT_OK;
-        message = TLV_VALUE_HOSTAPD_CTRL_NOT_OK;
-        goto done;
-    }
-    resp_len = sizeof(response) - 1;
-    wpa_ctrl_request(w, request, strlen(request), response, &resp_len, NULL);
-    /* Check response */
-    if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
-        indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command. Response: %s", response);
-        message = TLV_VALUE_HOSTAPD_RESP_NOT_OK;
-        goto done;
-    }
-    status = TLV_VALUE_STATUS_OK;
-    message = TLV_VALUE_OK;    
-done:
-    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
-    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
-    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
-    if (w) {
-        wpa_ctrl_close(w);
-    }
-    return 0;
-}
-#endif /* End Of CONFIG_WNM */
-
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
     size_t resp_len;
@@ -1761,6 +1768,7 @@ done:
     }
     return 0;
 }
+#endif /* End Of CONFIG_AP */
 
 static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     int status = TLV_VALUE_STATUS_NOT_OK;
@@ -3352,6 +3360,7 @@ static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper
     }
 
     if (role == DUT_TYPE_APUT) {
+#ifdef CONFIG_AP
         // TODO
         sprintf(buffer, "WPS_AP_PIN get");
         w = wpa_ctrl_open(get_hapd_ctrl_path());
@@ -3360,6 +3369,7 @@ static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper
             status = TLV_VALUE_STATUS_NOT_OK;
             message = TLV_VALUE_WPA_S_CTRL_NOT_OK;
             goto done;
+#endif /* End Of CONFIG_AP */
         }
 #ifdef CONFIG_P2P
     } else if (role == DUT_TYPE_STAUT || role == DUT_TYPE_P2PUT) {
@@ -3401,6 +3411,7 @@ done:
     return 0;
 }
 
+#ifdef CONFIG_AP
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
     char buffer[S_BUFFER_LEN], response[BUFFER_LEN];
@@ -3471,6 +3482,7 @@ done:
     }
     return 0;
 }
+#endif /* End Of CONFIG_AP */
 
 static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct wpa_ctrl *w = NULL;
@@ -3563,6 +3575,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
     }
 
     if (role == DUT_TYPE_APUT) {
+#ifdef CONFIG_AP
         // APUT
         struct _cfg_cred cfg_creds[] = {
             {"ssid", "ssid=", {0}, TLV_WSC_SSID},
@@ -3586,6 +3599,7 @@ static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrappe
             indigo_logger(LOG_LEVEL_ERROR, "Fail to read file: %s", wlan->hapd_conf_file);
             goto done;
         }
+#endif /* End Of CONFIG_AP */
     } else if (role == DUT_TYPE_STAUT) {
         // STAUT
         struct _cfg_cred cfg_creds[] = {
