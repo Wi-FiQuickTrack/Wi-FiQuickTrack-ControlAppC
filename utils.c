@@ -297,10 +297,10 @@ int loopback_socket = 0;
 static void loopback_server_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     struct sockaddr_storage from;
     unsigned char buffer[BUFFER_LEN];
-    int fromlen, len;
+    ssize_t fromlen, len;
 
     fromlen = sizeof(from);
-    len = recvfrom(sock, buffer, BUFFER_LEN, 0, (struct sockaddr *) &from, &fromlen);
+    len = recvfrom(sock, buffer, BUFFER_LEN, 0, (struct sockaddr *) &from, (socklen_t *)&fromlen);
     if (len < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Loopback server recvfrom[server] error");
         return ;
@@ -515,7 +515,8 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
     int s = 0, i = 0;
     struct sockaddr_in addr;
     int pkt_sent = 0, pkt_rcv = 0;
-    char message[1600], server_reply[1600], ifname[32];
+    char message[1600], server_reply[1600];
+    char ifname[32];
     ssize_t recv_len = 0, send_len = 0;
     struct timeval timeout;
 
@@ -569,7 +570,7 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
         loopback.rate = rate;
         loopback.pkt_sent = loopback.pkt_rcv = 0;
         memset(loopback.message, 0, sizeof(loopback.message));
-        for (i = 0; (i < packet_size) && (i < sizeof(loopback.message)); i++)
+        for (i = 0; (i < packet_size) && (i < (int)sizeof(loopback.message)); i++)
             loopback.message[i] = 0x0A;
         eloop_register_timeout(0, 0, send_continuous_loopback_packet, &loopback, NULL);
         indigo_logger(LOG_LEVEL_INFO, "Send continuous loopback data to ip %s port %u",
@@ -578,7 +579,7 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
     }
 
     memset(message, 0, sizeof(message));
-    for (i = 0; (i < packet_size) && (i < sizeof(message)); i++)
+    for (i = 0; (i < packet_size) && (i < (int)sizeof(message)); i++)
         message[i] = 0x0A;
 
     for (pkt_sent = 1; pkt_sent <= packet_count; pkt_sent++) {
@@ -612,8 +613,10 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
 
 int send_icmp_data(char *target_ip, int packet_count, int packet_size, double rate)
 {
-    int n, sock, i;
-    char buf[1600], server_reply[1600], ifname[32];
+    int n, sock;
+    size_t i;
+    unsigned char buf[1600], server_reply[1600];
+    char ifname[32];
     struct sockaddr_in addr;
     struct in_addr insaddr;
     struct icmphdr *icmphdr, *recv_icmphdr;
@@ -660,7 +663,7 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
         loopback.rate = rate;
         loopback.pkt_size = packet_size;
         snprintf(loopback.target_ip, sizeof(loopback.target_ip), "%s", target_ip);
-        for (i = sizeof(struct icmphdr); (i < packet_size) && (i < sizeof(loopback.message)); i++)
+        for (i = sizeof(struct icmphdr); (i < (size_t)packet_size) && (i < sizeof(loopback.message)); i++)
             loopback.message[i] = 0x0A;
         eloop_register_timeout(0, 0, send_continuous_loopback_packet, &loopback, NULL);
         indigo_logger(LOG_LEVEL_INFO, "Send continuous loopback data to ip %s", loopback.target_ip);
@@ -669,7 +672,7 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
 
     icmphdr = (struct icmphdr *)&buf;
     memset(&buf, 0, sizeof(buf));
-    for (i = sizeof(struct icmphdr); (i < packet_size) && (i < sizeof(buf)); i++)
+    for (i = sizeof(struct icmphdr); (i < (size_t)packet_size) && (i < sizeof(buf)); i++)
         buf[i] = 0x0A;
 
     for (pkt_sent = 1; pkt_sent <= packet_count; pkt_sent++) {
