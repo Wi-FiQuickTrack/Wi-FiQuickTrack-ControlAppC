@@ -5,7 +5,7 @@ ROLE = dut
 # Package Version
 VERSION = "2.1.0.42"
 
-OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o
+OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o qt_client.o
 CFLAGS += -g -Wall -Wextra -Wpedantic -Werror
 
 ifeq ($(TYPE),laptop)
