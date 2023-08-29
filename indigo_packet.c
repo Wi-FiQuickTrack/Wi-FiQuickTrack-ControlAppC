@@ -226,6 +226,7 @@ int parse_tlv(struct tlv_hdr *tlv, char *packet, size_t packet_len) {
     tlv->len = packet[2];
     tlv->value = (char*)malloc(sizeof(char) * tlv->len);
     memcpy(tlv->value, &packet[3], tlv->len);
+    tlv->value[tlv->len] = '\0';
 
     return tlv->len+3;
 }
