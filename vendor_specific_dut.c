@@ -184,15 +184,16 @@ void openwrt_apply_radio_config(void) {
 }
 #endif
 
+#ifdef CONFIG_AP
 /* Called by configure_ap_handler() */
 void configure_ap_enable_mbssid() {
 #ifdef _WTS_OPENWRT_
     /*
      * the following uci commands need to reboot openwrt
      *    so it can not be configured by controlApp
-     * 
+     *
      * Manually enable MBSSID on OpenWRT when need to test MBSSID
-     * 
+     *
     system("uci set wireless.qcawifi=qcawifi");
     system("uci set wireless.qcawifi.mbss_ie_enable=1");
     system("uci commit");
@@ -237,6 +238,11 @@ char buffer[S_BUFFER_LEN], wifi_name[16];
     }
 
     system("uci commit");
+#else
+    (void) band;
+    (void) country;
+    (void) channel;
+    (void) chwidth;
 #endif
 }
 
@@ -245,11 +251,11 @@ char buffer[S_BUFFER_LEN], wifi_name[16];
  * Called by start_ap_handler() after invoking hostapd
  */
 void start_ap_set_wlan_params(void *if_info) {
+#ifdef _WTS_OPENWRT_
     char buffer[S_BUFFER_LEN];
     struct interface_info *wlan = (struct interface_info *) if_info;
 
     memset(buffer, 0, sizeof(buffer));
-#ifdef _WTS_OPENWRT_
     /* Workaround: openwrt has IOT issue with intel AX210 AX mode */
     sprintf(buffer, "cfg80211tool %s he_ul_ofdma 0", wlan->ifname);
     system(buffer);
@@ -258,10 +264,15 @@ void start_ap_set_wlan_params(void *if_info) {
     system(buffer);
     sprintf(buffer, "cfg80211tool %s twt_responder 0", wlan->ifname);
     system(buffer);
-#endif
-    printf("set_wlan_params: %s\n", buffer);
-}
 
+    printf("set_wlan_params: %s\n", buffer);
+#else
+    (void) if_info;
+#endif
+}
+#endif /* End Of CONFIG_AP*/
+
+#ifdef CONFIG_P2P
 /* Return addr of P2P-device if there is no GO or client interface */
 int get_p2p_mac_addr(char *mac_addr, size_t size) {
     FILE *fp;
@@ -338,6 +349,7 @@ int get_p2p_dev_if(char *if_name, size_t size) {
 
     return 0;
 }
+#endif /* End Of CONFIG_P2P */
 
 /* Append IP range config and start dhcpd */
 void start_dhcp_server(char *if_name, char *ip_addr)
@@ -392,6 +404,7 @@ void stop_dhcp_client()
     system("killall dhclient 1>/dev/null 2>/dev/null");
 }
 
+#ifdef CONFIG_WPS
 wps_setting *p_wps_setting = NULL;
 wps_setting customized_wps_settings_ap[AP_SETTING_NUM];
 wps_setting customized_wps_settings_sta[STA_SETTING_NUM];
@@ -399,6 +412,8 @@ wps_setting customized_wps_settings_sta[STA_SETTING_NUM];
 void save_wsc_setting(wps_setting *s, char *entry, int len)
 {
     char *p = NULL;
+
+    (void) len;
 
     p = strchr(entry, '\n');
     if (p)
@@ -414,6 +429,8 @@ wps_setting* __get_wps_setting(int len, char *buffer, enum wps_device_role role)
     char *token = strtok(buffer , ",");
     wps_setting *s = NULL;
     int i = 0;
+
+    (void) len;
 
     if (role == WPS_AP) {
         memset(customized_wps_settings_ap, 0, sizeof(customized_wps_settings_ap));
@@ -442,7 +459,7 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
      * */
 #define WSC_SETTINGS_FILE_AP "/tmp/wsc_settings_APUT"
 #define WSC_SETTINGS_FILE_STA "/tmp/wsc_settings_STAUT"
-    int len = 0, is_valid = 0;
+    int len = 0;
     char pipebuf[S_BUFFER_LEN];
     char *parameter_ap[] = {"cat", WSC_SETTINGS_FILE_AP, NULL, NULL};
     char *parameter_sta[] = {"cat", WSC_SETTINGS_FILE_STA, NULL, NULL};
@@ -481,4 +498,7 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
             return NULL;
         }
     }
+
+    return NULL;
 }
+#endif /* End Of CONFIG_WPS */

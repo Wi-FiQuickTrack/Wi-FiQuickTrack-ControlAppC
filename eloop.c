@@ -70,14 +70,14 @@ struct eloop_data {
 static struct eloop_data eloop;
 
 
-void eloop_init(void *user_data)
+void qt_eloop_init(void *user_data)
 {
 	memset(&eloop, 0, sizeof(eloop));
 	eloop.user_data = user_data;
 }
 
 
-int eloop_register_read_sock(int sock,
+int qt_eloop_register_read_sock(int sock,
 			     void (*handler)(int sock, void *eloop_ctx,
 					     void *sock_ctx),
 			     void *eloop_data, void *user_data)
@@ -103,7 +103,7 @@ int eloop_register_read_sock(int sock,
 }
 
 
-void eloop_unregister_read_sock(int sock)
+void qt_eloop_unregister_read_sock(int sock)
 {
 	int i;
 
@@ -125,7 +125,7 @@ void eloop_unregister_read_sock(int sock)
 }
 
 
-int eloop_register_timeout(unsigned int secs, unsigned int usecs,
+int qt_eloop_register_timeout(unsigned int secs, unsigned int usecs,
 			   void (*handler)(void *eloop_ctx, void *timeout_ctx),
 			   void *eloop_data, void *user_data)
 {
@@ -172,7 +172,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 }
 
 
-int eloop_cancel_timeout(void (*handler)(void *eloop_ctx, void *sock_ctx),
+int qt_eloop_cancel_timeout(void (*handler)(void *eloop_ctx, void *sock_ctx),
 			 void *eloop_data, void *user_data)
 {
 	struct eloop_timeout *timeout, *prev, *next;
@@ -207,6 +207,7 @@ int eloop_cancel_timeout(void (*handler)(void *eloop_ctx, void *sock_ctx),
 #ifndef CONFIG_NATIVE_WINDOWS
 static void eloop_handle_alarm(int sig)
 {
+	(void) sig;
 	fprintf(stderr, "eloop: could not process SIGINT or SIGTERM in two "
 		"seconds. Looks like there\n"
 		"is a bug that ends up in a busy loop that "
@@ -268,7 +269,7 @@ static void eloop_process_pending_signals(void)
 }
 
 
-int eloop_register_signal(int sig,
+int qt_eloop_register_signal(int sig,
 			  void (*handler)(int sig, void *eloop_ctx,
 					  void *signal_ctx),
 			  void *user_data)
@@ -294,7 +295,7 @@ int eloop_register_signal(int sig,
 }
 
 
-void eloop_run(void)
+void qt_eloop_run(void)
 {
 	fd_set *rfds;
 	int i, res;
@@ -302,7 +303,7 @@ void eloop_run(void)
 
 	rfds = malloc(sizeof(*rfds));
 	if (rfds == NULL) {
-		printf("eloop_run - malloc failed\n");
+		printf("qt_eloop_run - malloc failed\n");
 		return;
 	}
 
@@ -364,13 +365,13 @@ void eloop_run(void)
 }
 
 
-void eloop_terminate(void)
+void qt_eloop_terminate(void)
 {
 	eloop.terminate = 1;
 }
 
 
-void eloop_destroy(void)
+void qt_eloop_destroy(void)
 {
 	struct eloop_timeout *timeout, *prev;
 
@@ -385,7 +386,7 @@ void eloop_destroy(void)
 }
 
 
-int eloop_terminated(void)
+int qt_eloop_terminated(void)
 {
 	return eloop.terminate;
 }

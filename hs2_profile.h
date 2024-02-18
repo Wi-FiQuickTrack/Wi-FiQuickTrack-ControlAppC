@@ -180,7 +180,7 @@ struct tlv_to_profile hs2_profile[] = {
 };
 
 struct tlv_to_profile* find_tlv_hs2_profile(int tlv_id) {
-    int i;
+    unsigned int i;
     for (i = 0; i < ARRAY_SIZE(hs2_profile); i++) {
         if (tlv_id == hs2_profile[i].tlv_id) {
             return &hs2_profile[i];
@@ -190,7 +190,7 @@ struct tlv_to_profile* find_tlv_hs2_profile(int tlv_id) {
 }
 
 void attach_hs20_icons(char * buffer) {
-    int i;
+    unsigned int i;
     for (i = 0; i < ARRAY_SIZE(hs20_icon); i++) {
         strcat(buffer, hs20_icon[i]);
     }
