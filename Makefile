@@ -5,8 +5,8 @@ ROLE = dut
 # Package Version
 VERSION = "2.2.1.4"
 
-OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o
-CFLAGS += -g
+OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o qt_client.o
+CFLAGS += -g -Wall -Wextra -Wpedantic -Werror
 
 ifeq ($(TYPE),laptop)
 CC = gcc
@@ -33,6 +33,10 @@ OBJS += indigo_api_callback_tp.o vendor_specific_tp.o
 CFLAGS += -DCONFIG_CTRL_IFACE_UDP
 CFLAGS += -D_TEST_PLATFORM_
 endif
+
+# Feature flags
+# Enable by default
+CFLAGS += -DCONFIG_P2P -DCONFIG_WNM -DCONFIG_HS20 -DCONFIG_AP -DCONFIG_WPS
 
 # Define the package version
 ifneq ($(VERSION),)

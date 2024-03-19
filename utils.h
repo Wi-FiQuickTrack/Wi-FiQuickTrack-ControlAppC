@@ -36,7 +36,7 @@
 
 /* Log */
 enum {
-    LOG_LEVEL_DEBUG_VERBOSE = 0,    
+    LOG_LEVEL_DEBUG_VERBOSE = 0,
     LOG_LEVEL_DEBUG = 1,
     LOG_LEVEL_INFO = 2,
     LOG_LEVEL_NOTICE = 3,
@@ -131,7 +131,7 @@ void indigo_logger(int level, const char *fmt, ...);
 int pipe_command(char *buffer, int buffer_size, char *cmd, char *parameter[]);
 char* read_file(char *fn);
 int write_file(char *fn, char *buffer, int len);
-int append_file(char *fn, char *buffer, int len); 
+int append_file(char *fn, char *buffer, int len);
 void open_tc_app_log();
 void close_tc_app_log();
 

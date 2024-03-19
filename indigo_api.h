@@ -232,7 +232,7 @@ struct indigo_api {
 #define TLV_VENUE_TYPE                          0x00ad
 #define TLV_HESSID                              0x00ae
 #define TLV_OSU_SSID                            0x00af
-#define TLV_ANQP_3GPP_CELL_NETWORK_INFO         0x00b0 
+#define TLV_ANQP_3GPP_CELL_NETWORK_INFO         0x00b0
 #define TLV_PROXY_ARP                           0x00b1
 #define TLV_BSSLOAD_ENABLE                      0x00b2
 #define TLV_ROAMING_CONSORTIUM                  0x00b3
