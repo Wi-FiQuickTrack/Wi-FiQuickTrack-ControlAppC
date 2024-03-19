@@ -72,7 +72,7 @@ static int control_socket_init(int port) {
     }
 
     /* Register to eloop and ready for the socket event */
-    if (eloop_register_read_sock(s, control_receive_message, NULL, NULL)) {
+    if (qt_eloop_register_read_sock(s, control_receive_message, NULL, NULL)) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to initiate ControlAppC");
         close(s);
         return -1;
@@ -86,9 +86,12 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     int ret;                          // return code
     int fromlen, len;                 // structure size and received length
     struct sockaddr_storage from;     // source address of the message
-    unsigned char buffer[BUFFER_LEN]; // buffer to receive the message
+    char buffer[BUFFER_LEN]; // buffer to receive the message
     struct packet_wrapper req, resp;  // packet wrapper for the received message and response
     struct indigo_api *api = NULL;    // used for API search, validation and handler call
+
+    (void) eloop_ctx;
+    (void) sock_ctx;
 
     /* Receive request */
     fromlen = sizeof(from);
@@ -112,7 +115,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
         fill_wrapper_ack(&resp, req.hdr.seq, 0x31, "Unable to parse the packet");
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
 
-        sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
+        sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen);
         goto done;
     }
 
@@ -124,7 +127,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
         indigo_logger(LOG_LEVEL_ERROR, "API Unknown (0x%04x): No registered handler", req.hdr.type);
         fill_wrapper_ack(&resp, req.hdr.seq, 0x31, "Unable to find the API handler");
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
-        sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
+        sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen);
         goto done;
     }
 
@@ -139,7 +142,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
         indigo_logger(LOG_LEVEL_ERROR, "API %s: Failed to verify and return NACK", api->name);
         fill_wrapper_ack(&resp, req.hdr.seq, 1, "Unable to find the API handler");
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
-        sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
+        sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen);
         goto done;
     }
 
@@ -148,7 +151,7 @@ static void control_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     if (api->handle && api->handle(&req, &resp) == 0) {
         indigo_logger(LOG_LEVEL_INFO, "API %s: Return execution result", api->name);
         len = assemble_packet(buffer, BUFFER_LEN, &resp);
-        sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen); 
+        sendto(sock, (const char *)buffer, len, MSG_CONFIRM, (const struct sockaddr *) &from, fromlen);
     } else {
         indigo_logger(LOG_LEVEL_DEBUG, "API %s (0x%04x): No handle function", api ? api->name : "Unknown", req.hdr.type);
     }
@@ -265,7 +268,9 @@ static int parse_parameters(int argc, char *argv[]) {
 
 static void handle_term(int sig, void *eloop_ctx, void *signal_ctx) {
     indigo_logger(LOG_LEVEL_INFO, "Signal %d received - terminating\n", sig);
-    eloop_terminate();
+    (void) eloop_ctx;
+    (void) signal_ctx;
+    qt_eloop_terminate();
     vendor_deinit();
 }
 
@@ -318,22 +323,22 @@ int main(int argc, char* argv[]) {
     vendor_init();
 
     /* Start eloop */
-    eloop_init(NULL);
+    qt_eloop_init(NULL);
 
     /* Register SIGTERM */
-    eloop_register_signal(SIGINT, handle_term, NULL);
-    eloop_register_signal(SIGTERM, handle_term, NULL);
+    qt_eloop_register_signal(SIGINT, handle_term, NULL);
+    qt_eloop_register_signal(SIGTERM, handle_term, NULL);
 
     /* Bind the service port and register to eloop */
     service_socket = control_socket_init(get_service_port());
     if (service_socket >= 0) {
-        eloop_run();
+        qt_eloop_run();
     } else {
         indigo_logger(LOG_LEVEL_INFO, "Failed to initiate the UDP socket");
     }
 
     /* Stop eloop */
-    eloop_destroy();
+    qt_eloop_destroy();
     indigo_logger(LOG_LEVEL_INFO, "ControlAppC stops");
     if (service_socket >= 0) {
         indigo_logger(LOG_LEVEL_INFO, "Close service port: %d", get_service_port());
