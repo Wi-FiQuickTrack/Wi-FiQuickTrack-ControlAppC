@@ -132,7 +132,7 @@ struct tlv_to_config_name maps[] = {
     { TLV_STA_OWE_GROUP, "owe_group", 0 },
     { TLV_BSSID, "bssid", 0 },
     { TLV_REALM, "realm", 1 },
-    { TLV_IMSI, "imsi", 1 },    
+    { TLV_IMSI, "imsi", 1 },
     { TLV_MILENAGE, "milenage", 1 },
     { TLV_BSSID_FILTER_LIST, "bssid_filter", 0 },
     { TLV_USERNAME, "username", 1 },
@@ -174,7 +174,7 @@ struct anqp_tlv_to_config_name anqp_maps[] = {
 };
 
 char* find_tlv_config_name(int tlv_id) {
-    int i;
+    unsigned int i;
     for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
         if (tlv_id == maps[i].tlv_id) {
             return maps[i].config_name;
@@ -184,7 +184,7 @@ char* find_tlv_config_name(int tlv_id) {
 }
 
 struct tlv_to_config_name* find_tlv_config(int tlv_id) {
-    int i;
+    unsigned int i;
     for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
         if (tlv_id == maps[i].tlv_id) {
             return &maps[i];
@@ -211,7 +211,7 @@ struct tlv_to_config_name wpas_global_maps[] = {
 };
 
 struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
-    int i;
+    unsigned int i;
     for (i = 0; i < sizeof(wpas_global_maps)/sizeof(struct tlv_to_config_name); i++) {
         if (tlv_id == wpas_global_maps[i].tlv_id) {
             return &wpas_global_maps[i];
@@ -234,8 +234,6 @@ struct tlv_to_config_name* find_generic_tlv_config(int tlv_id, struct tlv_to_con
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_loopback_server(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int stop_loop_back_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int stop_loopback_data_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int create_bridge_network_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_mac_addr_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -243,39 +241,55 @@ static int get_ip_addr_handler(struct packet_wrapper *req, struct packet_wrapper
 static int reset_device_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+
+#ifdef CONFIG_AP
 /* AP */
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef CONFIG_WNM
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_WNM */
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef _TEST_PLATFORM_
 static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of _TEST_PLATFORM_ */
+#ifdef CONFIG_WPS
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_wsc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_WPS */
+#endif /* End Of CONFIG_AP */
+
 /* STA */
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int associate_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int start_up_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_disconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_reconnect_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef CONFIG_WNM
 static int send_sta_btm_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_WNM */
 static int sta_scan_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef CONFIG_HS20
+static int send_sta_anqp_query_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_hs2_associate_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int sta_add_credential_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_install_ppsmo_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_sta_phy_mode_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_sta_channel_width_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#ifdef _TEST_PLATFORM_
 static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of _TEST_PLATFORM_ */
+#endif /* End Of CONFIG_HS20 */
+#ifdef CONFIG_WPS
+static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_WPS */
+
+#ifdef CONFIG_P2P
 /* P2P */
 static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int p2p_find_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -288,4 +302,5 @@ static int get_p2p_intent_value_handler(struct packet_wrapper *req, struct packe
 static int p2p_invite_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_p2p_serv_disc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_p2p_ext_listen_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+#endif /* End Of CONFIG_P2P */
 #endif // __INDIGO_API_CALLBACK
