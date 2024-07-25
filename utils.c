@@ -242,6 +242,10 @@ char* read_file(char *fn) {
     fd = open(fn, O_RDONLY);
     if (fd) {
         buffer = (char*)malloc(sizeof(char)*(size+1));
+	if (!buffer) {
+            close(fd);
+	    return buffer;
+	}
         memset(buffer, 0, size+1);
         read(fd, buffer, size);
         close(fd);
@@ -1654,6 +1658,10 @@ static char* http_header_multipart(char *path, char *host, int port, int content
     char *buffer = NULL;
 
     buffer = (char*)malloc(sizeof(char)*256);
+    if (!buffer) {
+        return buffer;
+    }
+
     sprintf(buffer,
         "POST %s HTTP/1.0\r\n" \
         "Host: %s:%d\r\n" \
@@ -1691,6 +1699,11 @@ static char* http_body_multipart(char *boundary, char *param_name, char *file_na
     /* Fill the body buffer */
     body_size = file_size + 256;
     buffer = (char*)malloc(body_size*sizeof(char));
+    if (!buffer) {
+        free(file_content);
+        return buffer;
+    }
+
     memset(buffer, 0, body_size);
 
     file_ptr = indigo_strrstr(file_name, "/");
