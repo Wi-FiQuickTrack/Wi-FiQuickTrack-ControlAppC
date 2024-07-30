@@ -143,7 +143,7 @@ typedef struct _wps_setting {
  * struct sta_driver_ops - Driver interface API wrapper definition
  *
  * This structure defines the API that each driver interface needs to implement
- * for indigo c control application. 
+ * for indigo c control application.
  */
 struct sta_driver_ops {
     const char *name;
@@ -167,13 +167,17 @@ int detect_third_radio(void);
 void create_sta_interface();
 void delete_sta_interface();
 
+#ifdef CONFIG_AP
 void configure_ap_enable_mbssid();
 void configure_ap_radio_params(char *band, char *country, int channel, int chwidth);
 void start_ap_set_wlan_params(void *if_info);
+#endif /* End Of CONFIG_AP */
 
+#ifdef CONFIG_P2P
 int get_p2p_mac_addr(char *mac_addr, size_t size);
 int get_p2p_group_if(char *if_name, size_t size);
 int get_p2p_dev_if(char *if_name, size_t size);
+#endif /* End Of CONFIG_P2P */
 
 void start_dhcp_server(char *if_name, char *ip_addr);
 void stop_dhcp_server();
