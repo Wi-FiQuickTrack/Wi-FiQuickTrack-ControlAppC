@@ -51,6 +51,11 @@ create_postinst() {
     echo "cp app ../app_tp" >>"$postinst_file"
     echo "make clean >/dev/null" >>"$postinst_file"
 
+    echo "sed -i 's/ROLE = tp/ROLE = sniffer/' Makefile" >>"$postinst_file"
+    echo "make >/dev/null" >>"$postinst_file"
+    echo "cp app ../app_sniffer" >>"$postinst_file"
+    echo "make clean >/dev/null" >>"$postinst_file"
+
     echo "cp QT_dhcpd.conf ../QT_dhcpd.conf" >>"$postinst_file"
 
     echo "echo \"Test application version\"" >>"$postinst_file"

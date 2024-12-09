@@ -19,12 +19,17 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "vendor_specific.h"
 #include "utils.h"
 
 #ifdef HOSTAPD_SUPPORT_MBSSID_WAR
 extern int use_openwrt_wpad;
+#endif
+
+#ifdef _OPENWRT_
+extern int number_radio;
 #endif
 
 #ifdef _TEST_PLATFORM_
@@ -34,8 +39,12 @@ const struct sta_driver_ops *sta_drv_ops = NULL;
 /* Detect the STA driver from lspci Network Controller description */
 const char *desc_platform1 = "Intel Corporation Device 2725";
 const char *desc_platform2 = "Qualcomm Device 1101";
+const char *desc_platform3 = "Intel Corporation Device 272b";
 
-static void check_platform1_default_conf();
+static void check_platform_default_conf();
+static void disable_11be();
+static void disable_11ax();
+static void reload_driver();
 
 /**
  * Generic platform dependent API implementation 
@@ -75,10 +84,16 @@ void detect_sta_vendor() {
         sta_drv_ops = &sta_driver_platform1_ops;
         indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 1");
 
-        check_platform1_default_conf();
+        check_platform_default_conf();
     } else if (strbuf && strstr(strbuf, desc_platform2)) {
         sta_drv_ops = &sta_driver_platform2_ops;
         indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 2");
+    } else if (strbuf && strstr(strbuf, desc_platform3)) {
+        sta_drv_ops = &sta_driver_platform3_ops;
+        indigo_logger(LOG_LEVEL_INFO, "hook platform handlers for platform 3");
+        /* set to 11ax mode by default due to STA testbed requirement */
+        disable_11be();
+        check_platform_default_conf();
     } else {
         /* set to platform 1 by default */
         sta_drv_ops = &sta_driver_platform1_ops;
@@ -91,21 +106,21 @@ void detect_sta_vendor() {
 }
 
 #if defined(_OPENWRT_)
-int detect_third_radio() {
+int detect_number_radio() {
     FILE *fp;
     char buffer[BUFFER_LEN];
-    int third_radio = 0;
+    int number_radio = 0;
 
     fp = popen("iw dev", "r");
     if (fp) {
         while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-            if (strstr(buffer, "phy#2"))
-                third_radio = 1;
+            if (strstr(buffer, "phy#0") || strstr(buffer, "phy#1") || strstr(buffer, "phy#2"))
+                number_radio += 1;
         }
         pclose(fp);
     }
 
-    return third_radio;
+    return number_radio;
 }
 #endif
 
@@ -113,34 +128,43 @@ void interfaces_init() {
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
-    int third_radio = 0;
+    char phy_name[16];
 
-    third_radio = detect_third_radio();
+    number_radio = detect_number_radio();
+    /* 1: Wi-Fi 7 MLD, 2: Wi-Fi 6, 3: Wi-Fi 6E */
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");
+    if (number_radio == 1)
+        sprintf(phy_name, WIFI7_PHY_INTERFACE);
+    else
+        sprintf(phy_name, "phy1");
+    sprintf(buffer, "iw phy %s interface add ath1 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy1 interface add ath11 type managed >/dev/null 2>/dev/null");
+    sprintf(buffer, "iw phy %s interface add ath11 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy1 interface add ath12 type managed >/dev/null 2>/dev/null");
+    sprintf(buffer, "iw phy %s interface add ath12 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy1 interface add ath13 type managed >/dev/null 2>/dev/null");
+    sprintf(buffer, "iw phy %s interface add ath13 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy0 interface add ath0 type managed >/dev/null 2>/dev/null");
+    if (number_radio != 1)
+        sprintf(phy_name, "phy0");
+    sprintf(buffer, "iw phy %s interface add ath0 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy0 interface add ath01 type managed >/dev/null 2>/dev/null");
+    sprintf(buffer, "iw phy %s interface add ath01 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy0 interface add ath02 type managed >/dev/null 2>/dev/null");
+    sprintf(buffer, "iw phy %s interface add ath02 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy0 interface add ath03 type managed >/dev/null 2>/dev/null");
+    sprintf(buffer, "iw phy %s interface add ath03 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    if (third_radio == 1) {
-        sprintf(buffer, "iw phy phy2 interface add ath2 type managed >/dev/null 2>/dev/null");
+    if (number_radio == 1 || number_radio == 3) {
+        if (number_radio != 1)
+            sprintf(phy_name, "phy2");
+        sprintf(buffer, "iw phy %s interface add ath2 type managed >/dev/null 2>/dev/null", phy_name);
         system(buffer);
-        sprintf(buffer, "iw phy phy2 interface add ath21 type managed >/dev/null 2>/dev/null");
+        sprintf(buffer, "iw phy %s interface add ath21 type managed >/dev/null 2>/dev/null", phy_name);
         system(buffer);
-        sprintf(buffer, "iw phy phy2 interface add ath22 type managed >/dev/null 2>/dev/null");
+        sprintf(buffer, "iw phy %s interface add ath22 type managed >/dev/null 2>/dev/null", phy_name);
         system(buffer);
-        sprintf(buffer, "iw phy phy2 interface add ath23 type managed >/dev/null 2>/dev/null");
+        sprintf(buffer, "iw phy %s interface add ath23 type managed >/dev/null 2>/dev/null", phy_name);
         system(buffer);
     }
 
@@ -165,22 +189,34 @@ void interfaces_init() {
     memset(mac_addr, 0, sizeof(mac_addr));
     get_mac_address(mac_addr, sizeof(mac_addr), "ath0");
     control_interface("ath0", "down");
-    mac_addr[16] = (char)'0';
+    if (number_radio == 1)
+        mac_addr[16] = (char)'4';
+    else
+        mac_addr[16] = (char)'0';
     set_mac_address("ath0", mac_addr);
 
     control_interface("ath01", "down");
-    mac_addr[16] = (char)'1';
+    if (number_radio == 1)
+        mac_addr[16] = (char)'5';
+    else
+        mac_addr[16] = (char)'1';
     set_mac_address("ath01", mac_addr);
 
     control_interface("ath02", "down");
-    mac_addr[16] = (char)'2';
+    if (number_radio == 1)
+        mac_addr[16] = (char)'6';
+    else
+        mac_addr[16] = (char)'2';
     set_mac_address("ath02", mac_addr);
 
     control_interface("ath03", "down");
-    mac_addr[16] = (char)'3';
+    if (number_radio == 1)
+        mac_addr[16] = (char)'7';
+    else
+        mac_addr[16] = (char)'3';
     set_mac_address("ath03", mac_addr);
 
-    if (third_radio == 1) {
+    if (number_radio == 1 || number_radio == 3) {
         memset(mac_addr, 0, sizeof(mac_addr));
         get_mac_address(mac_addr, sizeof(mac_addr), "ath2");
         control_interface("ath2", "down");
@@ -256,6 +292,12 @@ void vendor_deinit() {
     system("killall hostapd-wfa >/dev/null 2>/dev/null");
 #endif
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
+
+#ifndef _OPENWRT_
+    if (sta_drv_ops && strcmp(sta_drv_ops->name, "platform3") == 0) {
+        reload_driver();
+    }
+#endif
     system(buffer);
 }
 
@@ -317,7 +359,7 @@ struct he_chwidth_config {
     char config[32];
 };
 
-struct he_chwidth_config he_chwidth_config_list[] = {
+struct he_chwidth_config he_chwidth_config_list_platform1[] = {
     { CHWIDTH_AUTO, "" },
     { CHWIDTH_20, "003fc200fd09800ecffe00" },
     { CHWIDTH_40, "043fc200fd09800ecffe00" },
@@ -326,7 +368,16 @@ struct he_chwidth_config he_chwidth_config_list[] = {
     { CHWIDTH_160, "0c3fc200fd09800ecffe00" }
 };
 
-static void check_platform1_default_conf() {
+struct he_chwidth_config he_chwidth_config_list_platform3[] = {
+    { CHWIDTH_AUTO, "" },
+    { CHWIDTH_20, "063000000d00800000c000" },
+    { CHWIDTH_40, "063000000d00800000c000" },
+    { CHWIDTH_80, "063000000d00800000c000" },
+    { CHWIDTH_80PLUS80, "063000000d00800000c000" }, /* unused */
+    { CHWIDTH_160, "0e3000000d00800000c000" }
+};
+
+static void check_platform_default_conf() {
     char *fname = "/lib/firmware/iwl-dbg-cfg.ini";
     char buffer[S_BUFFER_LEN];
     FILE *f_ptr = NULL;
@@ -349,21 +400,29 @@ static void check_platform1_default_conf() {
 
 static void disable_11ax() {
     system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11ax=1");
-    sleep(3);
+    sleep(1);
+}
+
+static void disable_11be() {
+    system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi disable_11be=1");
+    indigo_logger(LOG_LEVEL_INFO, "disable 11be");
+    sleep(1);
 }
 
 static void reload_driver() {
     system("sudo modprobe -r iwlwifi;sudo modprobe iwlwifi");
-    sleep(3);
+    indigo_logger(LOG_LEVEL_INFO, "reload driver to default PHY setting");
+    sleep(1);
 }
 
-static int set_he_channel_width(int chwidth) {
+static int set_he_channel_width(int chwidth, int is_wifi7) {
     FILE *f_ptr = NULL, *f_tmp_ptr = NULL;
     char *path = "/lib/firmware/iwl-dbg-cfg.ini";
     char *tmp_path = "/lib/firmware/iwl-dbg-cfg-tmp.ini";
     char *he_ie_str = "he_phy_cap=";
     int is_found = 0;
     char buffer[S_BUFFER_LEN];
+    struct he_chwidth_config *cw_ptr = NULL;
 
     f_ptr  = fopen(path, "r");
     f_tmp_ptr = fopen(tmp_path, "w");    
@@ -379,6 +438,12 @@ static int set_he_channel_width(int chwidth) {
         return -1;
     }
 
+    if (is_wifi7 == 1) {
+        cw_ptr = he_chwidth_config_list_platform3;
+    } else {
+        cw_ptr = he_chwidth_config_list_platform1;
+    }
+
     memset(buffer, 0, sizeof(buffer));
     while ((fgets(buffer, S_BUFFER_LEN, f_ptr)) != NULL) {
         if (strstr(buffer, he_ie_str) != NULL) {
@@ -389,7 +454,7 @@ static int set_he_channel_width(int chwidth) {
             } else {
                 memset(buffer, 0, sizeof(buffer));
                 snprintf(buffer, sizeof(buffer), "%s%s", 
-                    he_ie_str, he_chwidth_config_list[chwidth].config);            
+                    he_ie_str, (cw_ptr + chwidth)->config);            
                 indigo_logger(LOG_LEVEL_DEBUG, 
                     "replace he_phy_cap setting[%d]:%s\n", chwidth, buffer);
             }
@@ -401,7 +466,7 @@ static int set_he_channel_width(int chwidth) {
     if (is_found == 0 && chwidth != CHWIDTH_AUTO) {
         memset(buffer, 0, sizeof(buffer));
         snprintf(buffer, sizeof(buffer), "%s%s", 
-                he_ie_str, he_chwidth_config_list[chwidth].config);
+                he_ie_str,(cw_ptr + chwidth)->config);
         indigo_logger(LOG_LEVEL_DEBUG, 
                     "set he_phy_cap setting:%s\n", buffer);        
         fputs(buffer, f_tmp_ptr);
@@ -415,7 +480,12 @@ static int set_he_channel_width(int chwidth) {
     rename(tmp_path, path);
 
     /* reload the driver */
-    reload_driver();
+    if (is_wifi7 == 1) {
+        disable_11be();
+    } else {
+        reload_driver();
+    }
+
     return 0;
 }
 
@@ -424,7 +494,7 @@ static int set_channel_width_platform1() {
     if ((sta_hw_config.phymode == PHYMODE_11AXA || 
             sta_hw_config.phymode == PHYMODE_11AXG || 
             sta_hw_config.phymode == PHYMODE_AUTO)) {
-        ret = set_he_channel_width(sta_hw_config.chwidth);
+        ret = set_he_channel_width(sta_hw_config.chwidth, 0);
     } else if ((sta_hw_config.chwidth == CHWIDTH_20 &&
         (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11NA))) {
         ret = insert_wpa_network_config("disable_ht40=1\n");
@@ -480,6 +550,44 @@ static void set_phy_mode_platform2() {
     }
 }
 
+/**
+ * Platform-dependent implementation for STA platform 3
+ */
+static int set_channel_width_platform3() {
+    int ret = 0;
+
+    if ((sta_hw_config.chwidth == CHWIDTH_20 &&
+        (sta_hw_config.phymode == PHYMODE_11BG || sta_hw_config.phymode == PHYMODE_11NA))) {
+        ret = insert_wpa_network_config("disable_ht40=1\n");
+    } else if ((sta_hw_config.phymode == PHYMODE_11AXG || sta_hw_config.phymode == PHYMODE_11AXA ||
+         sta_hw_config.phymode == PHYMODE_AUTO ||sta_hw_config.phymode == PHYMODE_11AX)) {
+        ret = set_he_channel_width(sta_hw_config.chwidth, 1);        
+    }
+
+    return ret;
+}
+
+static void set_phy_mode_platform3() {
+    if (sta_hw_config.phymode == PHYMODE_11BGN || sta_hw_config.phymode == PHYMODE_11AC) {
+        disable_11ax();
+    } else if (sta_hw_config.phymode == PHYMODE_11AXG || 
+        sta_hw_config.phymode == PHYMODE_11AXA || sta_hw_config.phymode == PHYMODE_11AX) {
+        disable_11be();
+    } else if (sta_hw_config.phymode == PHYMODE_11BG || sta_hw_config.phymode == PHYMODE_11A) {
+        insert_wpa_network_config("disable_ht=1\n");
+        disable_11ax();
+    } else if (sta_hw_config.phymode == PHYMODE_11NA) {
+        insert_wpa_network_config("disable_vht=1\n");
+        disable_11ax();
+    } else if (sta_hw_config.phymode == PHYMODE_11BE) {
+        /* reset default setting to enable 11be */
+        reload_driver();
+    } else if (sta_hw_config.phymode == PHYMODE_AUTO) {
+        /* set the default mode to 11ax mode */
+        disable_11be();
+    }
+}
+
 const struct sta_driver_ops sta_driver_platform1_ops = {
 	.name			        = "platform1",
 	.set_channel_width      = set_channel_width_platform1,
@@ -491,6 +599,12 @@ const struct sta_driver_ops sta_driver_platform2_ops = {
 	.name			        = "platform2",
 	.set_channel_width      = set_channel_width_platform2,
 	.set_phy_mode           = set_phy_mode_platform2,
+};
+
+const struct sta_driver_ops sta_driver_platform3_ops = {
+	.name			        = "platform3",
+	.set_channel_width      = set_channel_width_platform3,
+	.set_phy_mode           = set_phy_mode_platform3,
 };
 
 /* Return addr of P2P-device if there is no GO or client interface */
@@ -561,6 +675,60 @@ int get_p2p_group_if(char *if_name, size_t size) {
     }
 
     return error;
+}
+
+/* Get the name of Monitor interface */
+void get_monitor_if(char *if_name, size_t size) {
+    FILE *fp;
+    char buffer[S_BUFFER_LEN], *ptr, name[32];
+    int found = 0, phy_id = 0;
+
+    fp = popen("iw dev", "r");
+    if (fp) {
+        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            /* get phy interface ID */
+            ptr = strstr(buffer, "phy#");
+            if (ptr != NULL) {
+                while (*ptr != '\0') {
+                    if (isdigit(*ptr)) {
+                        phy_id = phy_id * 10 + (*ptr - '0');
+                    }
+                    ptr++;
+                }
+            }
+
+            ptr = strstr(buffer, "Interface");
+            if (ptr != NULL) {
+                sscanf(ptr, "%*s %s", name);
+                while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+                    ptr = strstr(buffer, "type");
+                    if (ptr != NULL) {
+                        ptr += 5;
+                        if (!strncmp(ptr, "monitor", 7)) {
+			                snprintf(if_name, size, "%s", name);
+                            found = 1;
+                        }
+                        break;
+                    }
+                }
+                if (found)
+                    break;
+            }
+        }
+        pclose(fp);
+    }
+    /* If monitor interface is not found, create one */
+    if (!found) {
+        indigo_logger(LOG_LEVEL_INFO, "cannot find monitor interface and create one for STA Injector");
+        snprintf(if_name, size, "%s", MONITOR_INTERFACE_DEFAULT);
+        memset(buffer, 0, sizeof(buffer));
+
+        sprintf(buffer, "iw phy phy%d interface add %s type monitor >/dev/null 2>/dev/null", phy_id, if_name);
+        system(buffer);
+        indigo_logger(LOG_LEVEL_INFO, "cmd: %s", buffer);
+        sleep(1);
+        control_interface(if_name, "up");
+    }
 }
 
 /* Append IP range config and start dhcpd */

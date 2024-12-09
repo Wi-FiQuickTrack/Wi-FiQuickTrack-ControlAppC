@@ -51,6 +51,7 @@ struct indigo_api {
 #define API_AP_SEND_ARP_MSGS                    0x1007
 #define API_AP_START_WPS                        0x1008
 #define API_AP_CONFIGURE_WSC                    0x1009
+#define API_AP_REKEY_GTK                        0x100a
 
 #define API_STA_ASSOCIATE                       0x2000
 #define API_STA_CONFIGURE                       0x2001
@@ -82,6 +83,14 @@ struct indigo_api {
 #define API_STA_SEND_ICON_REQ                   0x201b
 #define API_P2P_SET_EXT_LISTEN                  0x201c
 #define API_STA_ENABLE_WSC                      0x201d
+#define API_STA_INJECT_START                    0x201e
+#define API_STA_INJECT_FRAME                    0x201f
+#define API_STA_INJECT_STOP                     0x2020
+
+#define API_SNIFFER_START                       0x3000
+#define API_SNIFFER_STOP                        0x3001
+#define API_SNIFFER_UPLOAD_FILE                 0x3002
+#define API_SNIFFER_FILTER                      0x3003
 
 #define API_GET_IP_ADDR                         0x5000
 #define API_GET_MAC_ADDR                        0x5001
@@ -158,6 +167,8 @@ struct indigo_api {
 #define TLV_PHASE1                              0x0043
 #define TLV_CLIENT_CERT                         0x0044
 #define TLV_PRIVATE_KEY                         0x0045
+#define TLV_EAPOL_M3_ELEMENTS                   0x0046
+#define TLV_GTK_KDE_RANDOM_RESERVED_BITS        0x0047
 #define TLV_STA_POWER_SAVE                      0x0052
 #define TLV_STATIC_IP                           0x0055
 #define TLV_DEBUG_LEVEL                         0x0057
@@ -169,6 +180,9 @@ struct indigo_api {
 #define TLV_ARP_TRANSMISSION_RATE               0x005f
 #define TLV_ARP_TARGET_IP                       0x0060
 #define TLV_ARP_FRAME_COUNT                     0x0062
+#define TLV_FRAME_TYPE                          0x0063
+#define TLV_ACTION_CATEGORY                     0x0064
+#define TLV_ACTION_CODE                         0x0065
 #define TLV_PACKET_COUNT                        0x0067
 #define TLV_PACKET_TYPE                         0x0068
 #define TLV_PACKET_RATE                         0x0069
@@ -205,6 +219,7 @@ struct indigo_api {
 #define TLV_OWE_GROUPS                          0x008e
 #define TLV_STA_OWE_GROUP                       0x008f
 #define TLV_HE_MU_EDCA                          0x0090
+#define TLV_PROTECTION_TYPE                     0x0091
 #define TLV_RSNXE_OVERRIDE_EAPOL                0x0092
 #define TLV_TRANSITION_DISABLE                  0x0093
 #define TLV_SAE_CONFIRM_IMMEDIATE               0x0094
@@ -281,7 +296,25 @@ struct indigo_api {
 #define TLV_CAPTURE_OUTFILE                     0x00de
 #define TLV_TP_IP_ADDRESS                       0x00df
 #define TLV_WPS_ER_SUPPORT                      0x00e0
-#define TLV_ADDITIONAL_TEST_PLATFORM_ID         0x00e1
+#define TLV_TEST_PLATFORM_ID                    0x00e1
+// 00e2 - 00e5: used by sniffer agent
+#define TLV_PMK                                 0x00e6
+#define TLV_GROUP_MGMT_CIPHER                   0x00e7
+#define TLV_GROUP_MGMT                          0x00e8
+#define TLV_OPENSSL_CIPHERS                     0x00e9
+#define TLV_BEACON_PROT                         0x00ea
+#define TLV_IEEE80211_BE                        0x00eb
+#define TLV_MLD_AP                              0x00ec
+#define TLV_EHT_OPER_CHWIDTH                    0x00ed
+#define TLV_EHT_OPER_CENTR_FREQ                 0x00ee
+#define TLV_SAE_PASSWORD                        0x00ef
+#define TLV_SAE_PK_MODIFIER                     0x00f0
+#define TLV_SAE_PK_FILE                         0x00f1
+#define TLV_WPA_GROUP_REKEY                     0x00f2
+#define TLV_WPA_STRICT_REKEY                    0x00f3
+#define TLV_OCV                                 0x00f4
+#define TLV_MLD_FORCE_SINGLE_LINK               0x00f5
+#define TLV_MLD_CONNECT_BAND_PREF               0x00f6
 
 // class ResponseTLV
 // List of TLV used in the QuickTrack API response and ACK messages from the DUT
@@ -301,6 +334,9 @@ struct indigo_api {
 #define TLV_WSC_WPA_KEY_MGMT                    0xa00d
 #define TLV_WSC_WPA_PASSPHRASE                  0xa00e
 #define TLV_PASSPOINT_ICON_CHECKSUM             0xa00f
+#define TLV_TEST_SNIFFER_APP_VERSION            0xa010
+// a011 - a013: used by sniffer agent
+#define TLV_TEST_PLATFORM_WLAN_IP_ADDR          0xa014
 
 /* TLV Value */
 #define DUT_TYPE_STAUT                          0x01

@@ -63,6 +63,8 @@ struct tlv_to_config_name maps[] = {
     { TLV_IE_OVERRIDE, "own_ie_override", 0 }, // HostAPD Python Interface
     { TLV_SAE_ANTI_CLOGGING_THRESHOLD, "sae_anti_clogging_threshold", 0 }, // HostAPD Python Interface
     { TLV_DISABLE_PMKSA_CACHING, "disable_pmksa_caching", 0 },  // HostAPD Python Interface
+    { TLV_EAPOL_M3_ELEMENTS, "eapol_m3_elements", 0 },
+    { TLV_GTK_KDE_RANDOM_RESERVED_BITS, "gtk_kde_random_reserved_bits", 0 },
     { TLV_SAE_GROUPS, "sae_groups", 0 },
     { TLV_IEEE80211_AX, "ieee80211ax", 0 },
     { TLV_HE_OPER_CHWIDTH, "he_oper_chwidth", 0 },
@@ -106,6 +108,13 @@ struct tlv_to_config_name maps[] = {
     { TLV_WPS_INDEPENDENT, "wps_independent", 0 },
     { TLV_LOCAL_PWR_CONST, "local_pwr_constraint", 0 },
     { TLV_SPECTRUM_MGMT_REQ, "spectrum_mgmt_required", 0 },
+    { TLV_GROUP_MGMT_CIPHER, "group_mgmt_cipher", 0 },
+    { TLV_IEEE80211_BE, "ieee80211be", 0 },
+    { TLV_MLD_AP, "mld_ap", 0 },
+    { TLV_EHT_OPER_CHWIDTH, "eht_oper_chwidth", 0 },
+    { TLV_EHT_OPER_CENTR_FREQ, "eht_oper_centr_freq_seg0_idx", 0 },
+    { TLV_WPA_GROUP_REKEY, "wpa_group_rekey", 0 },
+    { TLV_WPA_STRICT_REKEY, "wpa_strict_rekey", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },
@@ -138,9 +147,14 @@ struct tlv_to_config_name maps[] = {
     { TLV_USERNAME, "username", 1 },
     { TLV_HOME_FQDN, "domain", 1 },
     { TLV_PREFER, "priority", 0 },
+    { TLV_GROUP_MGMT, "group_mgmt", 0 },
+    { TLV_SAE_PASSWORD, "sae_password", 1 },
 
     /* hapd + wpas */
     { TLV_EAP_FRAG_SIZE, "fragment_size", 0 },
+    { TLV_OPENSSL_CIPHERS, "openssl_ciphers", 1 },
+    { TLV_BEACON_PROT, "beacon_prot", 0 },
+    { TLV_OCV, "ocv", 0},
 };
 
 struct tlv_to_config_name semicolon_list[] = {
@@ -173,6 +187,13 @@ struct anqp_tlv_to_config_name anqp_maps[] = {
     { "OSUProvidersNaiList", "hs20:13" },
 };
 
+struct tlv_to_config_name wifi7_maps[] = {
+    { TLV_IEEE80211_BE, "ieee80211be", 0 },
+    { TLV_MLD_AP, "mld_ap", 0 },
+    { TLV_EHT_OPER_CHWIDTH, "eht_oper_chwidth", 0 },
+    { TLV_EHT_OPER_CENTR_FREQ, "eht_oper_centr_freq_seg0_idx", 0 },
+};
+
 char* find_tlv_config_name(int tlv_id) {
     int i;
     for (i = 0; i < sizeof(maps)/sizeof(struct tlv_to_config_name); i++) {
@@ -193,6 +214,16 @@ struct tlv_to_config_name* find_tlv_config(int tlv_id) {
     return NULL;
 }
 
+struct tlv_to_config_name* find_tlv_11be_config(int tlv_id) {
+    int i;
+    for (i = 0; i < sizeof(wifi7_maps)/sizeof(struct tlv_to_config_name); i++) {
+        if (tlv_id == wifi7_maps[i].tlv_id) {
+            return &wifi7_maps[i];
+        }
+    }
+    return NULL;
+}
+
 struct tlv_to_config_name wpas_global_maps[] = {
     { TLV_STA_SAE_GROUPS, "sae_groups", 0 },
     { TLV_MBO_CELL_CAPA, "mbo_cell_capa", 0 },
@@ -208,6 +239,8 @@ struct tlv_to_config_name wpas_global_maps[] = {
     { TLV_FREQ_LIST, "freq_list", 0 },
     { TLV_UPDATE_CONFIG, "update_config", 0 },
     { TLV_P2P_DISABLED, "p2p_disabled", 0 },
+    { TLV_MLD_FORCE_SINGLE_LINK, "mld_force_single_link", 0 },
+    { TLV_MLD_CONNECT_BAND_PREF, "mld_connect_band_pref", 0 },
 };
 
 struct tlv_to_config_name* find_wpas_global_config_name(int tlv_id) {
@@ -256,6 +289,7 @@ static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_w
 static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_wsc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int rekey_ap_gtk_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* STA */
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -276,6 +310,9 @@ static int set_sta_power_save_handler(struct packet_wrapper *req, struct packet_
 static int start_wps_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_sta_icon_req_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_sta_inject_start_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_sta_inject_frame_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_sta_inject_stop_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* P2P */
 static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int p2p_find_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -288,4 +325,9 @@ static int get_p2p_intent_value_handler(struct packet_wrapper *req, struct packe
 static int p2p_invite_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_p2p_serv_disc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_p2p_ext_listen_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+/* Sniffer */
+static int sniffer_start_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int sniffer_stop_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int sniffer_filter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int sniffer_upload_file_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif // __INDIGO_API_CALLBACK

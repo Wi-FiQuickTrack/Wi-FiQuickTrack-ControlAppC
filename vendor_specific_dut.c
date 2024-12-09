@@ -28,21 +28,21 @@ extern int use_openwrt_wpad;
 #endif
 
 #if defined(_OPENWRT_)
-int detect_third_radio() {
+int detect_number_radio() {
     FILE *fp;
     char buffer[BUFFER_LEN];
-    int third_radio = 0;
+    int number_radio = 0;
 
     fp = popen("iw dev", "r");
     if (fp) {
         while (fgets(buffer, sizeof(buffer), fp) != NULL) {
-            if (strstr(buffer, "phy#2"))
-                third_radio = 1;
+            if (strstr(buffer, "phy#0") || strstr(buffer, "phy#1") || strstr(buffer, "phy#2"))
+                number_radio += 1;
         }
         pclose(fp);
     }
 
-    return third_radio;
+    return number_radio;
 }
 #endif
 
@@ -50,23 +50,32 @@ void interfaces_init() {
 #if defined(_OPENWRT_) && !defined(_WTS_OPENWRT_)
     char buffer[BUFFER_LEN];
     char mac_addr[S_BUFFER_LEN];
-    int third_radio = 0;
+    int number_radio = 0;
+    char phy_name[16];
 
-    third_radio = detect_third_radio();
+    number_radio = detect_number_radio();
 
     memset(buffer, 0, sizeof(buffer));
-    sprintf(buffer, "iw phy phy1 interface add ath1 type managed >/dev/null 2>/dev/null");
+    if (number_radio == 1)
+        sprintf(phy_name, WIFI7_PHY_INTERFACE);
+    else
+        sprintf(phy_name, "phy1");
+    sprintf(buffer, "iw phy %s interface add ath1 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy1 interface add ath11 type managed >/dev/null 2>/dev/null");
+    sprintf(buffer, "iw phy %s interface add ath11 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy0 interface add ath0 type managed >/dev/null 2>/dev/null");
+    if (number_radio != 1)
+        sprintf(phy_name, "phy0");
+    sprintf(buffer, "iw phy %s interface add ath0 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    sprintf(buffer, "iw phy phy0 interface add ath01 type managed >/dev/null 2>/dev/null");
+    sprintf(buffer, "iw phy %s interface add ath01 type managed >/dev/null 2>/dev/null", phy_name);
     system(buffer);
-    if (third_radio == 1) {
-        sprintf(buffer, "iw phy phy2 interface add ath2 type managed >/dev/null 2>/dev/null");
+    if (number_radio == 1 || number_radio == 3) {
+        if (number_radio != 1)
+            sprintf(phy_name, "phy2");
+        sprintf(buffer, "iw phy %s interface add ath2 type managed >/dev/null 2>/dev/null", phy_name);
         system(buffer);
-        sprintf(buffer, "iw phy phy2 interface add ath21 type managed >/dev/null 2>/dev/null");
+        sprintf(buffer, "iw phy %s interface add ath21 type managed >/dev/null 2>/dev/null", phy_name);
         system(buffer);
     }
 
@@ -83,14 +92,20 @@ void interfaces_init() {
     memset(mac_addr, 0, sizeof(mac_addr));
     get_mac_address(mac_addr, sizeof(mac_addr), "ath0");
     control_interface("ath0", "down");
-    mac_addr[16] = (char)'0';
+    if (number_radio == 1)
+        mac_addr[16] = (char)'4';
+    else
+        mac_addr[16] = (char)'0';
     set_mac_address("ath0", mac_addr);
 
     control_interface("ath01", "down");
-    mac_addr[16] = (char)'1';
+    if (number_radio == 1)
+        mac_addr[16] = (char)'5';
+    else
+        mac_addr[16] = (char)'1';
     set_mac_address("ath01", mac_addr);
 
-    if (third_radio == 1) {
+    if (number_radio == 1 || number_radio == 3) {
         memset(mac_addr, 0, sizeof(mac_addr));
         get_mac_address(mac_addr, sizeof(mac_addr), "ath2");
         control_interface("ath2", "down");
@@ -481,4 +496,56 @@ wps_setting* get_vendor_wps_settings(enum wps_device_role role)
             return NULL;
         }
     }
+}
+
+void get_mld_link_mac(char *mac_addr, size_t size, char *band) {
+    FILE *fp;
+    char buffer[S_BUFFER_LEN], *ptr, name[32], addr[32];
+    char *if_name;
+    int band_id, freq;
+
+    memset(mac_addr, 0, size);
+    if (strcmp(band, "2.4GHz") == 0)
+        band_id = BAND_24GHZ;
+    else if (strcmp(band, "5GHz") == 0)
+        band_id = BAND_5GHZ;
+    else if (strcmp(band, "6GHz") == 0)
+        band_id = BAND_6GHZ;
+    if_name = get_wireless_interface();
+
+    fp = popen("iw dev", "r");
+    if (fp) {
+        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            ptr = strstr(buffer, "Interface");
+            if (ptr != NULL) {
+                sscanf(ptr, "%*s %s", name);
+                if (!strncmp(name, if_name, strlen(if_name))) {
+                    /* link 0:
+                         addr 00:03:7f:12:66:60
+                         channel 36 (5180 MHz), width: 80 MHz, center1: 5210 MHz
+                         txpower 28.00 dBm
+                    */
+                    while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+                        ptr = strstr(buffer, "link");
+                        if (ptr != NULL) {
+                            fgets(buffer, sizeof(buffer), fp);
+                            sscanf(buffer, "%*s %s", addr);
+                            fgets(buffer, sizeof(buffer), fp);
+                            ptr = strchr(buffer, '(');
+                            sscanf(ptr+1, "%d", &freq);
+                            if (verify_band_from_freq(freq, band_id) == 0) {
+                                snprintf(mac_addr, size, "%s", addr);
+                                break;
+                            }
+                        }
+                    }
+                    if (mac_addr[0])
+                        break;
+                }
+            }
+        }
+        pclose(fp);
+    }
+
+    return;
 }

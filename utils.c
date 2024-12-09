@@ -505,6 +505,7 @@ int stop_loopback_data(int *pkt_sent)
     return loopback.pkt_rcv;
 }
 
+#ifndef _TEST_SNIFFER_
 int send_udp_data(char *target_ip, int target_port, int packet_count, int packet_size, double rate) {
     int s = 0, i = 0;
     struct sockaddr_in addr;
@@ -704,6 +705,7 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
     close(sock);
     return pkt_rcv;
 }
+#endif
 
 int send_broadcast_arp(char *target_ip, int *send_count, int rate) {
     char buffer[S_BUFFER_LEN];
@@ -897,6 +899,14 @@ int reset_interface_ip(char *ifname) {
     return system(cmd);
 }
 
+int add_arp_entry(char *ip, char *mac, char *ifname) {
+    char buffer[S_BUFFER_LEN];
+
+    memset(buffer, 0, sizeof(buffer));
+    snprintf(buffer, sizeof(buffer), "ip neigh replace %s lladdr %s dev %s", ip, mac, ifname);
+    return system(buffer);
+}
+
 void detect_del_arp_entry(char *ip) {
     char buffer[S_BUFFER_LEN];
     char res_ip[32], res_dev[16], res_inf[16];
@@ -958,8 +968,18 @@ struct interface_info* assign_wireless_interface_info(struct bss_identifier_info
     int i;
 
     for (i = 0; i < interface_count; i++) {
-        if ((interfaces[i].band == bss->band) && 
-             (interfaces[i].identifier == UNUSED_IDENTIFIER)) {
+        /* Find mld main interface and create link conf */
+        if ((interfaces[i].band != bss->band) &&
+            (interfaces[i].identifier != UNUSED_IDENTIFIER) && bss->mld_link &&
+            (interfaces[i].link_id == UNUSED_IDENTIFIER)) {
+            snprintf(interfaces[i].link_conf_file, sizeof(interfaces[i].link_conf_file),
+                     "%s/hostapd_%s_link.conf", HAPD_CONF_FILE_DEFAULT_PATH, interfaces[i].ifname);
+            interfaces[i].link_id = bss->identifier;
+            interfaces[i].link_band = bss->band;
+            return &interfaces[i];
+        } else if ((interfaces[i].band == bss->band) &&
+             (interfaces[i].identifier == UNUSED_IDENTIFIER) &&
+             (!bss->mld_link)) {
             configured_interface_count++;
             interfaces[i].identifier = bss->identifier;
             interfaces[i].mbssid_enable = bss->mbssid_enable;
@@ -1166,7 +1186,7 @@ void set_wpas_debug_level(int level) {
 
 char* get_wpas_debug_arguments() {
     if (wpas_debug_level == DEBUG_LEVEL_ADVANCED) {
-        return "-ddd";
+        return "-dddK";
     } else if (wpas_debug_level == DEBUG_LEVEL_BASIC) {
         return "-d";
     }
@@ -1177,6 +1197,8 @@ int add_wireless_interface_info(int band, int bssid, char *name) {
     interfaces[interface_count].band = band;
     interfaces[interface_count].bssid = -1;
     interfaces[interface_count].identifier = UNUSED_IDENTIFIER;
+    interfaces[interface_count].link_id = UNUSED_IDENTIFIER;
+    memset(interfaces[interface_count].link_conf_file, 0, sizeof(interfaces[interface_count].link_conf_file));
     strcpy(interfaces[interface_count++].ifname, name);
     return 0;
 }
@@ -1259,6 +1281,7 @@ void parse_bss_identifier(int bss_identifier, struct bss_identifier_info* bss) {
     bss->identifier = (bss_identifier & 0xF0) >> 4;
     bss->mbssid_enable = (bss_identifier & 0x100) >> 8;
     bss->transmitter = (bss_identifier & 0x200) >> 9;
+    bss->mld_link = (bss_identifier & 0x400) >> 10;
     return;
 }
 
@@ -1268,6 +1291,10 @@ int clear_interfaces_resource() {
     {
         if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
             interfaces[i].identifier = UNUSED_IDENTIFIER;
+        }
+        if (interfaces[i].link_conf_file[0] != 0) {
+            memset(interfaces[i].link_conf_file, 0, sizeof(interfaces[i].link_conf_file));
+            interfaces[i].link_id = UNUSED_IDENTIFIER;
         }
     }
     configured_interface_count = 0;
@@ -1318,8 +1345,18 @@ char* get_all_hapd_conf_files(int *swap_hapd) {
             }
 #endif
             valid_id_cnt++;
+            /* There is segmentation fault in hostapd when 5G bss is the first
+               link and 5G initialization will be completed in a callback */
+            if (interfaces[i].link_conf_file[0] != 0 && interfaces[i].link_band != BAND_5GHZ) {
+                strncat(conf_files, interfaces[i].link_conf_file, strlen(interfaces[i].link_conf_file));
+                strcat(conf_files, " ");
+            }
             strncat(conf_files, interfaces[i].hapd_conf_file, strlen(interfaces[i].hapd_conf_file));
             strcat(conf_files, " ");
+            if (interfaces[i].link_conf_file[0] != 0 && interfaces[i].link_band == BAND_5GHZ) {
+                strncat(conf_files, interfaces[i].link_conf_file, strlen(interfaces[i].link_conf_file));
+                strcat(conf_files, " ");
+            }
         }
     }
     if (valid_id_cnt)
@@ -1408,7 +1445,7 @@ int get_center_freq_index(int channel, int width) {
     } else if (width == 2) {
         if (channel >= 36 && channel <= 64) {
             return 50;
-        } else if (channel >= 36 && channel <= 64) {
+        } else if (channel >= 100 && channel <= 128) {
             return 114;
         }
     }
@@ -1422,6 +1459,8 @@ int get_6g_center_freq_index(int channel, int width) {
         chwidth = 80;
     } else if (width == 2) {
         chwidth = 160;
+    } else if (width == 320) {
+        chwidth = 320;
     } else {
         return channel;
     }
