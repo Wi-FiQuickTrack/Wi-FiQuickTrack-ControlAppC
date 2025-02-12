@@ -2571,6 +2571,7 @@ static int add_p2p_group_handler(struct packet_wrapper *req, struct packet_wrapp
     int status = TLV_VALUE_STATUS_NOT_OK;
     char *message = TLV_VALUE_P2P_ADD_GROUP_NOT_OK;
     struct tlv_hdr *tlv = NULL;
+    char p2p_dev_if[32];
 
     memset(freq, 0, sizeof(freq));
     /* TLV_FREQUENCY (required) */
@@ -2589,8 +2590,10 @@ static int add_p2p_group_handler(struct packet_wrapper *req, struct packet_wrapp
     if (tlv)
         snprintf(he, sizeof(he), " he");
 
+    get_p2p_dev_if(p2p_dev_if, sizeof(p2p_dev_if));
+    indigo_logger(LOG_LEVEL_DEBUG, "P2P Dev IF: %s", p2p_dev_if);
     /* Open wpa_supplicant UDS socket */
-    w = wpa_ctrl_open(get_wpas_ctrl_path());
+    w = wpa_ctrl_open(get_wpas_if_ctrl_path(p2p_dev_if));
     if (!w) {
         indigo_logger(LOG_LEVEL_ERROR, "Failed to connect to wpa_supplicant");
         status = TLV_VALUE_STATUS_NOT_OK;
