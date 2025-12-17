@@ -549,3 +549,52 @@ void get_mld_link_mac(char *mac_addr, size_t size, char *band) {
 
     return;
 }
+
+int switch_mld_active_link()
+{
+    FILE * fp;
+    char *if_name = get_wireless_interface();
+    char phy_name[16], buffer[S_BUFFER_LEN];
+    char *ptr;
+
+    phy_name[0] = 0;
+    fp = popen("iw dev", "r");
+    if (fp) {
+        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            if (strstr(buffer, "phy")) {
+                snprintf(phy_name, sizeof(phy_name), "phy%c", buffer[4]);
+                fgets(buffer, sizeof(buffer), fp);
+                if (strstr(buffer, if_name))
+                    break;
+            }
+        }
+        pclose(fp);
+    }
+
+    if (phy_name[0] != 0) {
+        unsigned int active, valid, req_link;
+        snprintf(buffer, sizeof(buffer), "cat /sys/kernel/debug/ieee80211/%s/netdev:%s/active_links", phy_name, if_name);
+        fp = popen(buffer, "r");
+        if (fp) {
+            fgets(buffer, sizeof(buffer), fp);
+            sscanf(buffer, "%x", &active);
+            pclose(fp);
+        }
+        snprintf(buffer, sizeof(buffer), "cat /sys/kernel/debug/ieee80211/%s/netdev:%s/valid_links", phy_name, if_name);
+        fp = popen(buffer, "r");
+        if (fp) {
+            fgets(buffer, sizeof(buffer), fp);
+            sscanf(buffer, "%x", &valid);
+            pclose(fp);
+        }
+        req_link = valid ^ active;
+        snprintf(buffer, sizeof(buffer), "echo %x > /sys/kernel/debug/ieee80211/%s/netdev:%s/active_links", req_link, phy_name, if_name);
+        indigo_logger(LOG_LEVEL_INFO, "%s", buffer);
+        system(buffer);
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Can not find correct PHY name");
+        return -1;
+    }
+
+    return 0;
+}

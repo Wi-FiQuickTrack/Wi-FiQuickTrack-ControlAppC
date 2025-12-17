@@ -71,12 +71,14 @@
 
 #define HS20_OSU_CLIENT "/usr/local/bin/WFA-Hostapd-Supplicant/hs20-osu-client"
 
+#define TG_EXEC_FILE_IPERF2                         "iperf"
+
 #define WIRELESS_INTERFACE_DEFAULT                  "wlan0"
 #define MONITOR_INTERFACE_DEFAULT                   "mon0"
 #define SERVICE_PORT_DEFAULT                        9004
 
 /* Default bridge for wireless interfaces */
-#define BRIDGE_WLANS                                "br-wlans"
+#define BRIDGE_WLANS                                "br-lan"
 
 #ifdef _WTS_OPENWRT_
 #define HOSTAPD_SUPPORT_MBSSID 0
@@ -193,4 +195,5 @@ void stop_dhcp_client();
 wps_setting* get_vendor_wps_settings(enum wps_device_role);
 
 void get_mld_link_mac(char *mac_addr, size_t size, char *band);
+int switch_mld_active_link();
 #endif

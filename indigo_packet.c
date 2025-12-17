@@ -197,6 +197,11 @@ int print_hex(char *message, int message_len) {
 
 /* Add the TLV to the wrapper */
 int add_wrapper_tlv(struct packet_wrapper *wrapper, int id, int len, char *value) {
+    if (!wrapper->tlv[wrapper->tlv_num]) {
+        wrapper->tlv[wrapper->tlv_num] = (struct tlv_hdr *)malloc(sizeof(struct tlv_hdr));
+        memset(wrapper->tlv[wrapper->tlv_num], 0, sizeof(struct tlv_hdr));
+    }
+
     if (add_tlv(wrapper->tlv[wrapper->tlv_num], id, len, value) == 0) {
         wrapper->tlv_num++;
         return 0;

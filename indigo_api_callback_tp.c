@@ -60,11 +60,12 @@ void register_apis() {
     register_api(API_STOP_DHCP, NULL, stop_dhcp_handler);
     register_api(API_GET_WSC_CRED, NULL, get_wsc_cred_handler);
     register_api(API_STA_SEND_ICON_REQ, NULL, send_sta_icon_req_handler);
+    register_api(API_SEND_ARP_MSGS, NULL, send_arp_handler);
     /* AP */
     register_api(API_AP_START_UP, NULL, start_ap_handler);
     register_api(API_AP_STOP, NULL, stop_ap_handler);
     register_api(API_AP_CONFIGURE, NULL, configure_ap_handler);
-    register_api(API_AP_SEND_ARP_MSGS, NULL, send_ap_arp_handler);
+    register_api(API_AP_SET_MCS_RATES, NULL, set_ap_mcs_rates_handler);
     /* STA */
     register_api(API_STA_ASSOCIATE, NULL, associate_sta_handler);
     register_api(API_STA_CONFIGURE, NULL, configure_sta_handler);
@@ -77,6 +78,8 @@ void register_apis() {
     register_api(API_STA_INJECT_START, NULL, set_sta_inject_start_handler);
     register_api(API_STA_INJECT_FRAME, NULL, set_sta_inject_frame_handler);
     register_api(API_STA_INJECT_STOP, NULL, set_sta_inject_stop_handler);
+    register_api(API_TG_SERVER_START, NULL, start_tg_server_handler);
+    register_api(API_TG_SERVER_STOP, NULL, stop_tg_server_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -328,6 +331,55 @@ static void add_mu_edca_params(char *output) {
     strcat(output, "he_mu_edca_ac_vo_timer=255\n");
 }
 
+static void generate_large_vs_elem(char *buf, size_t buf_size, int vs_size) {
+    int i = 0, cur_size = 0;
+    char oui[] =  "506f9a";
+    int base_subtype = 0xe0;
+    int full_count, last_size;
+    int shift_bytes = 0, length;
+    char payload[BUFFER_LEN];
+
+    if (vs_size < 6) {
+        indigo_logger(LOG_LEVEL_ERROR, "Vendor Specific Element Size should >= 6");
+        return;
+    }
+
+    /* Pattern: dd + length + oui + subtype + payload(250) - total 256 bytes */
+    full_count = vs_size / 256;
+    last_size = vs_size % 256;
+    if (last_size < 6 && last_size != 0) {
+        /* Make sure last vs elem has >= 6 bytes */
+        /* Move 10 bytes of last complete vs elem to last vs elem */
+        shift_bytes = 1;
+    }
+    for (i = 0; i < full_count; i++) {
+        if (shift_bytes && i == full_count - 1) {
+            length = 240;
+        } else {
+            length = 250;
+        }
+        sprintf(payload, "%x%x%s%x", 0xdd, length + 4, oui, base_subtype);
+        strcat(buf, payload);
+        for (int j = 0; j < length; j++) {
+            sprintf(payload + 2*j, "%02x", j);
+        }
+        cur_size += length + 6;
+        strcat(buf, payload);
+        base_subtype++;
+    }
+    if (last_size == 0)
+        return;
+
+    sprintf(payload, "%x%02x%s%x", 0xdd, vs_size - cur_size - 2, oui, base_subtype);
+    strcat(buf, payload);
+
+    payload[0] = 0;
+    for (i = 0; i < vs_size - cur_size - 6; i++) {
+        sprintf(payload + 2*i, "%02x", i);
+    }
+    strcat(buf, payload);
+}
+
 static int generate_hostapd_config(char *output, int output_size, struct packet_wrapper *wrapper, struct interface_info* wlanp) {
     int i, ctrl_iface = 0;
     char buffer[S_BUFFER_LEN], cfg_item[2*S_BUFFER_LEN];
@@ -355,7 +407,7 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     char sae_passwd[32], sae_pk_mod[64], sae_pk_file[16], sae_pk[S_BUFFER_LEN];
     int enable_sae_pk = 0;
     int is_akm24_enabled = 0;
-
+    int enable_ft = 0;
 
 #if HOSTAPD_SUPPORT_MBSSID
     if ((wlanp->mbssid_enable && !wlanp->transmitter) || (band_first_wlan[wlanp->band] && !wlanp->link_conf_file[0])) {
@@ -568,6 +620,21 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
             continue;
         }
 
+        if (tlv->id == TLV_LARGE_BEACON_VS_SIZE) {
+            /* Need 2 * vs_size array for hex string VS element */
+            char value[16], vs_conf[4096+32], vs_elem[4096];
+            int vs_size;
+
+            memset(value, 0, sizeof(value));
+            memcpy(value, tlv->value, tlv->len);
+            vs_size = atoi(value);
+            vs_elem[0] = 0;
+            generate_large_vs_elem(vs_elem, sizeof(vs_elem), vs_size);
+            sprintf(vs_conf, "vendor_elements=%s\n", vs_elem);
+            strcat(output, vs_conf);
+            continue;
+        }
+
         cfg = find_tlv_config(tlv->id);
         if (!cfg) {
             indigo_logger(LOG_LEVEL_ERROR, "Unknown AP configuration name: TLV ID 0x%04x", tlv->id);
@@ -642,6 +709,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
 #endif
         if (tlv->id == TLV_WPA_KEY_MGMT && strstr(tlv->value, "OWE")) {
             has_owe = 1;
+        }
+
+        if (tlv->id == TLV_WPA_KEY_MGMT && 
+            (strstr(tlv->value, "FT-PSK") || strstr(tlv->value, "FT-SAE") || strstr(tlv->value, "FT-SAE-EXT-KEY") 
+            || strstr(tlv->value, "FT-EAP") || strstr(tlv->value, "FT-EAP-SHA384")) ) {
+            enable_ft = 1;
         }
 
         if (tlv->id == TLV_HS20 && strstr(tlv->value, "1")) {
@@ -739,6 +812,10 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         if (bss_load_tlv == 0) {
             strcat(output, "bss_load_update_period=100\n");
         }
+    }
+
+    if (enable_ft) {
+        strcat(output, "nas_identifier=nas.example.com\n");
     }
 
     if (enable_sae_pk) {
@@ -1038,6 +1115,10 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
     }
 
     if (is_bridge_created()) {
+#ifdef SUPPORT_THROUGHPUT_TEST
+        indigo_logger(LOG_LEVEL_INFO, "Skip Assign static IP in AP");
+        goto response;
+#endif
         ifname = get_wlans_bridge();
     } else {
         ifname = get_wireless_interface();
@@ -1057,7 +1138,7 @@ static int assign_static_ip_handler(struct packet_wrapper *req, struct packet_wr
         message = message_buf;
     }
 
-    response:
+response:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
     fill_wrapper_tlv_byte(resp, TLV_STATUS, len == 0 ? TLV_VALUE_STATUS_OK : TLV_VALUE_STATUS_NOT_OK);
     fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
@@ -1258,7 +1339,11 @@ static int send_loopback_data_handler(struct packet_wrapper *req, struct packet_
         memcpy(sta_mac, tlv->value, tlv->len);
         indigo_logger(LOG_LEVEL_DEBUG, "TLV_ADDRESS value: %s", sta_mac);
         /* add arp entry for workaround in test platform */
-        add_arp_entry(dst_ip, sta_mac, get_wireless_interface());
+        if (is_bridge_created()) {
+            add_arp_entry(dst_ip, sta_mac, get_wlans_bridge());
+        } else {
+            add_arp_entry(dst_ip, sta_mac, get_wireless_interface());
+        }
     } else {
         /* Detect and delete existing ARP entry for STAUT randomized MAC */
         detect_del_arp_entry(dst_ip);
@@ -1339,7 +1424,7 @@ static int stop_loop_back_server_handler(struct packet_wrapper *req, struct pack
     return 0;
 }
 
-static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+static int send_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
     struct tlv_hdr *tlv;
     char target_ip[64];
     char rate[16], arp_count[16], recv_count[16];
@@ -1379,6 +1464,9 @@ static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper
     recvd = send_broadcast_arp(target_ip, &send, atoi(rate));
     snprintf(recv_count, sizeof(recv_count), "%d", recvd);
     if (send > 0) {
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_BROADCAST_ARP_TEST_OK;
+    } else if (atoi(arp_count) == 0 || atoi(arp_count) == -1) {
         status = TLV_VALUE_STATUS_OK;
         message = TLV_VALUE_BROADCAST_ARP_TEST_OK;
     }
@@ -2718,6 +2806,221 @@ static int set_sta_inject_frame_handler(struct packet_wrapper *req, struct packe
             }
         }
         pclose(fp);
+    }
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int set_ap_mcs_rates_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct tlv_hdr *tlv;
+    char phy[16], mcs[16], nss[16], mode[16];
+    char command[S_BUFFER_LEN];
+    char *ifname;
+    int status = TLV_VALUE_STATUS_NOT_OK, recvd = 0, send = 0;
+    char *message = TLV_VALUE_NOT_OK;
+
+    /* TLV: TLV_PHYMODE */
+    memset(phy, 0, sizeof(phy));
+    tlv = find_wrapper_tlv_by_id(req, TLV_PHYMODE);
+    if (tlv) {
+        memcpy(phy, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_INFO, "PHY mode value: %s", phy);
+    } else {
+        goto done;
+    }
+    if (strcmp(phy, "11na") == 0) {
+        snprintf(mode, sizeof(mode),"ht-mcs-5");
+    } else if (strcmp(phy, "11bgn") == 0) {
+        snprintf(mode, sizeof(mode),"ht-mcs-2.4");
+    } else if (strcmp(phy, "11ac") == 0) {
+        snprintf(mode, sizeof(mode),"vht-mcs-5");
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Not supported PHY mode: %s", phy);
+        goto done;
+    }
+
+    /* TLV: TLV_MCS_INDEX */
+    memset(mcs, 0, sizeof(mcs));
+    tlv = find_wrapper_tlv_by_id(req, TLV_MCS_INDEX);
+    if (tlv) {
+        memcpy(mcs, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_INFO, "MCS value: %s", mcs);
+    } else {
+        goto done;
+    }
+
+    /* TLV: TLV_TX_NSS */
+    memset(nss, 0, sizeof(nss));
+    tlv = find_wrapper_tlv_by_id(req, TLV_TX_NSS);
+    if (tlv) {
+        memcpy(nss, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_INFO, "NSS value: %s", nss);
+    }
+
+    ifname = get_wireless_interface();
+    if (nss[0] == 0) /* Only for HT mode */
+        snprintf(command, sizeof(command), "iw dev %s set bitrates %s %s", ifname, mode, mcs);
+    else
+        snprintf(command, sizeof(command), "iw dev %s set bitrates %s %s:%s", ifname, mode, nss, mcs);
+    system(command);
+
+    status = TLV_VALUE_STATUS_OK;
+    message = TLV_VALUE_OK;
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int start_tg_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct tlv_hdr *tlv;
+    int ret_code;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_TG_SRV_NOT_OK;
+    char srv_ip[64], srv_port[16], trans_proto[8], tg_type[16];
+    char cmd[BUFFER_LEN], buffer[BUFFER_LEN], srv_log[S_BUFFER_LEN];
+    char *proto_tok = "";
+    FILE *fp;
+    char *start_server_string;
+
+    /* TLV: TLV_TG_SRV_IP */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TG_SRV_IP);
+    if (tlv) {
+        memset(srv_ip, 0, sizeof(srv_ip));
+        memcpy(srv_ip, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "tg server ip: %s", srv_ip);
+    } else {
+        goto done;
+    }
+
+    /* TLV: TLV_TG_SRV_PORT */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TG_SRV_PORT);
+    if (tlv) {
+        memset(srv_port, 0, sizeof(srv_port));
+        memcpy(srv_port, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "tg server port: %s", srv_port);
+    } else {
+        goto done;
+    }
+
+    /* TLV: TLV_TRANS_PROTO */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TRANS_PROTO);
+    if (tlv) {
+        memset(trans_proto, 0, sizeof(trans_proto));
+        memcpy(trans_proto, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "transmission protocol: %s", trans_proto);
+        if (strcmp(trans_proto, "udp") == 0) {
+            proto_tok = "-u";
+        }
+    } else {
+        goto done;
+    }
+
+    /* TLV: TLV_TG_TYPE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TG_TYPE);
+    if (tlv) {
+        memset(tg_type, 0, sizeof(tg_type));
+        memcpy(tg_type, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "tg_type: %s", tg_type);
+    } else {
+        goto done;
+    }
+
+    if (strcmp(tg_type, "Iperf_v2") == 0) {
+        /* Use Iperf Version 2 */
+
+        /* Assemble Iperf server commmand */
+        /* General parameters:
+        * -u: udp
+        * -B: server address
+        * -p: server port
+        * */
+
+        memset(srv_log, 0, sizeof(srv_log));
+        sprintf(srv_log, "/tmp/tg_srv_log_%s", srv_port);
+
+        memset(cmd, 0, sizeof(cmd));
+        sprintf(cmd, "%s -s %s -B %s -p %s -i 1 > %s 2>&1 &",
+            TG_EXEC_FILE_IPERF2, proto_tok,
+            srv_ip, srv_port, srv_log);
+
+        indigo_logger(LOG_LEVEL_DEBUG, "start server cmd: %s", cmd);
+
+        ret_code = system(cmd);
+        if (ret_code != 0) {
+            indigo_logger(LOG_LEVEL_ERROR, "Command failed to execute.");
+            goto done;
+        }
+
+        // Wait the daemon to start and log
+        sleep(1);
+
+        memset(cmd, 0, sizeof(cmd));
+        sprintf(cmd, "cat %s", srv_log);
+
+        fp = popen(cmd, "r");
+        if (fp == NULL) {
+            indigo_logger(LOG_LEVEL_ERROR, "Could not open pipe for output");
+            goto done;
+        }
+
+        start_server_string = "Server listening on";
+        memset(buffer, 0, sizeof(buffer));
+        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            // indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
+            if (strstr(buffer, start_server_string) != NULL) {
+                indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
+                status = TLV_VALUE_STATUS_OK;
+                message = TLV_VALUE_OK;
+            }
+        }
+        pclose(fp);
+    } else {
+        // It could be extended to support other tg_type
+        indigo_logger(LOG_LEVEL_ERROR, "Unsupported TG Type: %s\n", tg_type);
+    }
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int stop_tg_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_NOT_OK;
+    char buffer[BUFFER_LEN], tg_type[16];
+    struct tlv_hdr *tlv = NULL;
+
+    /* TLV: TLV_TG_TYPE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TG_TYPE);
+    if (tlv) {
+        memset(tg_type, 0, sizeof(tg_type));
+        memcpy(tg_type, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "tg_type: %s", tg_type);
+    } else {
+        goto done;
+    }
+
+    if (strcmp(tg_type, "Iperf_v2") == 0) {
+        // Iperf Version 2
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", TG_EXEC_FILE_IPERF2);
+        indigo_logger(LOG_LEVEL_DEBUG, "cmd: %s", buffer);
+        system(buffer);
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_OK;
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Unsupported TG Type: %s\n", tg_type);
     }
 done:
     fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);

@@ -3,7 +3,7 @@ TYPE = laptop
 # Role is dut or platform or sniffer
 ROLE = dut
 # Package Version
-VERSION = "2.3.0.238"
+VERSION = "3.0.0.12"
 
 OBJS = main.o eloop.o indigo_api.o indigo_packet.o utils.o wpa_ctrl.o
 CFLAGS += -g
@@ -26,12 +26,14 @@ LD = /openwrt/qsdk/staging_dir/toolchain-aarch64/bin/aarch64-openwrt-linux-ld
 # _OPENWRT_: Use OPENWRT
 CFLAGS += -D_OPENWRT_
 CFLAGS += -DHOSTAPD_SUPPORT_MBSSID_WAR
+CFLAGS += -DSUPPORT_THROUGHPUT_TEST
 endif
 
 # Define the app is for DUT or platform
 ifeq ($(ROLE),dut)
 OBJS += indigo_api_callback_dut.o vendor_specific_dut.o
 CFLAGS += -D_DUT_
+CFLAGS += -DSCAN_ENTRY_FLUSH
 else ifeq ($(ROLE), sniffer)
 OBJS += indigo_api_callback_sniffer.o vendor_specific_sniffer.o
 CFLAGS += -D_TEST_SNIFFER_

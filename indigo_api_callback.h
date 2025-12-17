@@ -115,6 +115,28 @@ struct tlv_to_config_name maps[] = {
     { TLV_EHT_OPER_CENTR_FREQ, "eht_oper_centr_freq_seg0_idx", 0 },
     { TLV_WPA_GROUP_REKEY, "wpa_group_rekey", 0 },
     { TLV_WPA_STRICT_REKEY, "wpa_strict_rekey", 0 },
+    { TLV_RX_SS_SUPPORT, "rx_ss_support", 0 },
+    { TLV_RSN_OVERRIDE_KEY_MGMT, "rsn_override_key_mgmt", 0 },
+    { TLV_RSN_OVERRIDE_PAIRWISE, "rsn_override_pairwise", 0 },
+    { TLV_RSN_OVERRIDE_MFP, "rsn_override_mfp", 0 },
+    { TLV_RSN_OVERRIDE_2_KEY_MGMT, "rsn_override_key_mgmt_2", 0 },
+    { TLV_RSN_OVERRIDE_2_PAIRWISE, "rsn_override_pairwise_2", 0 },
+    { TLV_RSN_OVERRIDE_2_MFP, "rsn_override_mfp_2", 0 },
+    { TLV_RSNE_OVERRIDE, "rsne_override", 0 },
+    { TLV_RSNOE_OVERRIDE, "rsnoe_override", 0 },
+    { TLV_RSNO2E_OVERRIDE, "rsno2e_override", 0 },
+    { TLV_RSNXE_OVERRIDE, "rsnxe_override", 0 },
+    { TLV_RSNXOE_OVERRIDE, "rsnxoe_override", 0 },
+    { TLV_EAPOL_KEY_RESERVED_RANDOM, "eapol_key_reserved_random", 0 },
+    { TLV_VENDOR_ELEMENTS, "vendor_elements", 0 },
+    { TLV_ASSOCRESP_ELEMENTS, "assocresp_elements", 0 },
+    { TLV_HE_6G_REG_PWR_TYPE, "he_6ghz_reg_pwr_type", 0 },
+    { TLV_ELEMENT_EXTEND, "element_extend", 0 },
+    { TLV_RNR, "rnr", 0 },
+    { TLV_DTIM_PERIOD, "dtim_period", 0 },
+    { TLV_ELEMENT_RESERVED_BITS, "element_reserved_bits", 0 },
+    { TLV_ELEMENT_UNTESTED_BITS, "element_untested_bits", 0 },
+    { TLV_ML_CTRL_EXT_MLD_CAPA_PRES_BIT, "ml_ctrl_ext_mld_capa_pres_bit", 0 },
 
     /* wpas, seperate? */
     { TLV_STA_SSID, "ssid", 1 },
@@ -149,6 +171,14 @@ struct tlv_to_config_name maps[] = {
     { TLV_PREFER, "priority", 0 },
     { TLV_GROUP_MGMT, "group_mgmt", 0 },
     { TLV_SAE_PASSWORD, "sae_password", 1 },
+    { TLV_STA_HT_MCS, "ht_mcs", 1 },
+    { TLV_STA_VHT_CAPA, "vht_capa", 0 },
+    { TLV_STA_VHT_CAPA_MASK, "vht_capa_mask", 0 },
+    { TLV_STA_VHT_RX_MCS_NSS_1, "vht_rx_mcs_nss_1", 0 },
+    { TLV_STA_VHT_TX_MCS_NSS_1, "vht_tx_mcs_nss_1", 0 },
+    { TLV_STA_VHT_RX_MCS_NSS_2, "vht_rx_mcs_nss_2", 0 },
+    { TLV_STA_VHT_TX_MCS_NSS_2, "vht_tx_mcs_nss_2", 0 },
+    { TLV_STA_RSN_OVERRIDING, "rsn_overriding", 0 },
 
     /* hapd + wpas */
     { TLV_EAP_FRAG_SIZE, "fragment_size", 0 },
@@ -278,6 +308,7 @@ static int start_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper 
 static int stop_dhcp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_wsc_pin_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int get_wsc_cred_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int send_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* AP */
 static int stop_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -286,10 +317,10 @@ static int send_ap_disconnect_handler(struct packet_wrapper *req, struct packet_
 static int set_ap_parameter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int send_ap_btm_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int trigger_ap_channel_switch(struct packet_wrapper *req, struct packet_wrapper *resp);
-static int send_ap_arp_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int start_wps_ap_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_ap_wsc_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int rekey_ap_gtk_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int set_ap_mcs_rates_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* STA */
 static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int configure_sta_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -313,6 +344,7 @@ static int enable_wsc_sta_handler(struct packet_wrapper *req, struct packet_wrap
 static int set_sta_inject_start_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_inject_frame_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int set_sta_inject_stop_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int switch_sta_link_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 /* P2P */
 static int start_up_p2p_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int p2p_find_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
@@ -330,4 +362,7 @@ static int sniffer_start_handler(struct packet_wrapper *req, struct packet_wrapp
 static int sniffer_stop_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int sniffer_filter_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 static int sniffer_upload_file_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+/* TG (Traffic Generator) */
+static int start_tg_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
+static int stop_tg_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp);
 #endif // __INDIGO_API_CALLBACK

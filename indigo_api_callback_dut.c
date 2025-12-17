@@ -89,6 +89,8 @@ void register_apis() {
     register_api(API_P2P_SET_SERV_DISC, NULL, set_p2p_serv_disc_handler);
     register_api(API_P2P_SET_EXT_LISTEN, NULL, set_p2p_ext_listen_handler);
     register_api(API_STA_ENABLE_WSC, NULL, enable_wsc_sta_handler);
+    register_api(API_TG_SERVER_START, NULL, start_tg_server_handler);
+    register_api(API_TG_SERVER_STOP, NULL, stop_tg_server_handler);
 }
 
 static int get_control_app_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
@@ -464,7 +466,12 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
         /* wps er support. upnp */
         if (tlv->id == TLV_WPS_ER_SUPPORT) {
             memset(cfg_item, 0, sizeof(cfg_item));
+            /* Can't use is_bridge_created as bridge_init is not finished */
+#ifdef SUPPORT_THROUGHPUT_TEST
+            sprintf(cfg_item, "upnp_iface=%s\n", get_wlans_bridge());
+#else
             sprintf(cfg_item, "upnp_iface=%s\n", wlanp->ifname);
+#endif
             strcat(output, cfg_item);
             memset(cfg_item, 0, sizeof(cfg_item));
             sprintf(cfg_item, "friendly_name=WPS Access Point\n");
@@ -749,7 +756,9 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
                 strcat(output, buffer);
 #ifndef _WTS_OPENWRT_
                 if (chwidth == 2) {
-                    strcat(output, "vht_capab=[VHT160]\n");
+                    strcat(output, "vht_capab=[VHT160][RXLDPC]\n");
+                } else {
+                    strcat(output, "vht_capab=[RXLDPC]\n");
                 }
 #endif
             }
@@ -811,13 +820,15 @@ static int generate_hostapd_config(char *output, int output_size, struct packet_
     if (enable_be) {
         if (!enable_beacon_prot)
             strcat(output, "beacon_prot=1\n");
-        /* Keep Wlan IF MAC as bssid when 11BE is enable */
+#if 0 /* Different MAC to cover more TP STA verifying scenarios */
+        /* Keep Wlan IF(MLD) MAC as bssid(Link) when 11BE is enable */
         if (!wlanp->link_conf_file[0]) {
             char mac_addr[32];
             get_mac_address(mac_addr, sizeof(mac_addr), wlanp->ifname);
             sprintf(buffer, "bssid=%s\n", mac_addr);
             strcat(output, buffer);
         }
+#endif
     }
 
     /* vendor specific config, not via hostapd */
@@ -1853,6 +1864,11 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     char *parameter[] = {"pidof", get_wpas_exec_file(), NULL};
     char *message = NULL;
     struct tlv_hdr *tlv = NULL;
+#ifdef SCAN_ENTRY_FLUSH    
+    struct wpa_ctrl *w = NULL;
+    char response[S_BUFFER_LEN];
+    size_t resp_len;
+#endif /* SCAN_ENTRY_FLUSH */
 
     /* TLV: RESET_TYPE */
     tlv = find_wrapper_tlv_by_id(req, TLV_RESET_TYPE);
@@ -1874,6 +1890,40 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
             memset(pac_file_path, 0, sizeof(pac_file_path));
         }
     }
+
+#ifdef SCAN_ENTRY_FLUSH
+    if (reset != RESET_TYPE_INIT) {
+        w = wpa_ctrl_open(get_wpas_ctrl_path());
+        if (w) {
+            /* Flush the scan cache in driver to avoid using previous scan results for repeated connection testing */
+            memset(buffer, 0, sizeof(buffer));
+            snprintf(buffer, sizeof(buffer), "DISCONNECT");
+            resp_len = sizeof(response) - 1;
+            wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+            if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+                indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command[%s]. Response: %s", buffer, response);
+            }
+
+            memset(buffer, 0, sizeof(buffer));
+            snprintf(buffer, sizeof(buffer), "BSS_FLUSH 0");
+            resp_len = sizeof(response) - 1;
+            wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+            if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+                indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command[%s]. Response: %s", buffer, response);
+            }            
+
+            memset(buffer, 0, sizeof(buffer));
+            snprintf(buffer, sizeof(buffer), "SCAN freq=2417 only_new=1");
+            resp_len = sizeof(response) - 1;
+            wpa_ctrl_request(w, buffer, strlen(buffer), response, &resp_len, NULL);
+            if (strncmp(response, WPA_CTRL_OK, strlen(WPA_CTRL_OK)) != 0) {
+                indigo_logger(LOG_LEVEL_ERROR, "Failed to execute the command[%s]. Response: %s", buffer, response);
+            }
+            sleep(1);
+            wpa_ctrl_close(w);
+        }
+    }
+#endif /* SCAN_ENTRY_FLUSH */
 
     memset(buffer, 0, sizeof(buffer));
     sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", get_wpas_exec_file());
@@ -1907,32 +1957,45 @@ static int stop_sta_handler(struct packet_wrapper *req, struct packet_wrapper *r
     return 0;
 }
 
-#ifdef _RESERVED_
-/* The function is reserved for the defeault wpas config */
-#define WPAS_DEFAULT_CONFIG_SSID                    "QuickTrack"
-#define WPAS_DEFAULT_CONFIG_WPA_KEY_MGMT            "WPA-PSK"
-#define WPAS_DEFAULT_CONFIG_PROTO                   "RSN"
-#define HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE         "CCMP"
-#define WPAS_DEFAULT_CONFIG_WPA_PASSPHRASE          "12345678"
 
-static void append_wpas_network_default_config(struct packet_wrapper *wrapper) {
-    if (find_wrapper_tlv_by_id(wrapper, TLV_SSID) == NULL) {
-        add_wrapper_tlv(wrapper, TLV_SSID, strlen(WPAS_DEFAULT_CONFIG_SSID), WPAS_DEFAULT_CONFIG_SSID);
-    }
-    if (find_wrapper_tlv_by_id(wrapper, TLV_WPA_KEY_MGMT) == NULL) {
-        add_wrapper_tlv(wrapper, TLV_WPA_KEY_MGMT, strlen(WPAS_DEFAULT_CONFIG_WPA_KEY_MGMT), WPAS_DEFAULT_CONFIG_WPA_KEY_MGMT);
-    }
-    if (find_wrapper_tlv_by_id(wrapper, TLV_PROTO) == NULL) {
-        add_wrapper_tlv(wrapper, TLV_PROTO, strlen(WPAS_DEFAULT_CONFIG_PROTO), WPAS_DEFAULT_CONFIG_PROTO);
-    }
-    if (find_wrapper_tlv_by_id(wrapper, TLV_RSN_PAIRWISE) == NULL) {
-        add_wrapper_tlv(wrapper, TLV_RSN_PAIRWISE, strlen(HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE), HOSTAPD_DEFAULT_CONFIG_RSN_PAIRWISE);
-    }
-    if (find_wrapper_tlv_by_id(wrapper, TLV_WPA_PASSPHRASE) == NULL) {
-        add_wrapper_tlv(wrapper, TLV_WPA_PASSPHRASE, strlen(WPAS_DEFAULT_CONFIG_WPA_PASSPHRASE), WPAS_DEFAULT_CONFIG_WPA_PASSPHRASE);
+/* The function is reserved for the defeault wpas config */
+#define WPAS_DEFAULT_CONFIG_SSID                "QuickTrack"
+#define WPAS_DEFAULT_CONFIG_PSK_WPA_KEY_MGMT    "WPA-PSK WPA-PSK-SHA256 FT-PSK SAE FT-SAE SAE-EXT-KEY FT-SAE-EXT-KEY"
+#define WPAS_DEFAULT_CONFIG_EAP_WPA_KEY_MGMT    "WPA-EAP WPA-EAP-SHA256 FT-EAP FT-EAP-SHA384 WPA-EAP-SUITE-B WPA-EAP-SUITE-B-192"
+#define WPAS_DEFAULT_CONFIG_PROTO               "RSN"
+#define WPAS_DEFAULT_CONFIG_RSN_PAIRWISE        "CCMP GCMP CCMP-256 GCMP-256"
+#define WPAS_DEFAULT_CONFIG_GROUP_CIPHERS       "CCMP GCMP CCMP-256 GCMP-256"
+#define WPAS_DEFAULT_CONFIG_WPA_PASSPHRASE      "12345678"
+#define WPAS_DEFAULT_CONFIG_IEEE80211_W         "1"
+#define WPAS_DEFAULT_CONFIG_SAE_PWE             "2"
+
+static void append_wpas_default_config(struct packet_wrapper *wrapper) {
+    if (find_wrapper_tlv_by_id(wrapper, TLV_STA_SSID) != NULL && 
+        find_wrapper_tlv_by_id(wrapper, TLV_PSK) != NULL && 
+        find_wrapper_tlv_by_id(wrapper, TLV_KEY_MGMT) == NULL) {
+        indigo_logger(LOG_LEVEL_DEBUG, "append wpas default config");
+        add_wrapper_tlv(wrapper, TLV_SAE_PWE, strlen(WPAS_DEFAULT_CONFIG_SAE_PWE), WPAS_DEFAULT_CONFIG_SAE_PWE);
     }
 }
-#endif /* _RESERVED_ */
+
+static void append_wpas_network_default_config(struct packet_wrapper *wrapper) {
+    if (find_wrapper_tlv_by_id(wrapper, TLV_STA_SSID) != NULL &&
+        find_wrapper_tlv_by_id(wrapper, TLV_KEY_MGMT) == NULL) {
+        if ((find_wrapper_tlv_by_id(wrapper, TLV_EAP) != NULL)) {
+            indigo_logger(LOG_LEVEL_DEBUG, "append wpas default EAP network block config");
+            /* default EAP setting */
+            add_wrapper_tlv(wrapper, TLV_KEY_MGMT, strlen(WPAS_DEFAULT_CONFIG_EAP_WPA_KEY_MGMT), WPAS_DEFAULT_CONFIG_EAP_WPA_KEY_MGMT);
+        } else if (find_wrapper_tlv_by_id(wrapper, TLV_PSK) != NULL) {
+            indigo_logger(LOG_LEVEL_DEBUG, "append wpas default PSK network block config");
+            /* default PSK setting */
+            add_wrapper_tlv(wrapper, TLV_KEY_MGMT, strlen(WPAS_DEFAULT_CONFIG_PSK_WPA_KEY_MGMT), WPAS_DEFAULT_CONFIG_PSK_WPA_KEY_MGMT);
+        }
+        add_wrapper_tlv(wrapper, TLV_PROTO, strlen(WPAS_DEFAULT_CONFIG_PROTO), WPAS_DEFAULT_CONFIG_PROTO);
+        add_wrapper_tlv(wrapper, TLV_PAIRWISE, strlen(WPAS_DEFAULT_CONFIG_RSN_PAIRWISE), WPAS_DEFAULT_CONFIG_RSN_PAIRWISE);
+        add_wrapper_tlv(wrapper, TLV_GROUP, strlen(WPAS_DEFAULT_CONFIG_GROUP_CIPHERS), WPAS_DEFAULT_CONFIG_GROUP_CIPHERS);
+        add_wrapper_tlv(wrapper, TLV_STA_IEEE80211_W, strlen(WPAS_DEFAULT_CONFIG_IEEE80211_W), WPAS_DEFAULT_CONFIG_IEEE80211_W);
+    }
+}
 
 static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wrapper *wrapper) {
     int i, j;
@@ -1949,6 +2012,8 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
     int akm24_configured = 0;
 
     sprintf(buffer, "ctrl_interface=%s\nap_scan=1\npmf=1\n", WPAS_CTRL_PATH_DEFAULT);
+    /* append wpas default network block config */
+    append_wpas_default_config(wrapper);
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         cfg = find_wpas_global_config_name(wrapper->tlv[i]->id);
@@ -1974,10 +2039,8 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
 
     strcat(buffer, "network={\n");
 
-#ifdef _RESERVED_
-    /* The function is reserved for the defeault wpas config */
+    /* append wpas default network block config */
     append_wpas_network_default_config(wrapper);
-#endif /* _RESERVED_ */
 
     for (i = 0; i < wrapper->tlv_num; i++) {
         cfg = find_tlv_config(wrapper->tlv[i]->id);
@@ -2019,6 +2082,10 @@ static int generate_wpas_config(char *buffer, int buffer_size, struct packet_wra
                 memset(buf, 0, sizeof(buf));
                 get_server_cert_hash(value, buf);
                 memcpy(value, buf, sizeof(buf));
+            }
+            if (wrapper->tlv[i]->id == TLV_STA_RSN_OVERRIDING && strcmp("1", value) == 0) {
+                strcat(buffer, "rsn_overriding=2\n");
+                continue;
             }
             if (cfg->quoted) {
                 sprintf(cfg_item, "%s=\"%s\"\n", cfg->config_name, value);
@@ -3937,5 +4004,154 @@ done:
     if (w) {
         wpa_ctrl_close(w);
     }
+    return 0;
+}
+
+static int start_tg_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    struct tlv_hdr *tlv;
+    int ret_code;
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_TG_SRV_NOT_OK;
+    char srv_ip[64], srv_port[16], trans_proto[8], tg_type[16];
+    char cmd[BUFFER_LEN], buffer[BUFFER_LEN], srv_log[S_BUFFER_LEN];
+    char *proto_tok = "";
+    FILE *fp;
+    char *start_server_string;
+
+    /* TLV: TLV_TG_SRV_IP */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TG_SRV_IP);
+    if (tlv) {
+        memset(srv_ip, 0, sizeof(srv_ip));
+        memcpy(srv_ip, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "tg server ip: %s", srv_ip);
+    } else {
+        goto done;
+    }
+
+    /* TLV: TLV_TG_SRV_PORT */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TG_SRV_PORT);
+    if (tlv) {
+        memset(srv_port, 0, sizeof(srv_port));
+        memcpy(srv_port, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "tg server port: %s", srv_port);
+    } else {
+        goto done;
+    }
+
+    /* TLV: TLV_TRANS_PROTO */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TRANS_PROTO);
+    if (tlv) {
+        memset(trans_proto, 0, sizeof(trans_proto));
+        memcpy(trans_proto, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "transmission protocol: %s", trans_proto);
+        if (strcmp(trans_proto, "udp") == 0) {
+            proto_tok = "-u";
+        }
+    } else {
+        goto done;
+    }
+
+    /* TLV: TLV_TG_TYPE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TG_TYPE);
+    if (tlv) {
+        memset(tg_type, 0, sizeof(tg_type));
+        memcpy(tg_type, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "tg_type: %s", tg_type);
+    } else {
+        goto done;
+    }
+
+    if (strcmp(tg_type, "Iperf_v2") == 0) {
+        /* Use Iperf Version 2 */
+
+        /* Assemble Iperf server commmand */
+        /* General parameters:
+        * -u: udp
+        * -B: server address
+        * -p: server port
+        * */
+        memset(srv_log, 0, sizeof(srv_log));
+        sprintf(srv_log, "/tmp/tg_srv_log_%s", srv_port);
+
+        memset(cmd, 0, sizeof(cmd));
+        sprintf(cmd, "%s -s %s -B %s -p %s -i 1 > %s 2>&1 &",
+            TG_EXEC_FILE_IPERF2, proto_tok,
+            srv_ip, srv_port, srv_log);
+
+        indigo_logger(LOG_LEVEL_DEBUG, "start server cmd: %s", cmd);
+
+        ret_code = system(cmd);
+        if (ret_code != 0) {
+            indigo_logger(LOG_LEVEL_ERROR, "Command failed to execute.");
+            goto done;
+        }
+        // Wait the daemon to start and log
+        sleep(1);
+
+        memset(cmd, 0, sizeof(cmd));
+        sprintf(cmd, "cat %s", srv_log);
+
+        fp = popen(cmd, "r");
+        if (fp == NULL) {
+            indigo_logger(LOG_LEVEL_ERROR, "Could not open pipe for output");
+            goto done;
+        }
+
+        start_server_string = "Server listening on";
+        memset(buffer, 0, sizeof(buffer));
+        while (fgets(buffer, sizeof(buffer), fp) != NULL) {
+            //indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
+            if (strstr(buffer, start_server_string) != NULL) {
+                indigo_logger(LOG_LEVEL_DEBUG, "%s", buffer);
+                status = TLV_VALUE_STATUS_OK;
+                message = TLV_VALUE_OK;
+            }
+        }
+        pclose(fp);
+    } else {
+        // It could be extended to support other tg_type
+        indigo_logger(LOG_LEVEL_ERROR, "Unsupported TG Type: %s\n", tg_type);
+    }
+
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
+    return 0;
+}
+
+static int stop_tg_server_handler(struct packet_wrapper *req, struct packet_wrapper *resp) {
+    int status = TLV_VALUE_STATUS_NOT_OK;
+    char *message = TLV_VALUE_NOT_OK;
+    char buffer[BUFFER_LEN], tg_type[16];
+    struct tlv_hdr *tlv = NULL;
+
+    /* TLV: TLV_TG_TYPE */
+    tlv = find_wrapper_tlv_by_id(req, TLV_TG_TYPE);
+    if (tlv) {
+        memset(tg_type, 0, sizeof(tg_type));
+        memcpy(tg_type, tlv->value, tlv->len);
+        indigo_logger(LOG_LEVEL_DEBUG, "tg_type: %s", tg_type);
+    } else {
+        goto done;
+    }
+
+    if (strcmp(tg_type, "Iperf_v2") == 0) {
+        // Iperf Version 2
+        memset(buffer, 0, sizeof(buffer));
+        sprintf(buffer, "killall %s 1>/dev/null 2>/dev/null", TG_EXEC_FILE_IPERF2);
+        indigo_logger(LOG_LEVEL_DEBUG, "cmd: %s", buffer);
+        system(buffer);
+        status = TLV_VALUE_STATUS_OK;
+        message = TLV_VALUE_OK;
+    } else {
+        indigo_logger(LOG_LEVEL_ERROR, "Unsupported TG Type: %s\n", tg_type);
+    }
+done:
+    fill_wrapper_message_hdr(resp, API_CMD_RESPONSE, req->hdr.seq);
+    fill_wrapper_tlv_byte(resp, TLV_STATUS, status);
+    fill_wrapper_tlv_bytes(resp, TLV_MESSAGE, strlen(message), message);
+
     return 0;
 }

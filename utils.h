@@ -23,6 +23,8 @@
 #define BUFFER_LEN                1536
 #define L_BUFFER_LEN              8192
 
+#define MAX_PACKET_SIZE           10000
+
 #define TOOL_POST_PORT 8080
 #define HAPD_UPLOAD_API "/upload-platform-hapd-log"
 #define WPAS_UPLOAD_API "/upload-platform-wpas-log"
@@ -144,7 +146,7 @@ struct loopback_info {
     int pkt_type;
     int pkt_size;
     char target_ip[64];
-    char message[1600];
+    char message[MAX_PACKET_SIZE];
 };
 
 /* log and file API */

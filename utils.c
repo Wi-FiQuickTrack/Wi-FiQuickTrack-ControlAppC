@@ -290,11 +290,11 @@ int loopback_socket = 0;
 
 static void loopback_server_receive_message(int sock, void *eloop_ctx, void *sock_ctx) {
     struct sockaddr_storage from;
-    unsigned char buffer[BUFFER_LEN];
+    unsigned char buffer[MAX_PACKET_SIZE];
     int fromlen, len;
 
     fromlen = sizeof(from);
-    len = recvfrom(sock, buffer, BUFFER_LEN, 0, (struct sockaddr *) &from, &fromlen);
+    len = recvfrom(sock, buffer, MAX_PACKET_SIZE, 0, (struct sockaddr *) &from, &fromlen);
     if (len < 0) {
         indigo_logger(LOG_LEVEL_ERROR, "Loopback server recvfrom[server] error");
         return ;
@@ -403,7 +403,7 @@ void setup_icmphdr(u_int8_t type, u_int8_t code, u_int16_t id,
 
 void send_one_loopback_icmp_packet(struct loopback_info *info) {
     int n;
-    char server_reply[1600];
+    char server_reply[MAX_PACKET_SIZE];
     struct in_addr insaddr;
     struct icmphdr *icmphdr, *recv_icmphdr;
     struct iphdr *recv_iphdr;
@@ -449,7 +449,7 @@ done:
 }
 
 void send_one_loopback_udp_packet(struct loopback_info *info) {
-    char server_reply[1600];
+    char server_reply[MAX_PACKET_SIZE];
     ssize_t recv_len = 0, send_len = 0;
 
     memset(&server_reply, 0, sizeof(server_reply));
@@ -510,7 +510,7 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
     int s = 0, i = 0;
     struct sockaddr_in addr;
     int pkt_sent = 0, pkt_rcv = 0;
-    char message[1600], server_reply[1600], ifname[32];
+    char message[MAX_PACKET_SIZE], server_reply[MAX_PACKET_SIZE], ifname[32];
     ssize_t recv_len = 0, send_len = 0;
     struct timeval timeout;
 
@@ -608,7 +608,7 @@ int send_udp_data(char *target_ip, int target_port, int packet_count, int packet
 int send_icmp_data(char *target_ip, int packet_count, int packet_size, double rate)
 {
     int n, sock, i;
-    char buf[1600], server_reply[1600], ifname[32];
+    char buf[MAX_PACKET_SIZE], server_reply[MAX_PACKET_SIZE], ifname[32];
     struct sockaddr_in addr;
     struct in_addr insaddr;
     struct icmphdr *icmphdr, *recv_icmphdr;
@@ -708,14 +708,32 @@ int send_icmp_data(char *target_ip, int packet_count, int packet_size, double ra
 #endif
 
 int send_broadcast_arp(char *target_ip, int *send_count, int rate) {
-    char buffer[S_BUFFER_LEN];
+    char buffer[S_BUFFER_LEN], ifname[16];
     FILE *fp;
     int recv = 0;
 
+    if (*send_count == -1) {
+        system("killall arping 1>/dev/null 2>/dev/null");
+        indigo_logger(LOG_LEVEL_INFO, "Stop sending continuous ARP requests");
+        return 0;
+    }
+
+    if (is_bridge_created()) {
+        snprintf(ifname, sizeof(ifname), "%s", get_wlans_bridge());
+    } else {
+        snprintf(ifname, sizeof(ifname), "%s", get_wireless_interface());
+    }
 #ifdef _OPENWRT_
-    snprintf(buffer, sizeof(buffer), "arping -I %s %s -c %d -b | grep broadcast", get_wireless_interface(), target_ip, *send_count);
+    snprintf(buffer, sizeof(buffer), "arping -I %s %s -c %d -b | grep broadcast", ifname, target_ip, *send_count);
 #else
-    snprintf(buffer, sizeof(buffer), "arping -i %s %s -c %d -W %d | grep packet", get_wireless_interface(), target_ip, *send_count, rate);
+    if (*send_count == 0) {
+        snprintf(buffer, sizeof(buffer), "arping -i %s %s -W %d -q &", ifname, target_ip, rate);
+        system(buffer);
+        indigo_logger(LOG_LEVEL_INFO, "Start sending continuous ARP requests");
+        return 0;
+    } else {
+        snprintf(buffer, sizeof(buffer), "arping -i %s %s -c %d -W %d | grep packet", ifname, target_ip, *send_count, rate);
+    }
 #endif
     fp = popen(buffer, "r");
     if (fp == NULL)
@@ -803,11 +821,17 @@ int is_bridge_created() {
 }
 
 void bridge_init(char *br) {
+#ifdef SUPPORT_THROUGHPUT_TEST
+    /* Indicate using bridge if to send data */
+    bridge_created = 1;
+    add_all_wireless_interface_to_bridge(br);
+#else
     /* Create bridge for multiple VAPs */
     if (configured_interface_count >= 2) {
         create_bridge(br);
         add_all_wireless_interface_to_bridge(br);
     }
+#endif
 }
 
 int create_bridge(char *br) {
@@ -839,14 +863,41 @@ int add_interface_to_bridge(char *br, char *ifname) {
     return 0;
 }
 
+static int delete_interface_from_bridge(char *br, char *ifname) {
+    char cmd[S_BUFFER_LEN];
+
+    /* Delete interface from bridge */
+    sprintf(cmd, "brctl delif %s %s", br, ifname);
+    system(cmd);
+    printf("%s\n", cmd);
+
+    return 0;
+}
+
+static int delete_all_wireless_interface_from_bridge(char *br) {
+    int i;
+
+    for (i = 0; i < interface_count; i++) {
+        if (interfaces[i].identifier != UNUSED_IDENTIFIER) {
+            delete_interface_from_bridge(br, interfaces[i].ifname);
+        }
+    }
+
+    return 0;
+}
+
 int reset_bridge(char *br) {
+#ifdef SUPPORT_THROUGHPUT_TEST
+    delete_all_wireless_interface_from_bridge(br);
+#else
     char cmd[S_BUFFER_LEN];
 
     /* Bring down bridge */
     control_interface(br, "down");
     sprintf(cmd, "brctl delbr %s", br);
     system(cmd);
- 
+#endif
+
     bridge_created = 0;
 
     return 0;
